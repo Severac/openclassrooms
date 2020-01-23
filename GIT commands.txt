@@ -1,0 +1,7 @@
+
+
+git remote add origin https://user:pass@github.com/Severac/openclassrooms.git
+
+@ et ! to be replaced with hex codes
+
+
