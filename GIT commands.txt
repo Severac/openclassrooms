@@ -5,3 +5,21 @@ git remote add origin https://user:pass@github.com/Severac/openclassrooms.git
 @ et ! to be replaced with hex codes
 
 
+git add --all   :  ajoute tous les fichiers nouvellement créés
+
+git status
+Indique ce qui est prêt à être commité  (ce qui a été ajouté ou modifié)
+
+git commit -m "mon commit"
+
+git config --global credential.helper store  (pour sauvegarder le mot de passe automatiquement pour la prochaine fois)
+
+git push
+
+Génération d'une clé ssh (facultatif ?) :
+ssh-keygen -t rsa -b 4096 -C "francois.boyer@gmail.com"
+ssh-add ~/.ssh/id_rsa
+Ajouter la clé publique dans les settings du serveur GitHub
+
+
+
