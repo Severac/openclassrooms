@@ -16,6 +16,9 @@ git config --global credential.helper store  (pour sauvegarder le mot de passe a
 
 git push
 
+
+git pull pour récupérer les choses   (ou git fetch et git rebase)
+
 Génération d'une clé ssh (facultatif ?) :
 ssh-keygen -t rsa -b 4096 -C "francois.boyer@gmail.com"
 ssh-add ~/.ssh/id_rsa
