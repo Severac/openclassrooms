@@ -1,0 +1,137 @@
+Features enlevées :
+
+packaging                                     78960 non-null object
+packaging_tags                                78961 non-null object
+
+
+emb_codes                                     29306 non-null object
+emb_codes_tags                                29303 non-null object
+first_packaging_code_geo                      18803 non-null object
+
+cities                                        23 non-null object
+
+Ces 2 champs sont redondants avec countries_tags  (qui lui aussi a le même niveau de qualité de donnée)
+countries                                     320492 non-null object
+countries_fr                                  320492 non-null object
+
+
+allergens_fr                                  19 non-null object  (pas assez de valeurs)
+
+Ces champs sont redondants avec traces_tags
+traces                                        24353 non-null object
+traces_fr                                     24352 non-null object
+
+no_nutriments                                 0 non-null float64
+
+serving_size                                  211331 non-null object
+
+
+Ce champ n'apportera rien de plus que le nombre d'additifs additives_n et additives_fr :
+additives                                     248905 non-null object
+
+Redondant avec additives_tags :
+additives_fr                                  154680 non-null object
+
+cocoa_100g                                    948 non-null float64
+
+Champs pas du tout ou très peu renseignés :
+ingredients_from_palm_oil                     0 non-null float64
+ingredients_that_may_be_from_palm_oil         0 non-null float64
+nutrition_grade_uk                            0 non-null float64
+
+butyric-acid_100g                             0 non-null float64
+caproic-acid_100g                             0 non-null float64
+caprylic-acid_100g                            1 non-null float64
+capric-acid_100g                              2 non-null float64
+lauric-acid_100g                              4 non-null float64
+myristic-acid_100g                            1 non-null float64
+palmitic-acid_100g                            1 non-null float64
+stearic-acid_100g                             1 non-null float64
+arachidic-acid_100g                           24 non-null float64
+behenic-acid_100g                             23 non-null float64
+lignoceric-acid_100g                          0 non-null float64
+cerotic-acid_100g                             0 non-null float64
+montanic-acid_100g                            1 non-null float64
+melissic-acid_100g                            0 non-null float64
+
+omega-3-fat_100g                              841 non-null float64
+alpha-linolenic-acid_100g                     186 non-null float64
+eicosapentaenoic-acid_100g                    38 non-null float64
+docosahexaenoic-acid_100g                     78 non-null float64
+omega-6-fat_100g                              188 non-null float64
+linoleic-acid_100g                            149 non-null float64
+arachidonic-acid_100g                         8 non-null float64
+gamma-linolenic-acid_100g                     24 non-null float64
+dihomo-gamma-linolenic-acid_100g              23 non-null float64
+omega-9-fat_100g                              21 non-null float64
+oleic-acid_100g                               13 non-null float64
+elaidic-acid_100g                             0 non-null float64
+gondoic-acid_100g                             14 non-null float64
+mead-acid_100g                                0 non-null float64
+erucic-acid_100g                              0 non-null float64
+nervonic-acid_100g                            0 non-null float64
+
+sucrose_100g                                  72 non-null float64
+glucose_100g                                  26 non-null float64
+fructose_100g                                 38 non-null float64
+lactose_100g                                  262 non-null float64
+maltose_100g                                  4 non-null float64
+maltodextrins_100g                            11 non-null float64
+starch_100g                                   266 non-null float64
+polyols_100g                                  414 non-null float64
+
+casein_100g                                   27 non-null float64
+serum-proteins_100g                           16 non-null float64
+nucleotides_100g                              9 non-null float64
+
+beta-carotene_100g                            34 non-null float64
+
+biotin_100g                                   330 non-null float64
+silica_100g                                   38 non-null float64
+bicarbonate_100g                              81 non-null float64
+chloride_100g                                 158 non-null float64
+
+fluoride_100g                                 79 non-null float64
+chromium_100g                                 20 non-null float64
+molybdenum_100g                               11 non-null float64
+
+caffeine_100g                                 78 non-null float64
+taurine_100g                                  29 non-null float64
+ph_100g                                       49 non-null float64
+
+
+chlorophyl_100g                               0 non-null float64
+glycemic-index_100g                           0 non-null float64
+water-hardness_100g                           0 non-null float64
+
+collagen-meat-protein-ratio_100g              165 non-null float64
+
+
+A la place de ces champs, on se contentera du comptage ingredients_from_palm_oil_n et ingredients_that_may_be_from_palm_oil_n :
+ingredients_from_palm_oil_tags                4835 non-null object
+ingredients_that_may_be_from_palm_oil_tags    11696 non-null object
+
+Ces champs contiennent l'état de certaines données (renseignées ou non, à vérifier ou non). 
+Il sera inutile de s'en servir pour vérifier les données qui sont renseignées ou non (on peut le faire nous mêmes en regardant les valeurs effectivement renseignées dans le dataframe)
+On revanche on conservera le champ states_tags pour écarter les valeurs qui contiennent "en:to-be-checked"
+On enlèvera donc ces 2 champs qui sont redondants avec states_tags:
+states                                        320726 non-null object
+states_fr                                     320726 non-null object
+
+Redondant avec main_category_fr:
+main_category                                 84366 non-null object
+
+
+Pour après :
+Ajouter comme donnée les additifs :
+https://world.openfoodfacts.org/additives
+Attention : E951 - Aspartame non considéré comme nocif 
+
+Calcul, magnesium... voir utilité de ces features pour un scoring de qualité (par rapport à ce qui est recommandé / jour ?)
+
+
+pnns_groups_1 et pnns_groups_2 semblent intéressants pour retenir de bons types d'aliments
+
+Comment reconnaître les entrées, plat principal, fromage, déssert... ?
+
+states_tags pour écarter les valeurs qui contiennent "en:to-be-checked"  (si on veut une fiabilité maximale des données)
