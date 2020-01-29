@@ -22,8 +22,8 @@ git push
 
 git pull pour récupérer les choses   (ou git fetch et git rebase)
 
-
-ou can do the following (assuming you are checked out on master and want to push to a remote branch master):
+Configurer la branche master pour pointer vers la branche distante origin  (pour que les git push et git rebase fonctionnent directement)
+You can do the following (assuming you are checked out on master and want to push to a remote branch master):
 
 Set up the 'remote' if you don't have it already
 
