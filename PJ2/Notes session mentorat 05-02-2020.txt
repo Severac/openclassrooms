@@ -1,0 +1,22 @@
+https://chrisalbon.com/python/data_wrangling/pandas_make_new_columns_using_functions/
+*
+Mentionner la faisabilité du compare string en 1 ligne  dans la présentation.  
+On peut utiliser la fonction map de pandas avec une comparaison de valeurs des chaînes de caractères
+
+
+https://towardsdatascience.com/data-cleaning-in-python-the-ultimate-guide-2020-c63b88bf0a0d
+
+
+Pour le notebook d'exploration :
+Représentation visuelle du nombre d'ingrédients,  avec différents groupes:   groupe par nutrition grade, catégorie des aliments....
+
+
+Représenter une distribution avec une échelle plus ciblée sur les valeurs intéressantes :
+2 techniques standard pour gérer la dynamique (différence entre + grande et + petite valeur) élevée
+> Graphe avec bin variables   (catégorie divers à la fin)
+> Transformer les variables.  Par exemple : fonction log
+
+Pour mieux représenter les graphes de dispersion, 2 méthodes possibles que l'on peut utiliser ensemble :
+
+- Transformer les variables avec un log(10)  => voir déjà ce que ça donne
+- Centrer (soustraire les valeurs à la moyenne) et réduire (diviser par l'écart type)  => StandardScale
