@@ -8,6 +8,10 @@ git clone https://github.com/Severac/openclassrooms.git .
 @ et ! to be replaced with hex codes
 
 
+git add fichier.extension :  ajoute un nouveau fichier pour qu'il soit tracké par le repository
+
+git add -u : ajoute tous les fichiers qui ont été modifiés, s'ils sont déjà trackés par le repository
+
 git add --all   :  ajoute tous les fichiers nouvellement créés
 
 git status
