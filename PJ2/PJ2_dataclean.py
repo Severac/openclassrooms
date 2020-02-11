@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Openfood facts dataset :  data cleaning notebook 
+# # Openclassrooms PJ2 : Openfood facts dataset :  data cleaning notebook 
 
 # In[1]:
 
@@ -1677,7 +1677,7 @@ food_energy_notnull
 sns.distplot(food_energy_notnull['energy_100g'], kde=True)
 
 
-# In[ ]:
+# In[117]:
 
 
 #food_energy_notnull[food_energy_notnull['energy_100g'] != 0]['energy_100g']
@@ -1685,43 +1685,43 @@ f2 = pd.cut(food_energy_notnull['energy_100g'], bins=[0., 1., np.inf], labels=[1
 f2.hist()
 
 
-# In[ ]:
+# In[118]:
 
 
 sns.distplot(food_energy_notnull[food_energy_notnull['energy_100g'] != 0]['energy_100g'], kde=True)
 
 
-# In[ ]:
+# In[119]:
 
 
 food['energy_100g'].hist(bins=50, figsize=(20,15))
 
 
-# In[ ]:
+# In[120]:
 
 
 food.query('energy_100g < 5000').shape
 
 
-# In[ ]:
+# In[121]:
 
 
 food_energy_notnull[food_energy_notnull['energy_100g'] == 0]['energy_100g']
 
 
-# In[ ]:
+# In[122]:
 
 
 food.pnns_groups_2.unique()
 
 
-# In[ ]:
+# In[123]:
 
 
 food.pnns_groups_1.unique()
 
 
-# In[ ]:
+# In[124]:
 
 
 pd.set_option("display.max_rows",10000)
@@ -1730,13 +1730,13 @@ pd.set_option("display.max_columns", 10000)
 food.labels_tags.unique()
 
 
-# In[ ]:
+# In[125]:
 
 
 food.additives_tags.unique()
 
 
-# In[ ]:
+# In[126]:
 
 
 # Conversion du champ catégorique en numérique. 
@@ -1747,10 +1747,4 @@ food_energyscoring_numerical = pd.DataFrame(food[food['energy_100g_scoring'].not
 food.astype({'energy_100g_scoring': 'float64'}).dtypes
 
 #food['energyscoring_numerical'] = food_energyscoring_numerical
-
-
-# In[ ]:
-
-
-
 
