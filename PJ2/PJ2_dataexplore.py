@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Openfoodfacts : analyse exploratoire des données
+# # Openclassrooms PJ2 : Openfoodfacts : analyse exploratoire des données
 
-# In[2]:
+# In[47]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -33,9 +33,15 @@ pd.set_option("display.max_columns", 1000)
 pd.set_option("display.max_rows",1000)
 
 
+# In[48]:
+
+
+#os.environ['https_proxy'] = "https:/user:password@ncproxy:8080" 
+
+
 # # Import des données
 
-# In[3]:
+# In[49]:
 
 
 import pandas as pd
@@ -44,7 +50,7 @@ def load_food_data(csv_path=FOOD_TRANSFORMED_PATH_FILE):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8', low_memory=False)
 
 
-# In[4]:
+# In[50]:
 
 
 food = load_food_data()
@@ -52,25 +58,25 @@ food = load_food_data()
 
 # # Informations globales sur les données
 
-# In[5]:
+# In[51]:
 
 
 food.head()
 
 
-# In[6]:
+# In[52]:
 
 
 qgrid.show_grid(food, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 150})
 
 
-# In[7]:
+# In[53]:
 
 
 food.info()
 
 
-# In[8]:
+# In[54]:
 
 
 scoring_features = ['nutrition_scoring', 'bio_scoring', 'no_ingredients_scoring',
@@ -83,19 +89,19 @@ quantity_features = ['energy_100g', 'sugars_100g', 'salt_100g', 'saturated-fat_1
 
 # # Anayse univariée des features de scoring
 
-# In[9]:
+# In[55]:
 
 
 food.info()
 
 
-# In[10]:
+# In[56]:
 
 
 food.describe()
 
 
-# In[11]:
+# In[57]:
 
 
 food[scoring_features].hist(bins=5, figsize=(20,15))
@@ -103,32 +109,37 @@ food[scoring_features].hist(bins=5, figsize=(20,15))
 
 # ## Focus sur les additifs, graisses, sucre, bio, et nombre d'ingrédients :
 
-# In[12]:
+# In[58]:
 
 
 plt.style.use('default')
+#On peut utiliser le code ci-dessous pour changer le style et la palette de couleurs :
 #print(plt.style.available)
 #plt.style.use('seaborn-ticks')
-#sns.set()
 #current_palette = sns.color_palette('hls', 4)
 
-
 for scoring_feature in ['additives_nocive_scoring', 'sugars_100g_scoring', 'saturated-fat_100g_scoring', 'bio_scoring', 'no_ingredients_scoring']:
-        food.groupby(scoring_feature)[[scoring_feature]].count().plot.pie(subplots=True)
+        ax = food.groupby(scoring_feature)[[scoring_feature]].count().plot.pie(subplots=True, title=scoring_feature)
+        plt.gca().axes.get_yaxis().set_visible(False)
+        # On peut utiliser le code ci-dessous pour spécifier les couleurs une par une :
         #food.groupby(scoring_feature)[[scoring_feature]].count().plot.pie(subplots=True, colors=['#2c73d2', '#0081cf', '#0089ba', '#008e9b', '#008f7a'])
     
     
 
 
 # ## Constats, parmi les produits qui contiennent les informations nécessaire au scoring :
-# * Près d'un quart des produits comportent au moins 1 additif considéré comme nocif
-# * La moitié des produits comportent plus de 4,5g de sucre /100 (ils sont moins bien notés que le meilleur scoring de sucre)
-# * Un quart des produits comportent plus de 7g de graisses saturées
-# * Plus d'un quart des produits sont du bio français
+# * Près d'un quart des produits comportent au moins 1 additif considéré comme nocif (scoring 1)
+# * La moitié des produits comportent plus de 4,5g de sucre /100 (ils sont en dessous du scoring 5 pour le suc)
+# * Un quart des produits comportent plus de 7g de graisses saturées (scoring 1)
+# * Plus d'un quart des produits sont du bio français (scoring 5)
+# * La moitié des produits ont plus de 7 ingrédients
+# (scoring 1 : > 10 ingrédients, scoring 2 : > 7 ingrédients)
+# 
+# Pour les valeurs associées aux différents scoring on pourra se référer au notebook de cleaning
 
 # # Analyse univariée de features quantitatives
 
-# In[13]:
+# In[59]:
 
 
 def log_convert(df, features_list_toconvert):
@@ -140,7 +151,7 @@ def log_convert(df, features_list_toconvert):
     return(features_list_converted)
 
 
-# In[14]:
+# In[60]:
 
 
 plt.rcParams["figure.figsize"] = [16,9]
@@ -150,38 +161,41 @@ plt.suptitle("Analyse univariée des quantités\nEchelle abscisses : proportion 
 
 # ## Analyse univariée logarithmique, pour mieux voir les répartitions
 
-# In[15]:
+# In[61]:
 
 
 features_list_log = log_convert(food, quantity_features)
 
 
-# In[16]:
+# In[62]:
 
 
 features_list_log
 
 
-# In[17]:
+# In[63]:
 
 
 food[features_list_log].hist(bins=50)
 plt.suptitle("Analyse univariée logarithmique des quantités\nEchelle des abscisses logarithmique : -3=0.001, ..., 1 = 10, 2=100, 3=1000, ... en g / 100g\nEchelle des ordonnées : nombre d'aliments")
 
 
-# In[18]:
+# In[64]:
 
 
 food.describe()
 
 
 # ## Distribution des proportions d'énergie
+# ### Dans les distributions ci-dessous, la barre verticale rouge délimite les scorings très mauvais
 
-# In[19]:
+# In[65]:
 
 
 plt.figure(figsize=(16, 10))
+
 plt.axvline(np.log10(2345), 0, 1, color='red', label='à gauche de la barre rouge : scoring énergie > 1\nà droite de la barre rouge   : scoring énergie = 1')
+# la valeur 2345 correspond au scoring énergie = 1 (voir notebook de cleaning)
 plt.legend()
 plt.title("Distribution des proportions d'énergie")
 sns.distplot(food[food['energy_100g_log'].notnull()]['energy_100g_log'], kde=True, label='Densité de probabilité', axlabel='energie pour 100g (échelle logarithmique: 1 = 10, 2=100, 3=1000, ...)')
@@ -190,11 +204,12 @@ plt.legend()
 
 # ## Distribution des proportions de sel
 
-# In[20]:
+# In[66]:
 
 
 plt.figure(figsize=(16, 10))
 plt.axvline(np.log10(1.575), 0, 1, color='red', label='à gauche de la barre rouge : scoring sel > 1\nà droite de la barre rouge   : scoring sel = 1')
+# la valeur 1.575 correspond au scoring sel = 1 (voir notebook de cleaning)
 plt.legend()
 plt.title('Distribution des proportions de sel')
 
@@ -204,11 +219,12 @@ plt.legend()
 
 # ## Distribution des proportions de sucre
 
-# In[21]:
+# In[67]:
 
 
 plt.figure(figsize=(16, 10))
 plt.axvline(np.log10(31), 0, 1, color='red', label='à gauche de la barre rouge : scoring sucre > 1\nà droite de la barre rouge   : scoring sucre = 1')
+# la valeur 31 correspond au scoring sucre = 1 (voir notebook de cleaning)
 plt.legend()
 plt.title('Distribution des proportions de sucre')
 sns.distplot(food[food['sugars_100g_log'].notnull()]['sugars_100g_log'], kde=True, label='Densité de probabilité', axlabel='sucre pour 100g (échelle logarithmique: -3=0.001, ..., 1 = 10, 2=100, 3=1000, ...)')
@@ -217,19 +233,19 @@ plt.legend()
 
 # # Analyse multivariée : Corrélation entre les données
 
-# In[22]:
+# In[68]:
 
 
 corr_matrix = food.corr()
 
 
-# In[23]:
+# In[69]:
 
 
 corr_matrix[quantity_features].loc[quantity_features]
 
 
-# In[24]:
+# In[70]:
 
 
 plt.title('Corrélation entre les proportions')
@@ -238,13 +254,13 @@ sns.heatmap(corr_matrix[quantity_features].loc[quantity_features],
         yticklabels=corr_matrix[quantity_features].loc[quantity_features].columns, cmap='coolwarm' ,center=0.20)
 
 
-# In[25]:
+# In[71]:
 
 
 corr_matrix[scoring_features].loc[scoring_features]
 
 
-# In[26]:
+# In[72]:
 
 
 plt.title('Corrélation entre les scorings de qualité nutritionnelle')
@@ -254,11 +270,11 @@ sns.heatmap(corr_matrix[scoring_features].loc[scoring_features],
 
 
 # ### On voit que le scoring nutrition est bien corrélé aux variables sur lesquels porte ce scoring : graisses, sucres, énergie, sel
-# ### no_ingredients et bio sont également corrélés aux autres variables (couleur bleu clair)
+# ### no_ingredients et bio sont également corrélés aux autres variables, mais de façon plus faible (couleur bleu clair)
 
 # ## Test khi 2 entre le scoring de nutrition et bio
 
-# In[27]:
+# In[73]:
 
 
 X = "bio_scoring"
@@ -269,7 +285,7 @@ cont = data[[X,Y]].pivot_table(index=X,columns=Y,aggfunc=len,margins=True,margin
 cont
 
 
-# In[28]:
+# In[74]:
 
 
 tx = cont.loc[:,["Total"]]
@@ -284,11 +300,12 @@ table = measure/xi_n
 
 sns.heatmap(table.iloc[:-1,:-1],annot=c.iloc[:-1,:-1], linewidths=.5)
 plt.show()
+# Voir https://en.wikipedia.org/wiki/Correlation_and_dependence
 
 
 # ## Diagramme de dispersion des quantités
 
-# In[29]:
+# In[75]:
 
 
 scatter_matrix(food[features_list_log], figsize=(16,16))
@@ -297,7 +314,7 @@ plt.suptitle('Diagramme de dispersion des quantités')
 
 # # Réduction dimensionnelle
 
-# In[30]:
+# In[76]:
 
 
 from sklearn import decomposition
@@ -341,7 +358,7 @@ print(reduced_data)
 
 # ## Cercle des corrélations et réduction de dimensionalité
 
-# In[58]:
+# In[77]:
 
 
 import matplotlib.pyplot as plt
@@ -462,7 +479,7 @@ def plot_dendrogram(Z, names):
 plt.show()
 
 
-# In[59]:
+# In[78]:
 
 
 
@@ -523,13 +540,13 @@ display_factorial_planes(X_projected, n_comp, pca, [(0,1),(2,3),(4,5)], illustra
 plt.show()
 
 
-# In[33]:
+# In[79]:
 
 
 pcs[0]
 
 
-# In[34]:
+# In[80]:
 
 
 data_pca
@@ -540,13 +557,13 @@ data_pca
 # ### On définit un nouveau dataframe qui contiendra uniquement les features de scoring les plus importantes, et qui n'ont pas de valeurs NA :
 # Les features de scoring sur les proportions/100g ont été enlevées car elles sont couvertes par le nutrition score  
 
-# In[35]:
+# In[81]:
 
 
 food_scoring_important = food[['code', 'product_name', 'image_url', 'main_category_fr', 'nutrition_scoring', 'no_ingredients_scoring', 'additives_nocive_scoring', 'bio_scoring']].dropna()
 
 
-# In[36]:
+# In[82]:
 
 
 food_scoring_important.shape
@@ -554,7 +571,7 @@ food_scoring_important.shape
 
 # ## Si on ne conserve que les aliments ayant tous les scoring nutrition, additifs, bio, nombre d'ingrédients, supérieurs à 5 :
 
-# In[37]:
+# In[83]:
 
 
 food_scoring_important = food[(food['nutrition_scoring'] == 5) & (food['additives_nocive_scoring'] == 5) & (food['bio_scoring'] == 5) & (food['no_ingredients_scoring'] == 5)]
@@ -562,7 +579,7 @@ food_scoring_important = food[(food['nutrition_scoring'] == 5) & (food['additive
 
 # ### Catégorie d'aliments à proposer dans ce cas :
 
-# In[38]:
+# In[84]:
 
 
 food_scoring_important['main_category_fr'].value_counts().plot(kind='bar')
@@ -573,7 +590,7 @@ food_scoring_important['main_category_fr'].value_counts().plot(kind='bar')
 # ## Si on ne conserve que les aliments ayant nutrition scoring à 5 et bio scoring à 5, sans tenir compte du scoring sur le nombre d'ingrédients  :
 # NB : puisque le scoring bio à 5 implique dene pas avoir d'additif, on n'inclut pas les additifs nocifs dans ce cas
 
-# In[39]:
+# In[85]:
 
 
 food_scoring_important = food[(food_scoring_important['nutrition_scoring'] == 5) &  (food['bio_scoring'] == 5)]
@@ -581,7 +598,7 @@ food_scoring_important = food[(food_scoring_important['nutrition_scoring'] == 5)
 
 # ### Catégorie d'aliments à proposer dans ce cas :
 
-# In[40]:
+# In[86]:
 
 
 food_scoring_important['main_category_fr'].value_counts().plot(kind='bar')
@@ -589,9 +606,9 @@ food_scoring_important['main_category_fr'].value_counts().plot(kind='bar')
 
 # ### => La variété des ingrédients disponibles reste faible
 
-# ## Si on ne conserve que les aliments ayant nutrition scoring >= 5, avec un scoring bio >= 2  (ce qui signifie au minimum des produits français, qu'ils soient bio ou non), et un scoring sur le nombre d'ingrédients >= 2 (c'est à dire pas plus de 5 ingrédients pour éviter les produits transformés) :
+# ## Si on ne conserve que les aliments ayant nutrition scoring >= 5, avec un scoring bio >= 2  (ce qui signifie au minimum des produits français, qu'ils soient bio ou non), et un scoring sur le nombre d'ingrédients >= 2 (c'est à dire pas plus de 10 ingrédients pour éviter les produits transformés) :
 
-# In[41]:
+# In[87]:
 
 
 food_scoring_important = food[(food['nutrition_scoring'] >= 5) & (food['bio_scoring'] >= 2)& (food['no_ingredients_scoring'] >= 4)]
@@ -599,13 +616,13 @@ food_scoring_important = food[(food['nutrition_scoring'] >= 5) & (food['bio_scor
 
 # ### Catégorie d'aliments à proposer dans ce cas :
 
-# In[42]:
+# In[88]:
 
 
 food_scoring_important['main_category_fr'].value_counts().plot(kind='bar')
 
 
-# In[43]:
+# In[89]:
 
 
 food_scoring_important['main_category_fr'].value_counts()[:30]
@@ -615,7 +632,7 @@ food_scoring_important['main_category_fr'].value_counts()[:30]
 
 # # Affichage de fiches scoring des bons ingrédients, avec images
 
-# In[47]:
+# In[90]:
 
 
 import plotly.express as px
@@ -657,40 +674,33 @@ def display_products_radar_image(df):
                         
         if (type(image_url) == str):
             print(f'image_url = <<{image_url}>>')
-            display(Image(df.loc[i]['image_url'], width=100))
+            # Commenté car ne fonctionne pas derrière proxy BNP
+            '''
+            image_obj = Image(df.loc[i]['image_url'], width=100) 
+            try:
+                display(image_obj)
+                
+            except:
+                print('Could not display image')
+            '''
                         
         print('\n\n')
         cnt +=1         
 
 
 
-# In[53]:
-
-
-food_scoring_important[food_scoring_important['main_category_fr'] == 'Viandes']
-
-
-# In[55]:
+# In[91]:
 
 
 display_products_radar_image(food_scoring_important[food_scoring_important['main_category_fr'] == 'Viandes'].head(20))
 
 
 
-# In[51]:
+# In[92]:
 
 
 for cat_name in food_scoring_important['main_category_fr'].value_counts()[:10].iteritems():
     print(f'5 bons produits dans la catégorie {cat_name[0]}')
     
     display_products_radar_image(food_scoring_important[food_scoring_important['main_category_fr'] == cat_name[0]].head(5))
-
-
-# # Annexe : essai du composant qgrid
-
-# In[46]:
-
-
-import qgrid
-qgrid.show_grid(food, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 150})
 
