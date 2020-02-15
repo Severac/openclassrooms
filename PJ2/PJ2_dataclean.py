@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ2 : Openfood facts dataset :  data cleaning notebook 
 
-# In[ ]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -32,7 +32,7 @@ sns.set()
 
 # # Fonctions d'affichage et de manipulation de données qui seront utilisées dans le notebook
 
-# In[ ]:
+# In[2]:
 
 
 from IPython.display import display, Markdown
@@ -54,7 +54,7 @@ def display_freq_table(col_names):
         display(tab)
 
 
-# In[ ]:
+# In[3]:
 
 
 '''
@@ -82,7 +82,7 @@ def compare_na(df, col1, col2):
 
 # # Téléchargement et décompression des données
 
-# In[ ]:
+# In[4]:
 
 
 #PROXY_DEF = 'BNP'
@@ -107,7 +107,7 @@ def fetch_food_data(food_url=FOOD_URL, food_path=FOOD_PATH):
     food_archive.close()
 
 
-# In[ ]:
+# In[5]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -118,7 +118,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Inspection de quelques lignes du fichier pour avoir un aperçu visuel du texte brut :
 
-# In[ ]:
+# In[6]:
 
 
 def read_raw_file(nblines, food_path = FOOD_PATH):
@@ -137,13 +137,13 @@ def read_raw_file(nblines, food_path = FOOD_PATH):
     
 
 
-# In[ ]:
+# In[7]:
 
 
 read_raw_file(0)
 
 
-# In[ ]:
+# In[8]:
 
 
 read_raw_file(1)
@@ -160,7 +160,7 @@ read_raw_file(5)
 # ### On fait donc un chargement en spécifiant le séparateur tabulation, avec encodage utf-8
 # 
 
-# In[ ]:
+# In[9]:
 
 
 import pandas as pd
@@ -170,7 +170,7 @@ def load_food_data(food_path=FOOD_PATH):
     return pd.read_csv(csv_path, sep='\t', header=0, encoding='utf-8', low_memory=False)
 
 
-# In[ ]:
+# In[10]:
 
 
 food = load_food_data()
@@ -178,7 +178,7 @@ food = load_food_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[ ]:
+# In[11]:
 
 
 num_lines = sum(1 for line in open(FOOD_PATH_FILE, encoding='utf-8'))
@@ -191,7 +191,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[ ]:
+# In[12]:
 
 
 food.head()
@@ -230,7 +230,7 @@ food.head()
 
 # # Inspection générale des données
 
-# In[ ]:
+# In[13]:
 
 
 #pd.options.display.max_columns = 1000
@@ -240,7 +240,7 @@ pd.set_option("display.max_rows",1000)
 
 # ## Vérfication s'il y a des doublons
 
-# In[ ]:
+# In[14]:
 
 
 food[food.duplicated()]
@@ -248,13 +248,13 @@ food[food.duplicated()]
 
 # #### => Aucun doublon détecté
 
-# In[ ]:
+# In[15]:
 
 
 food.head()
 
 
-# In[ ]:
+# In[16]:
 
 
 food.tail()
@@ -262,13 +262,13 @@ food.tail()
 
 # ## Affichage des colonnes :
 
-# In[ ]:
+# In[17]:
 
 
 food.info(verbose=True, null_counts=True)
 
 
-# In[ ]:
+# In[18]:
 
 
 food.describe()
@@ -277,7 +277,7 @@ food.describe()
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
 
-# In[ ]:
+# In[19]:
 
 
 (food.count()/food.shape[0]).sort_values(axis=0, ascending=False)
@@ -311,7 +311,7 @@ food.describe()
 
 # ### Des url sont fournies pour les produits.  Voir si on pourra compléter les données avec les url fournies :
 
-# In[ ]:
+# In[20]:
 
 
 pd.options.display.max_colwidth = 100
@@ -327,7 +327,7 @@ food['url']
 
 # ## Pourcentage des colonnes qui ont 70% de données manquantes :
 
-# In[ ]:
+# In[21]:
 
 
 def analyse_donnees_manquantes(df, seuil = .7):
@@ -364,19 +364,19 @@ analyse_donnees_manquantes(food)
 
 # #### Consultation des valeurs des tags des pays pour voir sur quelles valeurs filtrer pour conserver uniquement la France :
 
-# In[ ]:
+# In[22]:
 
 
 food['countries_tags'].value_counts()
 
 
-# In[ ]:
+# In[23]:
 
 
 food['countries'].value_counts()
 
 
-# In[ ]:
+# In[24]:
 
 
 food['countries_fr'].value_counts()
@@ -384,19 +384,19 @@ food['countries_fr'].value_counts()
 
 # #### Voici les filtres envisageables pour la France dans ces 3 colonnes :
 
-# In[ ]:
+# In[25]:
 
 
 len(food[food['countries_tags'].str.contains("france")==True])
 
 
-# In[ ]:
+# In[26]:
 
 
 len(food[ ( food['countries'].str.contains("France", case=False)==True ) | ( food['countries'].str.contains("FR")==True )  ] )
 
 
-# In[ ]:
+# In[27]:
 
 
 len(food[food['countries_fr'].str.contains("France")==True])
@@ -408,7 +408,7 @@ len(food[food['countries_fr'].str.contains("France")==True])
 # #### Le tableau ci-dessous permet de lister toutes les valeurs qui détectent la France selon le filtre sur countries_fr, mais qui ne la détectent pas selon le filtre sur countries.   
 # #### Il permet de voir pourquoi le filtre sur countries renvoie moins de lignes  (c'est parce que dans le champ countries, le nom du pays est traduit dans différents langages), et il permet aussi de confirmer par une inspection visuelle que les filtres sur countries_tags et countries_fr sont équivalents
 
-# In[ ]:
+# In[28]:
 
 
 food[( food['countries_fr'].str.contains("France", na=False) == True ) &  
@@ -418,13 +418,13 @@ food[( food['countries_fr'].str.contains("France", na=False) == True ) &
      )][['countries', 'countries_fr', 'countries_tags']]
 
 
-# In[ ]:
+# In[29]:
 
 
 food = food[food['countries_tags'].str.contains("france")==True].copy()
 
 
-# In[ ]:
+# In[30]:
 
 
 food.info(verbose=True, null_counts=True)
@@ -432,7 +432,7 @@ food.info(verbose=True, null_counts=True)
 
 # ## Nouvelle analyse des données manquantes, avec uniquement les produits vendus en France
 
-# In[ ]:
+# In[31]:
 
 
 analyse_donnees_manquantes(food)
@@ -448,7 +448,7 @@ analyse_donnees_manquantes(food)
 # ## Suppression des features par rapport à la qualité des données 
 # ### (suppression des features dont le nombre de données est inférieur au seuil minimum défini)
 
-# In[ ]:
+# In[32]:
 
 
 import collections
@@ -472,7 +472,7 @@ def drop_lowquality_values_does_not_work(df, min_percentage_feature_values_tokee
  
 
 
-# In[ ]:
+# In[33]:
 
 
 drop_lowquality_values(food, min_percentage_feature_values_tokeep)
@@ -480,7 +480,7 @@ drop_lowquality_values(food, min_percentage_feature_values_tokeep)
 
 # ## Affichage des features restantes avec leur pourcentage de complétude
 
-# In[ ]:
+# In[34]:
 
 
 (food.count()/food.shape[0]).sort_values(axis=0, ascending=False)
@@ -698,13 +698,13 @@ drop_lowquality_values(food, min_percentage_feature_values_tokeep)
 # ### Une insepection visuelle sur les champs pnns_groups_2 et pnns_groups_1 montre qu'ils ne seront pas utiles pour détecter les légumes non transformés 
 # Par exemple le beurre de cacahuète est taggé "Legumes"
 
-# In[ ]:
+# In[35]:
 
 
 food[food['pnns_groups_2'].str.contains("legumes", case=False, na=False)][['product_name', 'main_category_fr', 'pnns_groups_2', 'pnns_groups_1']].head(1000)
 
 
-# In[ ]:
+# In[36]:
 
 
 food[food['pnns_groups_1'].str.contains("legumes", case=False, na=False)][['product_name', 'main_category_fr', 'pnns_groups_2', 'pnns_groups_1']].head(1000)
@@ -716,13 +716,13 @@ food[food['pnns_groups_1'].str.contains("legumes", case=False, na=False)][['prod
 # nutrition-score-fr_100g 0.623883
 # nutrition_grade_fr 0.623883
 
-# In[ ]:
+# In[37]:
 
 
 food.groupby(['nutrition_grade_fr'])['nutrition_grade_fr'].count().plot(kind='pie')
 
 
-# In[ ]:
+# In[38]:
 
 
 food.groupby(['nutrition_grade_fr'])['nutrition_grade_fr'].count().plot(kind='bar')
@@ -730,7 +730,7 @@ food.groupby(['nutrition_grade_fr'])['nutrition_grade_fr'].count().plot(kind='ba
 
 # #### nutrition-score-fr_100g : les valeurs sont bien comprises entre -15 et 40 : pas d'anomalie apparente quand le champ est renseigné
 
-# In[ ]:
+# In[39]:
 
 
 sns.distplot(food[food['nutrition-score-fr_100g'].notnull()]['nutrition-score-fr_100g'], kde=True)
@@ -738,7 +738,7 @@ sns.distplot(food[food['nutrition-score-fr_100g'].notnull()]['nutrition-score-fr
 
 # ### Box plot avec en abscisse la feature nutrition_grade_fr, et en ordonnée la feature nutrition-score-fr_100g
 
-# In[ ]:
+# In[40]:
 
 
 plt.figure(figsize=(16, 10))
@@ -758,7 +758,7 @@ sns.boxplot(x='nutrition_grade_fr', y='nutrition-score-fr_100g', data=food.sort_
 
 # #### Affichage des nutrtion score > -1 :  on voit que ce sont des eaux. C''est pour cela qu'il y a quelques outliers pour le nutrition grade A
 
-# In[ ]:
+# In[41]:
 
 
 food[( food['nutrition-score-fr_100g'] > -1) & 
@@ -769,7 +769,7 @@ food[( food['nutrition-score-fr_100g'] > -1) &
 # sodium_100g 0.635626  
 # salt_100g 0.635656  
 
-# In[ ]:
+# In[42]:
 
 
 compare_na(food, 'sodium_100g', 'salt_100g')
@@ -777,7 +777,7 @@ compare_na(food, 'sodium_100g', 'salt_100g')
 
 # #### Ci-dessous on voit que le rapport entre les deux features est constant :
 
-# In[ ]:
+# In[43]:
 
 
 (food['sodium_100g'] / food['salt_100g']).hist()
@@ -789,7 +789,7 @@ compare_na(food, 'sodium_100g', 'salt_100g')
 # ingredients_from_palm_oil_n                0.543133  
 # ingredients_that_may_be_from_palm_oil_n    0.543133  
 
-# In[ ]:
+# In[44]:
 
 
 compare_na(food, 'ingredients_from_palm_oil_n', 'ingredients_that_may_be_from_palm_oil_n')
@@ -797,7 +797,7 @@ compare_na(food, 'ingredients_from_palm_oil_n', 'ingredients_that_may_be_from_pa
 
 # #### Visualisation graphique de la différence de valeur entre les deux variables  (0 = pas de différence)
 
-# In[ ]:
+# In[45]:
 
 
 (food['ingredients_from_palm_oil_n'] - food['ingredients_that_may_be_from_palm_oil_n']).hist()
@@ -805,7 +805,7 @@ compare_na(food, 'ingredients_from_palm_oil_n', 'ingredients_that_may_be_from_pa
 
 # #### Quelques exemples d'écarts de valeur entre les 2 variables :
 
-# In[ ]:
+# In[46]:
 
 
 food[(food['ingredients_from_palm_oil_n'] - food['ingredients_that_may_be_from_palm_oil_n']) != 0][['product_name', 'ingredients_from_palm_oil_n','ingredients_that_may_be_from_palm_oil_n']].head(1000)
@@ -820,19 +820,19 @@ food[(food['ingredients_from_palm_oil_n'] - food['ingredients_that_may_be_from_p
 # labels_fr                                  0.356959  
 # labels                                     0.356573  
 
-# In[ ]:
+# In[47]:
 
 
 compare_na(food, 'labels_tags', 'labels_fr')
 
 
-# In[ ]:
+# In[48]:
 
 
 compare_na(food, 'labels_tags', 'labels')
 
 
-# In[ ]:
+# In[49]:
 
 
 compare_na(food, 'labels_fr', 'labels')
@@ -858,13 +858,13 @@ compare_na(food, 'labels_fr', 'labels')
 # Produit contenat des ogm :
 # fr:contient-des-ogm  
 
-# In[ ]:
+# In[50]:
 
 
 food[['product_name', 'labels', 'labels_fr', 'labels_tags']].head(1000)
 
 
-# In[ ]:
+# In[51]:
 
 
 food[food['labels_tags'].str.contains("bio|france|organic", case=False, na=False)][['product_name', 'labels', 'labels_fr', 'labels_tags']].head(1000)
@@ -872,7 +872,7 @@ food[food['labels_tags'].str.contains("bio|france|organic", case=False, na=False
 
 # #### Ci-dessous on voit que quand labels_tags correspond à du bio ou du français, il n'y a pas d'occurence de labels_fr qui ne contient pas la même information.  Les 2 champs sont équivalents.
 
-# In[ ]:
+# In[52]:
 
 
 food[( food['labels_tags'].str.contains("bio|organic|france", case=False, na=False) == True ) &  
@@ -881,7 +881,7 @@ food[( food['labels_tags'].str.contains("bio|organic|france", case=False, na=Fal
      )][['labels_tags', 'labels', 'labels_fr']]
 
 
-# In[ ]:
+# In[53]:
 
 
 food[( food['labels_fr'].str.contains("bio|organic|france", case=False, na=False) == True ) &  
@@ -892,7 +892,7 @@ food[( food['labels_fr'].str.contains("bio|organic|france", case=False, na=False
 
 # #### Ci-dessous une comparaison entre labels_tags et labels montre que le champ labels est moins standard que les deux autres  : il faudrait filtrer sur SE-EKO-01 ou DE-ÖKO ou désigner du bio, là où il suffit de filtrer sur "bio" ou "organic" dans les champs labels_tags ou labels_fr
 
-# In[ ]:
+# In[54]:
 
 
 food[( food['labels_tags'].str.contains("bio|organic|france", case=False, na=False) == True ) &  
@@ -914,7 +914,7 @@ food[( food['labels_tags'].str.contains("bio|organic|france", case=False, na=Fal
 
 # #### L'inspection visuelle ci-dessous montre que le champ additives ne correspond pas vraiment à ce qu'on cherche, et que additives_n reflète bien le nombre d'additifs renseignés dans les champs additives_tags et additives_fr
 
-# In[ ]:
+# In[55]:
 
 
 food[['product_name', 'additives_tags', 'additives_fr', 'additives_n', 'additives']].head(1000)
@@ -922,7 +922,7 @@ food[['product_name', 'additives_tags', 'additives_fr', 'additives_n', 'additive
 
 # #### La comparaison des valeurs NA et l'inspection visuelle  montrent que les champs additives_tags et additives_fr sont équivalents => On conservera la feature additives_tags, ainsi que additives_n pour le nombre d'additifs
 
-# In[ ]:
+# In[56]:
 
 
 compare_na(food, 'additives_tags', 'additives_fr')
@@ -934,7 +934,7 @@ compare_na(food, 'additives_tags', 'additives_fr')
 # states_fr                                     1.000000  
 # 
 
-# In[ ]:
+# In[57]:
 
 
 food[['product_name', 'states', 'states_tags', 'states_fr']].head(1000)
@@ -944,7 +944,7 @@ food[['product_name', 'states', 'states_tags', 'states_fr']].head(1000)
 
 # #### Les contrôles ci-dessous et l'inspection visuelle montrent que les 3 champs contiennent le même niveau d'information  => on retiendra le champ states_tags
 
-# In[ ]:
+# In[58]:
 
 
 food[( food['states_tags'].str.contains("to-be-checked", case=False, na=False) == True ) &  
@@ -953,7 +953,7 @@ food[( food['states_tags'].str.contains("to-be-checked", case=False, na=False) =
      )][['states', 'states_tags', 'states_fr']]
 
 
-# In[ ]:
+# In[59]:
 
 
 food[( food['states'].str.contains("to-be-checked", case=False, na=False) == True ) &  
@@ -962,7 +962,7 @@ food[( food['states'].str.contains("to-be-checked", case=False, na=False) == Tru
      )][['states', 'states_tags', 'states_fr']]
 
 
-# In[ ]:
+# In[60]:
 
 
 food[( food['states_tags'].str.contains("to-be-checked", case=False, na=False) == True ) &  
@@ -971,7 +971,7 @@ food[( food['states_tags'].str.contains("to-be-checked", case=False, na=False) =
      )][['states', 'states_tags', 'states_fr']]
 
 
-# In[ ]:
+# In[61]:
 
 
 food[( food['states_tags'].str.contains("A vérifier", case=False, na=False) == True ) &  
@@ -986,7 +986,7 @@ food[( food['states_tags'].str.contains("A vérifier", case=False, na=False) == 
 # 
 # 
 
-# In[ ]:
+# In[62]:
 
 
 food[['product_name', 'main_category_fr', 'main_category']].head(1000)
@@ -1000,13 +1000,13 @@ food[['product_name', 'main_category_fr', 'main_category']].head(1000)
 
 # #### On conservera ce champ afin de compter le nombre d'ingrédients :
 
-# In[ ]:
+# In[63]:
 
 
 food[['product_name', 'ingredients_text']].sample(1000)
 
 
-# In[ ]:
+# In[64]:
 
 
 food[food['ingredients_text'].notnull()]
@@ -1014,7 +1014,7 @@ food[food['ingredients_text'].notnull()]
 
 # ### Comptage du nombre d'ingrédients
 
-# In[ ]:
+# In[65]:
 
 
 food[food['ingredients_text'].notnull()]['ingredients_text'].str.strip().str.split(',').apply(len)
@@ -1135,7 +1135,7 @@ main_category                                 84366 non-null object
 
 # ## Conserver uniquement les features retenues
 
-# In[ ]:
+# In[66]:
 
 
 features_list = ['code', 'last_modified_t', 'product_name' , 'states_tags', 'main_category_fr','brands','brands_tags', 'nutrition_grade_fr','energy_100g','sugars_100g','salt_100g','saturated-fat_100g','fiber_100g','proteins_100g','ingredients_from_palm_oil_n','pnns_groups_2','pnns_groups_1','labels_tags','countries_tags','additives_tags','additives_n','ingredients_text','image_url']
@@ -1144,7 +1144,7 @@ food = food[features_list]
 
 # ## Ajout d'une feature numérique de scoring pour le nutrition grade
 
-# In[ ]:
+# In[67]:
 
 
 def convert_category_to_number(cat):
@@ -1167,7 +1167,7 @@ food['nutrition_scoring'] = food_cat
 
 # ## Ajout d'une feature pour le comptage du nombre d'ingrédients
 
-# In[ ]:
+# In[68]:
 
 
 food_no_ingredients = pd.DataFrame(food[food['ingredients_text'].notnull()]['ingredients_text'].str.strip().str.split(',').apply(len))
@@ -1175,21 +1175,21 @@ food_no_ingredients = pd.DataFrame(food[food['ingredients_text'].notnull()]['ing
 food['no_ingredients'] = food_no_ingredients
 
 
-# In[ ]:
+# In[69]:
 
 
 pd.set_option('display.max_colwidth', -1)
 food[food['ingredients_text'].notnull()][['product_name','ingredients_text', 'no_ingredients']].sample(100)
 
 
-# In[ ]:
+# In[70]:
 
 
 no_ingredients_mean = food[food['no_ingredients'].notnull()]['no_ingredients'].mean()
 no_ingredients_median = food[food['no_ingredients'].notnull()]['no_ingredients'].median()
 
 
-# In[ ]:
+# In[71]:
 
 
 plt.figure(figsize=(16, 10))
@@ -1198,7 +1198,7 @@ plt.axvline(no_ingredients_median, 0, 1, color='green')
 sns.distplot(food[food['no_ingredients'].notnull()]['no_ingredients'], kde=True)
 
 
-# In[ ]:
+# In[72]:
 
 
 food[food['no_ingredients'].notnull()]['no_ingredients'].describe()
@@ -1206,7 +1206,7 @@ food[food['no_ingredients'].notnull()]['no_ingredients'].describe()
 
 # ### L'observation ci-dessous montre que le nombre d'additifs (additives_n) est déjà inclus dans le nombre d'ingrédients (no_ingredients: feature que l'on a créée)
 
-# In[ ]:
+# In[73]:
 
 
 food[food['no_ingredients'].notnull()][['product_name', 'no_ingredients', 'ingredients_text', 'additives_n','additives_tags']].sample(100)
@@ -1214,7 +1214,7 @@ food[food['no_ingredients'].notnull()][['product_name', 'no_ingredients', 'ingre
 
 # ### Ajout de la feature de scoring par rapport au nombre d'ingrédients
 
-# In[ ]:
+# In[74]:
 
 
 no_ingredients_scoring_bins = [0, 3, 5, 7, 10, np.inf]
@@ -1223,7 +1223,7 @@ no_ingredients_scoring_labels = [5, 4, 3, 2, 1]
 food['no_ingredients_scoring'] = pd.cut(food['no_ingredients'], bins=no_ingredients_scoring_bins, labels=no_ingredients_scoring_labels)
 
 
-# In[ ]:
+# In[75]:
 
 
 food[food['ingredients_text'].notnull()][['product_name','ingredients_text', 'no_ingredients', 'no_ingredients_scoring']].sample(100)
@@ -1233,7 +1233,7 @@ food[food['ingredients_text'].notnull()][['product_name','ingredients_text', 'no
 # ### Si un additif nocif est présent : score = 1
 # ### Si pas d'additif nocif : score = 5
 
-# In[ ]:
+# In[76]:
 
 
 # Pour une application réelle, il faudra récupérer la liste des additifs noctifs sur une source de données externe à déterminer
@@ -1265,7 +1265,7 @@ food['additives_nocive_scoring'] = pd.DataFrame(food[food['additives_tags'].notn
 # proteins_100g                              0.653373  
 # 
 
-# In[ ]:
+# In[77]:
 
 
 # Ces valeurs de scoring ont été remplies par rapport au document Nutri-score_reglement_usage_041019.pdf
@@ -1344,37 +1344,37 @@ for feature_name in proportions_scoring_bins.keys():
     food[feature_name_scoring] = pd.cut(food[feature_name], bins=proportions_scoring_bins[feature_name]['bins'], labels=proportions_scoring_bins[feature_name]['labels'])
 
 
-# In[ ]:
+# In[78]:
 
 
 food.info()
 
 
-# In[ ]:
+# In[79]:
 
 
 #food[['energy_100g_scoring']].plot()
 
 
-# In[ ]:
+# In[80]:
 
 
 food.groupby(['energy_100g_scoring'])['energy_100g_scoring'].count().plot(kind='pie')
 
 
-# In[ ]:
+# In[81]:
 
 
 food.groupby(['salt_100g_scoring'])['salt_100g_scoring'].count().plot(kind='pie')
 
 
-# In[ ]:
+# In[82]:
 
 
 food.info()
 
 
-# In[ ]:
+# In[83]:
 
 
 analyse_donnees_manquantes(food, 0.7)
@@ -1404,7 +1404,7 @@ analyse_donnees_manquantes(food, 0.7)
 # fr:viande-francaise  
 # fr:volaille-francaise  
 
-# In[ ]:
+# In[84]:
 
 
 bio_list = ['en:organic']
@@ -1438,7 +1438,7 @@ def bio_score_item(labels_tags):
 food['bio_scoring'] = pd.DataFrame(food[food['labels_tags'].notnull()]['labels_tags'].apply(bio_score_item))
 
 
-# In[ ]:
+# In[85]:
 
 
 food[['bio_scoring','labels_tags']].sample(100)
@@ -1447,19 +1447,19 @@ food[['bio_scoring','labels_tags']].sample(100)
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée
 
-# In[ ]:
+# In[86]:
 
 
 (food.count()/food.shape[0]).sort_values(axis=0, ascending=False)
 
 
-# In[ ]:
+# In[87]:
 
 
 food.columns
 
 
-# In[ ]:
+# In[88]:
 
 
 food.sample(1000).to_csv('sample.csv')
@@ -1467,13 +1467,13 @@ food.sample(1000).to_csv('sample.csv')
 
 # ## Analyse des features quantitatives
 
-# In[ ]:
+# In[89]:
 
 
 food.describe()
 
 
-# In[ ]:
+# In[90]:
 
 
 food.skew()
@@ -1481,7 +1481,7 @@ food.skew()
 
 # ### On constate une dysymétrie très importante de la plupart des valeurs
 
-# In[ ]:
+# In[91]:
 
 
 food.hist(bins=50, figsize=(20,15))
@@ -1489,7 +1489,7 @@ food.hist(bins=50, figsize=(20,15))
 
 # ### Affichage des tableaux de fréquence
 
-# In[ ]:
+# In[92]:
 
 
 from IPython.display import display, Markdown
@@ -1511,7 +1511,7 @@ def display_freq_table(col_names):
         display(tab)
 
 
-# In[ ]:
+# In[93]:
 
 
 display_freq_table(['energy_100g','salt_100g','sugars_100g','saturated-fat_100g','fiber_100g','proteins_100g','ingredients_from_palm_oil_n'])
@@ -1521,7 +1521,7 @@ display_freq_table(['energy_100g','salt_100g','sugars_100g','saturated-fat_100g'
 
 # # Sauvegarde des données cleanées dans un nouveau CSV
 
-# In[ ]:
+# In[94]:
 
 
 food.to_csv(FOOD_PATH_FILE_OUTPUT, index=False)
@@ -1531,25 +1531,25 @@ food.to_csv(FOOD_PATH_FILE_OUTPUT, index=False)
 
 # ### Feature product_name
 
-# In[ ]:
+# In[95]:
 
 
 food[food['product_name'].duplicated(keep=False) & food['product_name'].notnull()].count()
 
 
-# In[ ]:
+# In[96]:
 
 
 food[food['product_name'].duplicated(keep=False) & food['product_name'].notnull()].sort_values(['product_name']).head(500)
 
 
-# In[ ]:
+# In[97]:
 
 
 sf=food[food['product_name'].duplicated() & food['product_name'].notnull()].sort_values(['code']).sample(500)
 
 
-# In[ ]:
+# In[98]:
 
 
 food.shape
@@ -1567,115 +1567,115 @@ food.shape
 # 
 # 
 
-# In[ ]:
+# In[99]:
 
 
 food[food['energy_100g'] == 0]['energy_100g'].count()
 
 
-# In[ ]:
+# In[100]:
 
 
 food[food['energy_100g'] == 0]
 
 
-# In[ ]:
+# In[101]:
 
 
 food.query('salt_100g > 100')
 
 
-# In[ ]:
+# In[102]:
 
 
 q = food['salt_100g'].quantile(0.99)
 
 
-# In[ ]:
+# In[103]:
 
 
 q
 
 
-# In[ ]:
+# In[104]:
 
 
 food[food['salt_100g'] > q].sort_values("salt_100g")
 
 
-# In[ ]:
+# In[105]:
 
 
 sns.set_style("whitegrid")
 
 
-# In[ ]:
+# In[106]:
 
 
 sns.boxplot(x='salt_100g', y='nutrition_grade_fr', data=food)
 
 
-# In[ ]:
+# In[107]:
 
 
 sns.boxplot(x='salt_100g', y='nutrition_grade_fr', data=food)
 
 
-# In[ ]:
+# In[108]:
 
 
 sns.boxplot(x='sugars_100g', y='nutrition_grade_fr', data=food)
 
 
-# In[ ]:
+# In[109]:
 
 
 sns.boxplot(x='saturated-fat_100g', y='nutrition_grade_fr', data=food)
 
 
-# In[ ]:
+# In[110]:
 
 
 sns.boxplot(x='energy_100g', y='nutrition_grade_fr', data=food)
 
 
-# In[ ]:
+# In[111]:
 
 
 sns.boxplot(x='fiber_100g', y='nutrition_grade_fr', data=food)
 
 
-# In[ ]:
+# In[112]:
 
 
 sns.boxplot(x='proteins_100g', y='nutrition_grade_fr', data=food)
 
 
-# In[ ]:
+# In[113]:
 
 
 sns.pairplot(food[['energy_100g', 'sugars_100g', 'nutrition_grade_fr']], hue='nutrition_grade_fr')
 
 
-# In[ ]:
+# In[114]:
 
 
 food_energy_notnull = food[food['energy_100g'].notnull()]
 
 
-# In[ ]:
+# In[115]:
 
 
 food_energy_notnull
 
 
-# In[ ]:
+# In[116]:
 
 
 sns.distplot(food_energy_notnull['energy_100g'], kde=True)
 
 
-# In[ ]:
+# In[117]:
 
 
 #food_energy_notnull[food_energy_notnull['energy_100g'] != 0]['energy_100g']
@@ -1683,43 +1683,43 @@ f2 = pd.cut(food_energy_notnull['energy_100g'], bins=[0., 1., np.inf], labels=[1
 f2.hist()
 
 
-# In[ ]:
+# In[118]:
 
 
 sns.distplot(food_energy_notnull[food_energy_notnull['energy_100g'] != 0]['energy_100g'], kde=True)
 
 
-# In[ ]:
+# In[119]:
 
 
 food['energy_100g'].hist(bins=50, figsize=(20,15))
 
 
-# In[ ]:
+# In[120]:
 
 
 food.query('energy_100g < 5000').shape
 
 
-# In[ ]:
+# In[121]:
 
 
 food_energy_notnull[food_energy_notnull['energy_100g'] == 0]['energy_100g']
 
 
-# In[ ]:
+# In[122]:
 
 
 food.pnns_groups_2.unique()
 
 
-# In[ ]:
+# In[123]:
 
 
 food.pnns_groups_1.unique()
 
 
-# In[ ]:
+# In[124]:
 
 
 pd.set_option("display.max_rows",10000)
@@ -1728,13 +1728,13 @@ pd.set_option("display.max_columns", 10000)
 food.labels_tags.unique()
 
 
-# In[ ]:
+# In[125]:
 
 
 food.additives_tags.unique()
 
 
-# In[ ]:
+# In[126]:
 
 
 # Conversion du champ catégorique en numérique. 
