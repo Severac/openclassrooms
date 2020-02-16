@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ3 : IMDB dataset :  data cleaning notebook 
 
-# In[1]:
+# In[65]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -34,6 +34,9 @@ plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matp
 
 import seaborn as sns
 sns.set()
+
+
+pd.set_option('display.max_columns', None)
 
 
 # # Téléchargement et décompression des données
@@ -114,7 +117,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[124]:
+# In[7]:
 
 
 df = load_data()
@@ -135,7 +138,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[125]:
+# In[9]:
 
 
 df.head()
@@ -207,154 +210,70 @@ df.info()
 (df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
 
 
-# In[191]:
+# ## Identification des typologies de features à traiter 
+
+# In[133]:
 
 
 numerical_features = ['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']
-categorical_features = ['color', 'content_rating']
 
-categorical_features_totransform = ['country', 'actor_1_name', 'actor_2_name', 'actor_3_name', 'director_name']
-categorical_features_totransform_specific = ['movie_title']
-categorical_features_tosplit_andtransform = ['genres', 'plot_keywords'] #Sous ensemble des features to transform, qu'il va falloir splitter avant de 1hot encoder
-#categorical features to transform : genres, movie_title, country, actor_1_name, language, actor_2_name, actor_3_name, director_name, plot_keywords
-#features to remove : aspect_ratio, movie_imdb_link
+# à 1 hot encoder, et à splitter avant si nécessaire  ('genres' et 'plot_keywords' doivent être splittées)
+categorical_features = ['country', 'director_name', 'genres', 'plot_keywords', 'color', 'content_rating']
 
+# à transformer en bag of words
+categorical_features_tobow = ['movie_title']  
 
+# à fusioner en 1 seule variable
+categorical_features_tomerge = ['actor_1_name', 'actor_2_name', 'actor_3_name']  
 
-
-# In[193]:
-
-
-df[categorical_features_tosplit_andtransform]
+# features qui ne seront pas conservées :
+features_notkept = ['aspect_ratio', 'movie_imdb_link']
 
 
-# In[218]:
 
 
-np.isnan(df.at[4,'actor_3_name'])
+# ## Affichage des features qui seront splittées avant le 1hot encode :
+
+# In[150]:
 
 
-# In[232]:
+df[['genres', 'plot_keywords']]
 
-
-df_transformed = df.copy(deep=True)
-
-for feature_totransform in categorical_features_tosplit_andtransform:
-    all_features = []
-
-    for i, row in df.iterrows():
-        if (type(row[feature_totransform]) == str):        
-            features_list = row[feature_totransform].split(sep='|')
-            for feature_name in features_list:
-                all_features.append(feature_totransform+'_'+feature_name)
-
-    all_features = list(set(all_features))
-
-    for feature_name in all_features:
-        df_transformed[feature_name] = 0
-
-
-    for i, row in df.iterrows():
-        if (type(row[feature_totransform]) == str):        
-            features_list = row[feature_totransform].split(sep='|')
-            for feature_name in features_list:
-                df_transformed.at[i, feature_totransform+'_'+feature_name] = 1
-
-
-# In[237]:
-
-
-df_transformed = df.copy(deep=True)
-
-for feature_totransform in categorical_features_tosplit_andtransform:
-    for i, row in df.iterrows():
-        if (type(row[feature_totransform]) == str):        
-            features_list = row[feature_totransform].split(sep='|')
-            for feature_name in features_list:
-                df_transformed.at[i, feature_totransform+'_'+feature_name] = 1
-
-
-# In[235]:
-
-
-qgrid_show(df)
-
-
-# In[233]:
-
-
-qgrid_show(df_transformed)
-
-
-# In[236]:
-
-
-df_transformed.shape
-
-
-# In[97]:
-
-
-for line in df['genres'].str.split(pat='|'):
-    print(line)
-
-
-# In[79]:
-
-
-df['genres'].str.split(pat='|',expand=True)
-
-
-# In[86]:
-
-
-df['genres'].str.split(pat='|', expand=True)
-
-
-# In[96]:
-
-
-df['genres'].str.split(pat='|')
-
-
-# In[19]:
-
-
-qgrid_show(df[categorical_features_totransform])
-
-
-# ### Le jeu de données est globalement bien renseigné. Mais comment va-t-on compléter les données manquantes ?
 
 # # Imputation des données manquantes
 
-# In[34]:
+# In[77]:
 
 
-from sklearn.impute import KNNImputer
+# KNN imputer pas encore supporté par la version de sklearn que j'utilise :
 
-#imputer = KNNImputer(n_neighbors=2, weights="uniform")
+#from sklearn.impute import KNNImputer
+
+#imputer = KNNImputer(n_neighbors=2, weights="uniform")  
 #imputer.fit_transform(df[numerical_features])
 
 
-# In[52]:
+# In[78]:
 
 
 numerical_features_columns = df[numerical_features].columns
 
 
-# In[61]:
+# In[79]:
 
 
 numerical_features_index = df[numerical_features].index
 
 
-# In[53]:
+# In[80]:
 
 
 numerical_features_columns.shape
 
 
-# In[39]:
+# ## Imputation des données numériques par régression linéaire
+
+# In[81]:
 
 
 from sklearn.experimental import enable_iterative_imputer
@@ -363,61 +282,144 @@ imp = IterativeImputer(max_iter=10, random_state=0)
 
 transformed_data = imp.fit_transform(df[numerical_features])  
 
-#>>> X_test = [[np.nan, 2], [6, np.nan], [np.nan, 6]]
 
-#imp.transform(X_test)
-
-
-# In[62]:
+# In[82]:
 
 
 df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
 
 
-# In[42]:
+# ### Visualisation de quelques résultats par comparaison avant/après :
 
-
-df[numerical_features].shape
-
-
-# In[59]:
+# In[84]:
 
 
 qgrid_show(df[numerical_features])
 
 
-# In[63]:
+# In[86]:
 
 
 qgrid_show(df_numerical_features_imputed)
 
 
-# In[20]:
+# ### Constat que toutes les valeurs sont maintenant renseignées :
+
+# In[161]:
+
+
+(df_numerical_features_imputed.count()/df_numerical_features_imputed.shape[0]).sort_values(axis=0, ascending=False)
+
+
+# ## Transformation des features de catégorie
+# ### Voir le §  Identification des typologies de features à traiter  ci-dessus pour une explication des différents cas de figure
+
+# In[149]:
+
+
+'''
+Cette fonction fait un 1 hot encoding des features qui sont des catégories
+Elle fonctionne pour les 2 cas de figure suivant :
+- Les valeurs possibles de la colonne sont une chaîne de caractère (ex : cat1)
+- Les valeurs possibles de la colonne sont des chaînes de caractère avec des séparateurs (ex:  cat1|cat2|cat3)
+'''
+
+def add_categorical_features_1hot(df, df_target, categorical_features_totransform):
+    for feature_totransform in categorical_features_totransform:
+        print(f'Adding 1hot Feature : {feature_totransform}')
+        df_transformed = df[feature_totransform].str.get_dummies().add_prefix(feature_totransform +'_')
+        df_target = pd.concat([df_target, df_transformed], axis=1)
+        
+    return(df_target)
+
+'''
+Cette fonction commence par merger les valeurs de toutes les colonnes comprises dans 
+categorical_features_tomerge_andtransform  dans une colonne temporaire
+Puis elle fait un 1 hot encode du résultat en appelant la fonction add_categorical_features_1hot
+
+df :  dataframe source
+df_target : dataframe cible où seront concaténées les nouvelles features créées
+categorical_features_tomerge_andtransform : la liste des catégories à merger et à 1 hot encode,
+             par exemple: ['actor_1_name', 'actor_2_name', 'actor_3_name']
+merged_feature_name : le nom de la feature qui sera mergée
+    exemple si le nom est 'actors_names'
+    On pourra avoir les colonnes suivantes de créées:  'actors_names_Le nom du 1er acteur', 'actors_names_Le nom du 2eme acteur'
+          
+'''
+def add_categorical_features_merge_and_1hot(df, df_target, categorical_features_tomerge_andtransform, merged_feature_name):
+    cnt = 0
+    for feature_totransform in categorical_features_tomerge_andtransform:                            
+        if (cnt == 0):
+            df[merged_feature_name] = df[feature_totransform]
+        
+        else:
+            df[merged_feature_name] = df[merged_feature_name] + '|' + df[feature_totransform]
+            
+        cnt += 1
+        
+    return(add_categorical_features_1hot(df, df_target, [merged_feature_name]))
+            
+
+
+# In[110]:
+
+
+df_imputed = add_categorical_features_1hot(df, df_numerical_features_imputed, categorical_features)
+df_imputed = add_categorical_features_merge_and_1hot(df, df_imputed, categorical_features_tomerge, 'actors_names' )
+
+
+# ## Comparaison avant/après de quelques valeurs 1hot encoded :
+
+# In[159]:
+
+
+df[['actor_1_name', 'actor_2_name', 'actor_3_name', 'authors_names', 'country', 'genres']].head(10)
+
+
+# In[160]:
+
+
+df_imputed[['authors_names_Johnny Depp', 'authors_names_Orlando Bloom', 'authors_names_Jack Davenport', 'authors_names_Joel David Moore', 'country_USA', 'country_UK', 'genres_Action', 'genres_Adventure']].head(10)
+
+
+# In[102]:
+
+
+df_imputed[df_imputed['actor_1_name_Joel David Moore'] == 1][['actor_1_name_Joel David Moore']].head(30)
+
+
+# In[ ]:
 
 
 df.hist(bins=50, figsize=(20,15))
 
 
-# In[21]:
+# In[ ]:
+
+
+
+
+
+# In[ ]:
 
 
 scatter_matrix(df[numerical_features], figsize=(30,30))
 plt.suptitle('Diagramme de dispersion des données numériques')
 
 
-# In[22]:
+# In[ ]:
 
 
 corr_matrix = df.corr()
 
 
-# In[23]:
+# In[ ]:
 
 
 corr_matrix[numerical_features].loc[numerical_features]
 
 
-# In[24]:
+# In[ ]:
 
 
 
@@ -431,7 +433,7 @@ sns.heatmap(corr_matrix[numerical_features].loc[numerical_features],
 
 # # Cercle des corrélations et première réduction de dimensionalité des variables numériques
 
-# In[25]:
+# In[ ]:
 
 
 import matplotlib.pyplot as plt
@@ -558,7 +560,7 @@ def plot_dendrogram(Z, names):
 plt.show()
 
 
-# In[26]:
+# In[ ]:
 
 
 
@@ -639,22 +641,68 @@ plt.show()
 
 # # Features catégorielles
 
-# In[27]:
+# In[ ]:
 
 
 qgrid_show(df[categorical_features_totransform])
 
 
-# In[28]:
+# In[ ]:
 
 
 df['country'].unique().shape[0]
 
 
-# In[29]:
+# In[ ]:
 
 
 print(f'{df.shape[0]} valeurs au total dans le dataframe')
 for col in df[categorical_features_totransform]:
-    print(f'Feature {col} : {df[col].unique().shape[0]} valeurs uniques')
+    print(f {col} : {df[col].unique().shape[0]} valeurs uniques')
+
+
+# # Annexe : inutile, à effacer plus tard
+
+# In[21]:
+
+
+'''
+df_transformed = df.copy(deep=True)
+
+for feature_totransform in categorical_features_tosplit_andtransform:
+    all_features = []
+
+    for i, row in df.iterrows():
+        if (type(row[feature_totransform]) == str):        
+            features_list = row[feature_totransform].split(sep='|')
+            for feature_name in features_list:
+                all_features.append(feature_totransform+'_'+feature_name)
+
+    all_features = list(set(all_features))
+
+    for feature_name in all_features:
+        df_transformed[feature_name] = 0
+
+
+    for i, row in df.iterrows():
+        if (type(row[feature_totransform]) == str):        
+            features_list = row[feature_totransform].split(sep='|')
+            for feature_name in features_list:
+                df_transformed.at[i, feature_totransform+'_'+feature_name] = 1
+'''
+
+
+# In[22]:
+
+
+'''
+df_transformed = df.copy(deep=True)
+
+for feature_totransform in categorical_features_tosplit_andtransform:
+    for i, row in df.iterrows():
+        if (type(row[feature_totransform]) == str):        
+            features_list = row[feature_totransform].split(sep='|')
+            for feature_name in features_list:
+                df_transformed.at[i, feature_totransform+'_'+feature_name] = 1
+'''
 
