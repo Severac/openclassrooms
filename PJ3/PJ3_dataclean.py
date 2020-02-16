@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Openclassrooms PJ3 : IMDB dataset :  data cleaning notebook 
+# # Openclassrooms PJ3 : IMDB dataset :  data exploration notebook 
 
 # In[65]:
 
@@ -111,6 +111,8 @@ read_raw_file(2)
 
 
 import pandas as pd
+
+pd.set_option('display.max_columns', None)
 
 def load_data(data_path=DATA_PATH):
     csv_path = DATA_PATH_FILE
