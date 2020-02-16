@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ3 : IMDB dataset :  data cleaning notebook 
 
-# In[49]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -38,7 +38,7 @@ sns.set()
 
 # # Téléchargement et décompression des données
 
-# In[8]:
+# In[2]:
 
 
 PROXY_DEF = 'BNP'
@@ -64,7 +64,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[9]:
+# In[3]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -75,7 +75,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Inspection de quelques lignes du fichier pour avoir un aperçu visuel du texte brut :
 
-# In[10]:
+# In[4]:
 
 
 def read_raw_file(nblines, data_path = DATA_PATH):
@@ -104,7 +104,7 @@ read_raw_file(2)
 
 # ## Chargement des données
 
-# In[12]:
+# In[6]:
 
 
 import pandas as pd
@@ -114,15 +114,15 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[13]:
+# In[124]:
 
 
 df = load_data()
 
 
-# ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichie
+# ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[14]:
+# In[8]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -135,32 +135,32 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[15]:
+# In[125]:
 
 
 df.head()
 
 
-# In[30]:
+# In[10]:
 
 
 def qgrid_show(df):
     display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
 
 
-# In[32]:
+# In[11]:
 
 
 display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
 
 
-# In[34]:
+# In[12]:
 
 
 df.info()
 
 
-# In[35]:
+# In[13]:
 
 
 df.describe()
@@ -168,19 +168,21 @@ df.describe()
 
 # ### Vérification s'il y a des doublons
 
-# In[42]:
+# In[14]:
 
 
 df[df.duplicated()]
 
 
-# In[39]:
+# ### Suppression des doublons
+
+# In[15]:
 
 
 df.drop_duplicates(inplace=True)
 
 
-# In[40]:
+# In[16]:
 
 
 df.info()
@@ -199,27 +201,123 @@ df.info()
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
 
-# In[43]:
+# In[17]:
 
 
 (df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
 
 
-# In[73]:
+# In[191]:
 
 
 numerical_features = ['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']
 categorical_features = ['color', 'content_rating']
 
-categorical_features_totransform = ['genres', 'movie_title', 'country', 'actor_1_name', 'actor_2_name', 'actor_3_name', 'director_name', 'plot_keywords']
-categorical_features_tosplit = ['genres', 'plot_keywords'] #Sous ensemble des features to transform, qu'il va falloir splitter avant de 1hot encoder
+categorical_features_totransform = ['country', 'actor_1_name', 'actor_2_name', 'actor_3_name', 'director_name']
+categorical_features_totransform_specific = ['movie_title']
+categorical_features_tosplit_andtransform = ['genres', 'plot_keywords'] #Sous ensemble des features to transform, qu'il va falloir splitter avant de 1hot encoder
 #categorical features to transform : genres, movie_title, country, actor_1_name, language, actor_2_name, actor_3_name, director_name, plot_keywords
 #features to remove : aspect_ratio, movie_imdb_link
 
 
 
 
-# In[74]:
+# In[193]:
+
+
+df[categorical_features_tosplit_andtransform]
+
+
+# In[218]:
+
+
+np.isnan(df.at[4,'actor_3_name'])
+
+
+# In[232]:
+
+
+df_transformed = df.copy(deep=True)
+
+for feature_totransform in categorical_features_tosplit_andtransform:
+    all_features = []
+
+    for i, row in df.iterrows():
+        if (type(row[feature_totransform]) == str):        
+            features_list = row[feature_totransform].split(sep='|')
+            for feature_name in features_list:
+                all_features.append(feature_totransform+'_'+feature_name)
+
+    all_features = list(set(all_features))
+
+    for feature_name in all_features:
+        df_transformed[feature_name] = 0
+
+
+    for i, row in df.iterrows():
+        if (type(row[feature_totransform]) == str):        
+            features_list = row[feature_totransform].split(sep='|')
+            for feature_name in features_list:
+                df_transformed.at[i, feature_totransform+'_'+feature_name] = 1
+
+
+# In[237]:
+
+
+df_transformed = df.copy(deep=True)
+
+for feature_totransform in categorical_features_tosplit_andtransform:
+    for i, row in df.iterrows():
+        if (type(row[feature_totransform]) == str):        
+            features_list = row[feature_totransform].split(sep='|')
+            for feature_name in features_list:
+                df_transformed.at[i, feature_totransform+'_'+feature_name] = 1
+
+
+# In[235]:
+
+
+qgrid_show(df)
+
+
+# In[233]:
+
+
+qgrid_show(df_transformed)
+
+
+# In[236]:
+
+
+df_transformed.shape
+
+
+# In[97]:
+
+
+for line in df['genres'].str.split(pat='|'):
+    print(line)
+
+
+# In[79]:
+
+
+df['genres'].str.split(pat='|',expand=True)
+
+
+# In[86]:
+
+
+df['genres'].str.split(pat='|', expand=True)
+
+
+# In[96]:
+
+
+df['genres'].str.split(pat='|')
+
+
+# In[19]:
 
 
 qgrid_show(df[categorical_features_totransform])
@@ -227,32 +325,99 @@ qgrid_show(df[categorical_features_totransform])
 
 # ### Le jeu de données est globalement bien renseigné. Mais comment va-t-on compléter les données manquantes ?
 
-# In[45]:
+# # Imputation des données manquantes
+
+# In[34]:
+
+
+from sklearn.impute import KNNImputer
+
+#imputer = KNNImputer(n_neighbors=2, weights="uniform")
+#imputer.fit_transform(df[numerical_features])
+
+
+# In[52]:
+
+
+numerical_features_columns = df[numerical_features].columns
+
+
+# In[61]:
+
+
+numerical_features_index = df[numerical_features].index
+
+
+# In[53]:
+
+
+numerical_features_columns.shape
+
+
+# In[39]:
+
+
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+imp = IterativeImputer(max_iter=10, random_state=0)
+
+transformed_data = imp.fit_transform(df[numerical_features])  
+
+#>>> X_test = [[np.nan, 2], [6, np.nan], [np.nan, 6]]
+
+#imp.transform(X_test)
+
+
+# In[62]:
+
+
+df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
+
+
+# In[42]:
+
+
+df[numerical_features].shape
+
+
+# In[59]:
+
+
+qgrid_show(df[numerical_features])
+
+
+# In[63]:
+
+
+qgrid_show(df_numerical_features_imputed)
+
+
+# In[20]:
 
 
 df.hist(bins=50, figsize=(20,15))
 
 
-# In[51]:
+# In[21]:
 
 
 scatter_matrix(df[numerical_features], figsize=(30,30))
 plt.suptitle('Diagramme de dispersion des données numériques')
 
 
-# In[52]:
+# In[22]:
 
 
 corr_matrix = df.corr()
 
 
-# In[58]:
+# In[23]:
 
 
 corr_matrix[numerical_features].loc[numerical_features]
 
 
-# In[57]:
+# In[24]:
 
 
 
@@ -266,7 +431,7 @@ sns.heatmap(corr_matrix[numerical_features].loc[numerical_features],
 
 # # Cercle des corrélations et première réduction de dimensionalité des variables numériques
 
-# In[70]:
+# In[25]:
 
 
 import matplotlib.pyplot as plt
@@ -393,7 +558,7 @@ def plot_dendrogram(Z, names):
 plt.show()
 
 
-# In[71]:
+# In[26]:
 
 
 
@@ -474,19 +639,19 @@ plt.show()
 
 # # Features catégorielles
 
-# In[75]:
+# In[27]:
 
 
 qgrid_show(df[categorical_features_totransform])
 
 
-# In[79]:
+# In[28]:
 
 
 df['country'].unique().shape[0]
 
 
-# In[82]:
+# In[29]:
 
 
 print(f'{df.shape[0]} valeurs au total dans le dataframe')
