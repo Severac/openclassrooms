@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ3 : IMDB dataset :  data clean and modelisation notebook 
 
-# In[32]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -38,7 +38,7 @@ sns.set()
 
 
 
-# In[33]:
+# In[2]:
 
 
 def qgrid_show(df):
@@ -47,7 +47,7 @@ def qgrid_show(df):
 
 # # Téléchargement et décompression des données
 
-# In[34]:
+# In[3]:
 
 
 PROXY_DEF = 'BNP'
@@ -73,7 +73,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[35]:
+# In[4]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -84,7 +84,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Chargement des données
 
-# In[36]:
+# In[5]:
 
 
 import pandas as pd
@@ -95,7 +95,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[37]:
+# In[6]:
 
 
 df = load_data()
@@ -103,7 +103,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[38]:
+# In[7]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -116,7 +116,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[39]:
+# In[8]:
 
 
 df.head()
@@ -124,7 +124,7 @@ df.head()
 
 # ### Vérification s'il y a des doublons
 
-# In[40]:
+# In[9]:
 
 
 df[df.duplicated()]
@@ -132,19 +132,19 @@ df[df.duplicated()]
 
 # ### Suppression des doublons
 
-# In[41]:
+# In[10]:
 
 
 df.drop_duplicates(inplace=True)
 
 
-# In[203]:
+# In[11]:
 
 
 df = df.reset_index(drop=True)
 
 
-# In[204]:
+# In[12]:
 
 
 df.info()
@@ -163,7 +163,7 @@ df.info()
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
 
-# In[43]:
+# In[13]:
 
 
 (df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
@@ -171,7 +171,7 @@ df.info()
 
 # ## Identification des typologies de features à traiter 
 
-# In[44]:
+# In[14]:
 
 
 numerical_features = ['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']
@@ -193,7 +193,7 @@ features_notkept = ['aspect_ratio', 'movie_imdb_link']
 
 # ## Affichage des features qui seront splittées avant le 1hot encode :
 
-# In[45]:
+# In[15]:
 
 
 df[['genres', 'plot_keywords']]
@@ -201,7 +201,7 @@ df[['genres', 'plot_keywords']]
 
 # # Imputation des données manquantes
 
-# In[46]:
+# In[16]:
 
 
 # KNN imputer pas encore supporté par la version de sklearn que j'utilise :
@@ -212,19 +212,19 @@ df[['genres', 'plot_keywords']]
 #imputer.fit_transform(df[numerical_features])
 
 
-# In[47]:
+# In[17]:
 
 
 numerical_features_columns = df[numerical_features].columns
 
 
-# In[48]:
+# In[18]:
 
 
 numerical_features_index = df[numerical_features].index
 
 
-# In[49]:
+# In[19]:
 
 
 numerical_features_columns.shape
@@ -232,7 +232,7 @@ numerical_features_columns.shape
 
 # ## Imputation des données numériques par régression linéaire
 
-# In[50]:
+# In[20]:
 
 
 from sklearn.experimental import enable_iterative_imputer
@@ -242,7 +242,7 @@ imp = IterativeImputer(max_iter=10, random_state=0)
 transformed_data = imp.fit_transform(df[numerical_features])  
 
 
-# In[51]:
+# In[21]:
 
 
 df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
@@ -250,13 +250,13 @@ df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=nume
 
 # ### Visualisation de quelques résultats par comparaison avant/après :
 
-# In[52]:
+# In[22]:
 
 
 qgrid_show(df[numerical_features])
 
 
-# In[53]:
+# In[23]:
 
 
 qgrid_show(df_numerical_features_imputed)
@@ -264,7 +264,7 @@ qgrid_show(df_numerical_features_imputed)
 
 # ### Constat que toutes les valeurs sont maintenant renseignées :
 
-# In[54]:
+# In[24]:
 
 
 (df_numerical_features_imputed.count()/df_numerical_features_imputed.shape[0]).sort_values(axis=0, ascending=False)
@@ -273,7 +273,7 @@ qgrid_show(df_numerical_features_imputed)
 # ## Transformation des features de catégorie
 # ### Voir le §  Identification des typologies de features à traiter  ci-dessus pour une explication des différents cas de figure
 
-# In[55]:
+# In[25]:
 
 
 '''
@@ -327,38 +327,38 @@ def add_categorical_features_bow_and_1hot(df, df_target, categorical_features_to
     return(df_target)            
 
 
-# In[57]:
+# In[26]:
 
 
 df_imputed = add_categorical_features_1hot(df, df_numerical_features_imputed, categorical_features)
 df_imputed = add_categorical_features_merge_and_1hot(df, df_imputed, categorical_features_tomerge, 'actors_names' )
 
 
-# In[58]:
+# In[27]:
 
 
 df_imputed.shape
 
 
-# In[59]:
+# In[28]:
 
 
 df_imputed = add_categorical_features_bow_and_1hot(df, df_imputed, categorical_features_tobow)
 
 
-# In[60]:
+# In[29]:
 
 
 df_imputed.shape
 
 
-# In[61]:
+# In[30]:
 
 
 df_imputed.head(10)
 
 
-# In[68]:
+# In[31]:
 
 
 df_imputed.describe()
@@ -366,19 +366,19 @@ df_imputed.describe()
 
 # ## Comparaison avant/après de quelques valeurs 1hot encoded :
 
-# In[62]:
+# In[32]:
 
 
 df[['actor_1_name', 'actor_2_name', 'actor_3_name', 'actors_names', 'country', 'genres']].head(10)
 
 
-# In[63]:
+# In[33]:
 
 
 df_imputed[['actors_names_Johnny Depp', 'actors_names_Orlando Bloom', 'actors_names_Jack Davenport', 'actors_names_Joel David Moore', 'country_USA', 'country_UK', 'genres_Action', 'genres_Adventure']].head(10)
 
 
-# In[77]:
+# In[34]:
 
 
 df_imputed.loc[0]
@@ -404,7 +404,7 @@ df_imputed.loc[0]
 
 # # Réduction de dimensionalité
 
-# In[72]:
+# In[35]:
 
 
 from sklearn import decomposition
@@ -425,19 +425,19 @@ pca = decomposition.PCA(n_components=n_comp)
 pca.fit(X_scaled)
 
 
-# In[78]:
+# In[36]:
 
 
 X_reduced = pca.transform(X_scaled)
 
 
-# In[79]:
+# In[37]:
 
 
 X_reduced.shape
 
 
-# In[102]:
+# In[38]:
 
 
 from sklearn.neighbors import NearestNeighbors
@@ -446,43 +446,50 @@ nbrs = NearestNeighbors(n_neighbors=6, algorithm='ball_tree').fit(X_reduced)
 distances_matrix, reco_matrix = nbrs.kneighbors(X_reduced)
 
 
-# In[103]:
+# In[39]:
 
 
 distances_matrix.shape
 
 
-# In[104]:
+# In[40]:
 
 
 reco_matrix.shape
 
 
-# In[105]:
+# In[41]:
 
 
 reco_matrix
 
 
-# In[144]:
+# In[42]:
 
 
 print(f"{(df.iloc[0]['movie_title'])}")
 
 
-# In[218]:
+# In[57]:
 
 
-df[df['movie_title'].str.contains('Matrix')]
+df[df['movie_title'].str.contains('Nixon')]
 
 
-# In[197]:
+# In[69]:
 
 
-df[['movie_title']]
+pd.options.display.max_colwidth = 100
+df.loc[[3820]]
 
 
-# In[192]:
+# In[66]:
+
+
+df.loc[[1116]]
+
+
+# In[44]:
 
 
 def afficher_recos(film_index, reco_matrix):
@@ -493,40 +500,58 @@ def afficher_recos(film_index, reco_matrix):
         print(f"{df.loc[reco_matrix[film_index, nb_film+1]]['movie_title']} - imdb score : {df.loc[reco_matrix[film_index, nb_film+1]]['imdb_score']} - {df.loc[reco_matrix[film_index, nb_film+1]]['movie_imdb_link']}")
 
 
-# In[210]:
+# In[45]:
 
 
 afficher_recos(2703, reco_matrix)
 
 
-# In[211]:
+# In[46]:
 
 
 afficher_recos(0, reco_matrix)
 
 
-# In[212]:
+# In[47]:
 
 
 afficher_recos(3, reco_matrix)
 
 
-# In[217]:
+# In[48]:
 
 
 afficher_recos(4820, reco_matrix)
 
 
-# In[220]:
+# In[49]:
 
 
 afficher_recos(647, reco_matrix)
 
 
-# In[219]:
+# In[50]:
 
 
 afficher_recos(124, reco_matrix)
+
+
+# In[51]:
+
+
+afficher_recos(931, reco_matrix)
+
+
+# In[52]:
+
+
+afficher_recos(1172, reco_matrix)
+
+
+# In[53]:
+
+
+afficher_recos(3820, reco_matrix)
 
 
 # # Features à transformer / ajouter
@@ -535,7 +560,7 @@ afficher_recos(124, reco_matrix)
 
 # # Annexe : inutile, à effacer plus tard
 
-# In[66]:
+# In[54]:
 
 
 '''
@@ -564,7 +589,7 @@ for feature_totransform in categorical_features_tosplit_andtransform:
 '''
 
 
-# In[67]:
+# In[55]:
 
 
 '''
