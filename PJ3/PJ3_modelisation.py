@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ3 : IMDB dataset :  data clean and modelisation notebook 
 
-# In[1]:
+# In[7]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -38,7 +38,7 @@ sns.set()
 
 
 
-# In[2]:
+# In[8]:
 
 
 def qgrid_show(df):
@@ -47,7 +47,7 @@ def qgrid_show(df):
 
 # # Téléchargement et décompression des données
 
-# In[3]:
+# In[9]:
 
 
 PROXY_DEF = 'BNP'
@@ -73,7 +73,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[4]:
+# In[10]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -84,7 +84,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Chargement des données
 
-# In[5]:
+# In[11]:
 
 
 import pandas as pd
@@ -95,7 +95,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[6]:
+# In[48]:
 
 
 df = load_data()
@@ -103,7 +103,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[7]:
+# In[13]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -116,7 +116,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[8]:
+# In[14]:
 
 
 df.head()
@@ -124,7 +124,7 @@ df.head()
 
 # ### Vérification s'il y a des doublons
 
-# In[9]:
+# In[15]:
 
 
 df[df.duplicated()]
@@ -136,11 +136,6 @@ df[df.duplicated()]
 
 
 df.drop_duplicates(inplace=True)
-
-
-# In[11]:
-
-
 df = df.reset_index(drop=True)
 
 
@@ -552,6 +547,75 @@ afficher_recos(1172, reco_matrix)
 
 
 afficher_recos(3820, reco_matrix)
+
+
+# # Industralisation du modèle avec Pipeline
+
+# In[43]:
+
+
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.pipeline import Pipeline
+
+class DuplicatesRemover(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        return None
+    
+    def fit(self, df, y=None):      
+        return self
+    
+    def transform(self, df):
+        df.drop_duplicates(inplace=True)
+        df = df.reset_index(drop=True)
+        
+        return(df)
+
+
+# In[44]:
+
+
+duplicates_remover = DuplicatesRemover()
+
+
+# In[50]:
+
+
+df = duplicates_remover.fit_transform(df)
+
+
+# In[46]:
+
+
+df = duplicates_remover.transform(df)
+
+
+# In[51]:
+
+
+df[df.duplicated()]
+
+
+# In[52]:
+
+
+preparation_and_recommendation_pipeline = Pipeline([
+    ('duplicates_remover', DuplicatesRemover),
+
+])
+
+df2 = preparation_and_recommendation_pipeline.fit(df)
+
+
+# In[53]:
+
+
+type(df2)
+
+
+# In[34]:
+
+
+df = preparation_and_recommendation_pipeline.transform(df)
 
 
 # # Features à transformer / ajouter
