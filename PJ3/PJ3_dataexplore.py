@@ -106,7 +106,7 @@ read_raw_file(2)
 
 # ## Chargement des données
 
-# In[6]:
+# In[4]:
 
 
 import pandas as pd
@@ -118,7 +118,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[7]:
+# In[5]:
 
 
 df = load_data()
@@ -126,7 +126,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[8]:
+# In[6]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -145,14 +145,14 @@ print(message)
 df.head()
 
 
-# In[10]:
+# In[9]:
 
 
 def qgrid_show(df):
     display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
 
 
-# In[11]:
+# In[10]:
 
 
 display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
@@ -266,7 +266,7 @@ corr_matrix = df.corr()
 corr_matrix[numerical_features].loc[numerical_features]
 
 
-# In[29]:
+# In[24]:
 
 
 plt.figure(figsize=(16, 10))
@@ -280,19 +280,19 @@ sns.heatmap(corr_matrix[numerical_features].loc[numerical_features],
 
 # # Cercle des corrélations et première réduction de dimensionalité des variables numériques
 
-# In[30]:
+# In[25]:
 
 
 df['imdb_score_cat'] = pd.cut(df['imdb_score'], bins=5)
 
 
-# In[32]:
+# In[26]:
 
 
 df[['imdb_score', 'imdb_score_cat']]
 
 
-# In[79]:
+# In[27]:
 
 
 import matplotlib.pyplot as plt
@@ -427,7 +427,7 @@ def plot_dendrogram(Z, names):
 plt.show()
 
 
-# In[90]:
+# In[28]:
 
 
 
@@ -526,16 +526,16 @@ plt.show()
 
 # # Features catégorielles
 
-# In[27]:
+# In[29]:
 
 
 qgrid_show(df[categorical_features])
 
 
-# In[28]:
+# In[31]:
 
 
 print(f'{df.shape[0]} valeurs au total dans le dataframe')
 for col in df[categorical_features]:
-    print(f {col} : {df[col].unique().shape[0]} valeurs uniques')
+    print(f'{col} : {df[col].unique().shape[0]} valeurs uniques')
 

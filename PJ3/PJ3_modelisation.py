@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ3 : IMDB dataset :  data clean and modelisation notebook 
 
-# In[7]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -38,7 +38,7 @@ sns.set()
 
 
 
-# In[8]:
+# In[2]:
 
 
 def qgrid_show(df):
@@ -47,7 +47,7 @@ def qgrid_show(df):
 
 # # Téléchargement et décompression des données
 
-# In[9]:
+# In[3]:
 
 
 PROXY_DEF = 'BNP'
@@ -73,7 +73,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[10]:
+# In[4]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -84,7 +84,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Chargement des données
 
-# In[11]:
+# In[5]:
 
 
 import pandas as pd
@@ -95,7 +95,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[48]:
+# In[6]:
 
 
 df = load_data()
@@ -103,7 +103,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[13]:
+# In[7]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -116,7 +116,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[14]:
+# In[8]:
 
 
 df.head()
@@ -124,7 +124,7 @@ df.head()
 
 # ### Vérification s'il y a des doublons
 
-# In[15]:
+# In[9]:
 
 
 df[df.duplicated()]
@@ -549,19 +549,34 @@ afficher_recos(1172, reco_matrix)
 afficher_recos(3820, reco_matrix)
 
 
+# In[14]:
+
+
+df.to_numpy()
+
+
+# In[31]:
+
+
+df.shape[0]
+
+
 # # Industralisation du modèle avec Pipeline
 
-# In[43]:
+# In[114]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+
 class DuplicatesRemover(BaseEstimator, TransformerMixin):
     def __init__(self):
         return None
     
-    def fit(self, df, y=None):      
+    def fit(self, df, labels=None):      
         return self
     
     def transform(self, df):
@@ -569,6 +584,61 @@ class DuplicatesRemover(BaseEstimator, TransformerMixin):
         df = df.reset_index(drop=True)
         
         return(df)
+    
+class NumericalFeaturesImputer(BaseEstimator, TransformerMixin):
+    def __init__(self, numerical_features=['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']):
+        self.numerical_features = numerical_features
+    
+    def fit(self, df, labels=None):      
+        return self
+    
+    def transform(self, df):
+        numerical_features_columns = df[self.numerical_features].columns
+        numerical_features_index = df[self.numerical_features].index
+        
+        all_columns = df.columns
+        all_indexes = df.index
+
+        imp = IterativeImputer(max_iter=10, random_state=0)
+
+        transformed_data = imp.fit_transform(df[self.numerical_features])  
+        
+        #code à tester :
+        df.drop(self.numerical_features)
+        df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
+        
+        df_target = pd.concat([df, df_numerical_features_impute], axis=1)
+        
+        return(df_target)
+        
+        ###
+        
+        df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
+        
+        return(df_numerical_features_imputed)
+    
+    
+class PipelineFinal(BaseEstimator, TransformerMixin):
+    def __init__(self, params=None):
+        print('init')
+        self.params = params
+    
+    def fit(self, df, labels=None):   
+        print('fit')
+        return self
+    
+    def predict(self, df, y=None):
+        print('predict')
+        return([i for i in range(df.shape[0])])
+    
+    def fit_predict(self, df, labels=None):
+        self.fit(df)
+        return self.predict(df)
+    
+    def transform(self, df):
+        print('transform')
+        return(df)
+        #return(df.to_numpy())
 
 
 # In[44]:
@@ -583,33 +653,56 @@ duplicates_remover = DuplicatesRemover()
 df = duplicates_remover.fit_transform(df)
 
 
-# In[46]:
-
-
-df = duplicates_remover.transform(df)
-
-
-# In[51]:
+# In[103]:
 
 
 df[df.duplicated()]
 
 
-# In[52]:
+# In[115]:
+
 
 
 preparation_and_recommendation_pipeline = Pipeline([
-    ('duplicates_remover', DuplicatesRemover),
+    ('duplicates_remover', DuplicatesRemover()),
+    ('numerical_features_imputer', NumericalFeaturesImputer()),
+    ('pipeline_final', PipelineFinal()),
 
 ])
 
-df2 = preparation_and_recommendation_pipeline.fit(df)
+
+'''
+preparation_and_recommendation_pipeline = Pipeline([
+    ('pipeline_final', PipelineFinal()),
+
+])
+'''
+
+df_numpy = df.to_numpy()
+
+#df2 = preparation_and_recommendation_pipeline.fit(df)
+#df2 = preparation_and_recommendation_pipeline.transform(df)
+#df2 = preparation_and_recommendation_pipeline.predict(df)
+
+df2 = preparation_and_recommendation_pipeline.fit_transform(df)
 
 
-# In[53]:
+# In[118]:
 
 
-type(df2)
+(df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
+
+
+# In[117]:
+
+
+(df2.count()/df2.shape[0]).sort_values(axis=0, ascending=False)
+
+
+# In[107]:
+
+
+df2
 
 
 # In[34]:
