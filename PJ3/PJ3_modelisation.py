@@ -139,7 +139,7 @@ df.drop_duplicates(inplace=True)
 df = df.reset_index(drop=True)
 
 
-# In[12]:
+# In[11]:
 
 
 df.info()
@@ -158,7 +158,7 @@ df.info()
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
 
-# In[13]:
+# In[12]:
 
 
 (df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
@@ -166,13 +166,16 @@ df.info()
 
 # ## Identification des typologies de features à traiter 
 
-# In[14]:
+# In[13]:
 
 
 numerical_features = ['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']
 
 # à 1 hot encoder, et à splitter avant si nécessaire  ('genres' et 'plot_keywords' doivent être splittées)
-categorical_features = ['country', 'director_name', 'genres', 'plot_keywords', 'color', 'content_rating']
+categorical_features = ['country', 'language', 'director_name', 'genres', 'plot_keywords', 'color', 'content_rating']
+#categorical_features = ['language', 'director_name', 'genres', 'plot_keywords', 'color', 'content_rating']
+
+## => Rajouter language (pour l'instant il n'est pas pris en compte)
 
 # à transformer en bag of words
 categorical_features_tobow = ['movie_title']  
@@ -188,7 +191,7 @@ features_notkept = ['aspect_ratio', 'movie_imdb_link']
 
 # ## Affichage des features qui seront splittées avant le 1hot encode :
 
-# In[15]:
+# In[14]:
 
 
 df[['genres', 'plot_keywords']]
@@ -196,7 +199,7 @@ df[['genres', 'plot_keywords']]
 
 # # Imputation des données manquantes
 
-# In[16]:
+# In[15]:
 
 
 # KNN imputer pas encore supporté par la version de sklearn que j'utilise :
@@ -207,19 +210,19 @@ df[['genres', 'plot_keywords']]
 #imputer.fit_transform(df[numerical_features])
 
 
-# In[17]:
+# In[16]:
 
 
 numerical_features_columns = df[numerical_features].columns
 
 
-# In[18]:
+# In[17]:
 
 
 numerical_features_index = df[numerical_features].index
 
 
-# In[19]:
+# In[18]:
 
 
 numerical_features_columns.shape
@@ -227,7 +230,7 @@ numerical_features_columns.shape
 
 # ## Imputation des données numériques par régression linéaire
 
-# In[20]:
+# In[19]:
 
 
 from sklearn.experimental import enable_iterative_imputer
@@ -237,7 +240,7 @@ imp = IterativeImputer(max_iter=10, random_state=0)
 transformed_data = imp.fit_transform(df[numerical_features])  
 
 
-# In[21]:
+# In[20]:
 
 
 df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
@@ -245,13 +248,13 @@ df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=nume
 
 # ### Visualisation de quelques résultats par comparaison avant/après :
 
-# In[22]:
+# In[21]:
 
 
 qgrid_show(df[numerical_features])
 
 
-# In[23]:
+# In[22]:
 
 
 qgrid_show(df_numerical_features_imputed)
@@ -259,7 +262,7 @@ qgrid_show(df_numerical_features_imputed)
 
 # ### Constat que toutes les valeurs sont maintenant renseignées :
 
-# In[24]:
+# In[23]:
 
 
 (df_numerical_features_imputed.count()/df_numerical_features_imputed.shape[0]).sort_values(axis=0, ascending=False)
@@ -268,7 +271,7 @@ qgrid_show(df_numerical_features_imputed)
 # ## Transformation des features de catégorie
 # ### Voir le §  Identification des typologies de features à traiter  ci-dessus pour une explication des différents cas de figure
 
-# In[25]:
+# In[24]:
 
 
 '''
@@ -322,38 +325,38 @@ def add_categorical_features_bow_and_1hot(df, df_target, categorical_features_to
     return(df_target)            
 
 
-# In[26]:
+# In[25]:
 
 
 df_imputed = add_categorical_features_1hot(df, df_numerical_features_imputed, categorical_features)
 df_imputed = add_categorical_features_merge_and_1hot(df, df_imputed, categorical_features_tomerge, 'actors_names' )
 
 
-# In[27]:
+# In[26]:
 
 
 df_imputed.shape
 
 
-# In[28]:
+# In[27]:
 
 
 df_imputed = add_categorical_features_bow_and_1hot(df, df_imputed, categorical_features_tobow)
 
 
-# In[29]:
+# In[28]:
 
 
 df_imputed.shape
 
 
-# In[30]:
+# In[29]:
 
 
 df_imputed.head(10)
 
 
-# In[31]:
+# In[30]:
 
 
 df_imputed.describe()
@@ -361,19 +364,19 @@ df_imputed.describe()
 
 # ## Comparaison avant/après de quelques valeurs 1hot encoded :
 
-# In[32]:
+# In[31]:
 
 
 df[['actor_1_name', 'actor_2_name', 'actor_3_name', 'actors_names', 'country', 'genres']].head(10)
 
 
-# In[33]:
+# In[32]:
 
 
 df_imputed[['actors_names_Johnny Depp', 'actors_names_Orlando Bloom', 'actors_names_Jack Davenport', 'actors_names_Joel David Moore', 'country_USA', 'country_UK', 'genres_Action', 'genres_Adventure']].head(10)
 
 
-# In[34]:
+# In[33]:
 
 
 df_imputed.loc[0]
@@ -399,7 +402,7 @@ df_imputed.loc[0]
 
 # # Réduction de dimensionalité
 
-# In[35]:
+# In[34]:
 
 
 from sklearn import decomposition
@@ -420,19 +423,19 @@ pca = decomposition.PCA(n_components=n_comp)
 pca.fit(X_scaled)
 
 
-# In[36]:
+# In[35]:
 
 
 X_reduced = pca.transform(X_scaled)
 
 
-# In[37]:
+# In[36]:
 
 
 X_reduced.shape
 
 
-# In[38]:
+# In[37]:
 
 
 from sklearn.neighbors import NearestNeighbors
@@ -441,50 +444,50 @@ nbrs = NearestNeighbors(n_neighbors=6, algorithm='ball_tree').fit(X_reduced)
 distances_matrix, reco_matrix = nbrs.kneighbors(X_reduced)
 
 
-# In[39]:
+# In[38]:
 
 
 distances_matrix.shape
 
 
-# In[40]:
+# In[39]:
 
 
 reco_matrix.shape
 
 
-# In[41]:
+# In[40]:
 
 
 reco_matrix
 
 
-# In[42]:
+# In[41]:
 
 
 print(f"{(df.iloc[0]['movie_title'])}")
 
 
-# In[57]:
+# In[42]:
 
 
 df[df['movie_title'].str.contains('Nixon')]
 
 
-# In[69]:
+# In[43]:
 
 
 pd.options.display.max_colwidth = 100
 df.loc[[3820]]
 
 
-# In[66]:
+# In[44]:
 
 
 df.loc[[1116]]
 
 
-# In[44]:
+# In[45]:
 
 
 def afficher_recos(film_index, reco_matrix):
@@ -495,75 +498,87 @@ def afficher_recos(film_index, reco_matrix):
         print(f"{df.loc[reco_matrix[film_index, nb_film+1]]['movie_title']} - imdb score : {df.loc[reco_matrix[film_index, nb_film+1]]['imdb_score']} - {df.loc[reco_matrix[film_index, nb_film+1]]['movie_imdb_link']}")
 
 
-# In[45]:
+# In[46]:
 
 
 afficher_recos(2703, reco_matrix)
 
 
-# In[46]:
+# In[47]:
 
 
 afficher_recos(0, reco_matrix)
 
 
-# In[47]:
+# In[48]:
 
 
 afficher_recos(3, reco_matrix)
 
 
-# In[48]:
+# In[49]:
 
 
 afficher_recos(4820, reco_matrix)
 
 
-# In[49]:
+# In[50]:
 
 
 afficher_recos(647, reco_matrix)
 
 
-# In[50]:
+# In[51]:
 
 
 afficher_recos(124, reco_matrix)
 
 
-# In[51]:
+# In[52]:
 
 
 afficher_recos(931, reco_matrix)
 
 
-# In[52]:
+# In[53]:
 
 
 afficher_recos(1172, reco_matrix)
 
 
-# In[53]:
+# In[54]:
 
 
 afficher_recos(3820, reco_matrix)
 
 
-# In[14]:
+# In[55]:
 
 
 df.to_numpy()
 
 
-# In[31]:
+# In[56]:
 
 
 df.shape[0]
 
 
+# In[57]:
+
+
+df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']]
+
+
+# In[58]:
+
+
+df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']].loc[4]
+
+
 # # Industralisation du modèle avec Pipeline
 
-# In[114]:
+# In[59]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -595,27 +610,125 @@ class NumericalFeaturesImputer(BaseEstimator, TransformerMixin):
     def transform(self, df):
         numerical_features_columns = df[self.numerical_features].columns
         numerical_features_index = df[self.numerical_features].index
-        
-        all_columns = df.columns
-        all_indexes = df.index
 
+        # Imputation par régression linéaire :
         imp = IterativeImputer(max_iter=10, random_state=0)
-
         transformed_data = imp.fit_transform(df[self.numerical_features])  
+
+        # Drop des features non imputées sur l'axe des colonnes
+        df.drop(labels=self.numerical_features, axis=1, inplace=True)
         
-        #code à tester :
-        df.drop(self.numerical_features)
+        # Recréation d'un dataframe avec les features imputées
         df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
         
-        df_target = pd.concat([df, df_numerical_features_impute], axis=1)
+        df = pd.concat([df, df_numerical_features_imputed], axis=1)
         
-        return(df_target)
+        return(df)
+
+'''
+Cette fonction fait un 1 hot encoding des features qui sont des catégories
+Elle fonctionne pour les 2 cas de figure suivant :
+- Les valeurs possibles de la colonne sont une chaîne de caractère (ex : cat1)
+- Les valeurs possibles de la colonne sont des chaînes de caractère avec des séparateurs (ex:  cat1|cat2|cat3)
+'''
+    
+def add_categorical_features_1hot(df, categorical_features_totransform):
+    #df.drop(labels=categorical_features_totransform, axis=1, inplace=True)
+    
+    for feature_totransform in categorical_features_totransform:
+        print(f'Adding 1hot Feature : {feature_totransform}')
         
-        ###
+        df_transformed = df[feature_totransform].str.get_dummies().add_prefix(feature_totransform +'_')   
+        df.drop(labels=feature_totransform, axis=1, inplace=True)
         
-        df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
+        df = pd.concat([df, df_transformed], axis=1)
         
-        return(df_numerical_features_imputed)
+    return(df)
+
+
+'''
+Cette fonction commence par merger les valeurs de toutes les colonnes comprises dans 
+categorical_features_tomerge_andtransform  dans une seule colonne temporaire
+Puis elle fait un 1 hot encode du résultat en appelant la fonction add_categorical_features_1hot
+
+df :  dataframe source, sur lequel on va droper les features avant transformation, et ajouter les features après transformation
+categorical_features_tomerge_andtransform : la liste des catégories à merger et à 1 hot encode,
+             par exemple: ['actor_1_name', 'actor_2_name', 'actor_3_name']
+merged_feature_name : le nom de la feature qui sera mergée
+    exemple si le nom est 'actors_names'
+    On pourra avoir les colonnes suivantes de créées:  'actors_names_Le nom du 1er acteur', 'actors_names_Le nom du 2eme acteur'
+          
+'''
+def add_categorical_features_merge_and_1hot(df, categorical_features_tomerge_andtransform, merged_feature_name):
+    #df.drop(labels=categorical_features_tomerge_andtransform, axis=1, inplace=True)
+    
+    cnt = 0
+    for feature_totransform in categorical_features_tomerge_andtransform:                            
+        if (cnt == 0):
+            df[merged_feature_name] = df[feature_totransform]
+        
+        else:
+            df[merged_feature_name] = df[merged_feature_name] + '|' + df[feature_totransform]
+            
+        cnt += 1
+    
+    df.drop(labels=categorical_features_tomerge_andtransform, axis=1, inplace=True)
+    
+    return(add_categorical_features_1hot(df, [merged_feature_name]))
+    
+
+        
+class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
+    def __init__(self, categorical_features_totransform =['country', 'language', 'director_name', 'genres', 'plot_keywords', 'color', 'content_rating']):
+        self.categorical_features_totransform = categorical_features_totransform
+    
+    def fit(self, df, labels=None):      
+        return self
+    
+    def transform(self, df):       
+        return(add_categorical_features_1hot(df, self.categorical_features_totransform))
+
+class CategoricalFeaturesMergerAnd1HotEncoder(BaseEstimator, TransformerMixin):
+    def __init__(self, categorical_features_tomerge_andtransform = ['actor_1_name', 'actor_2_name', 'actor_3_name'], merged_feature_name = 'actors_names'):
+        self.categorical_features_tomerge_andtransform = categorical_features_tomerge_andtransform
+        self.merged_feature_name = merged_feature_name
+    
+    def fit(self, df, labels=None):      
+        return self
+    
+    def transform(self, df):       
+        return(add_categorical_features_merge_and_1hot(df, self.categorical_features_tomerge_andtransform, self.merged_feature_name))   
+
+class CategoricalFeaturesBowEncoder(BaseEstimator, TransformerMixin):
+    def __init__(self, categorical_features_tobow = ['movie_title']):
+        self.categorical_features_tobow = categorical_features_tobow
+    
+    def fit(self, df, labels=None):      
+        return self
+    
+    def transform(self, df):       
+        for feature_tobow in self.categorical_features_tobow:
+            print(f'Adding bow Feature : {feature_tobow}')
+            print('1')
+            df_transformed = df[feature_tobow].str.lower().str.replace(r'[^\w\s]', '').str.get_dummies(sep=' ').add_prefix(feature_tobow +'_')
+            print('2')
+            df.drop(labels=feature_tobow, axis=1, inplace=True)
+            print('3')
+            df = pd.concat([df, df_transformed], axis=1)
+        
+        return(df)
+
+class FeaturesDroper(BaseEstimator, TransformerMixin):
+    def __init__(self, features_todrop = ['aspect_ratio', 'movie_imdb_link']):
+        self.features_todrop = features_todrop
+    
+    def fit(self, df, labels=None):      
+        return self
+    
+    def transform(self, df):       
+        df.drop(labels=self.features_todrop, axis=1, inplace=True)        
+        return(df)
+    
     
     
 class PipelineFinal(BaseEstimator, TransformerMixin):
@@ -640,36 +753,67 @@ class PipelineFinal(BaseEstimator, TransformerMixin):
         return(df)
         #return(df.to_numpy())
 
-
-# In[44]:
-
-
-duplicates_remover = DuplicatesRemover()
+        
 
 
-# In[50]:
+# In[60]:
 
 
-df = duplicates_remover.fit_transform(df)
+df
 
 
-# In[103]:
+# In[61]:
 
 
-df[df.duplicated()]
-
-
-# In[115]:
-
+from sklearn import decomposition
+from sklearn import preprocessing
+from sklearn.neighbors import NearestNeighbors
+#from sklearn.neighbors import KNeighborsTransformer
 
 
 preparation_and_recommendation_pipeline = Pipeline([
     ('duplicates_remover', DuplicatesRemover()),
     ('numerical_features_imputer', NumericalFeaturesImputer()),
+    ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
+    ('categoricalfeatures_merger_1hotencoder', CategoricalFeaturesMergerAnd1HotEncoder()),
+    ('categoricalfeatures_bow_1hotencoder', CategoricalFeaturesBowEncoder()),
+    ('features_droper', FeaturesDroper()),
     ('pipeline_final', PipelineFinal()),
 
 ])
+# Voir pourquoi il y a 6 colonnes de différence avec le code non industrialisé
 
+
+'''
+preparation_and_recommendation_pipeline = Pipeline([
+    ('duplicates_remover', DuplicatesRemover()),
+    ('numerical_features_imputer', NumericalFeaturesImputer()),
+    ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
+    ('categoricalfeatures_merger_1hotencoder', CategoricalFeaturesMergerAnd1HotEncoder()),
+    ('categoricalfeatures_bow_1hotencoder', CategoricalFeaturesBowEncoder()),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('pipeline_final', PipelineFinal()),
+
+])
+'''
+
+'''
+preparation_and_recommendation_pipeline = Pipeline([
+    ('duplicates_remover', DuplicatesRemover()),
+    ('numerical_features_imputer', NumericalFeaturesImputer()),
+    ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
+    ('categoricalfeatures_merger_1hotencoder', CategoricalFeaturesMergerAnd1HotEncoder()),
+    ('categoricalfeatures_bow_1hotencoder', CategoricalFeaturesBowEncoder()),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('pipeline_final', PipelineFinal()),
+    ('knn', KNeighborsTransformer(n_neighbors=6, algorithm='ball_tree'))
+nbrs = NearestNeighbors(n_neighbors=6, algorithm='ball_tree').fit(X_reduced)
+distances_matrix, reco_matrix = nbrs.kneighbors(X_reduced)
+
+])
+'''
 
 '''
 preparation_and_recommendation_pipeline = Pipeline([
@@ -687,25 +831,43 @@ df_numpy = df.to_numpy()
 df2 = preparation_and_recommendation_pipeline.fit_transform(df)
 
 
-# In[118]:
+# In[62]:
+
+
+df2.shape
+
+
+# In[63]:
+
+
+df2.shape
+
+
+# In[64]:
 
 
 (df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
 
 
-# In[117]:
+# In[65]:
 
 
 (df2.count()/df2.shape[0]).sort_values(axis=0, ascending=False)
 
 
-# In[107]:
+# In[66]:
+
+
+df.shape
+
+
+# In[67]:
 
 
 df2
 
 
-# In[34]:
+# In[68]:
 
 
 df = preparation_and_recommendation_pipeline.transform(df)
@@ -717,7 +879,7 @@ df = preparation_and_recommendation_pipeline.transform(df)
 
 # # Annexe : inutile, à effacer plus tard
 
-# In[54]:
+# In[69]:
 
 
 '''
@@ -746,7 +908,7 @@ for feature_totransform in categorical_features_tosplit_andtransform:
 '''
 
 
-# In[55]:
+# In[70]:
 
 
 '''
