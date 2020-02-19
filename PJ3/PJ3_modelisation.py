@@ -89,6 +89,7 @@ if (DOWNLOAD_DATA == True):
 
 import pandas as pd
 pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
 
 def load_data(data_path=DATA_PATH):
     csv_path = DATA_PATH_FILE
@@ -116,7 +117,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[8]:
+# In[76]:
 
 
 df.head()
@@ -132,14 +133,15 @@ df[df.duplicated()]
 
 # ### Suppression des doublons
 
-# In[10]:
+# In[87]:
 
 
 df.drop_duplicates(inplace=True)
-df = df.reset_index(drop=True)
+#df = df.reset_index(drop=True)
+df.reset_index(drop=True, inplace=True)
 
 
-# In[11]:
+# In[88]:
 
 
 df.info()
@@ -578,7 +580,7 @@ df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imd
 
 # # Industralisation du modèle avec Pipeline
 
-# In[59]:
+# In[42]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -587,16 +589,27 @@ from sklearn.pipeline import Pipeline
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
+from sklearn.neighbors import NearestNeighbors
+from sklearn.decomposition import NMF
+
+from sklearn import decomposition
+from sklearn import preprocessing
+#from sklearn.neighbors import KNeighborsTransformer
+
+
 class DuplicatesRemover(BaseEstimator, TransformerMixin):
     def __init__(self):
+        self.df_origin = None
         return None
     
     def fit(self, df, labels=None):      
         return self
     
     def transform(self, df):
+        self.df_origin = df
+        df = df.copy(deep=True)
         df.drop_duplicates(inplace=True)
-        df = df.reset_index(drop=True)
+        df.reset_index(drop=True, inplace=True)
         
         return(df)
     
@@ -708,12 +721,10 @@ class CategoricalFeaturesBowEncoder(BaseEstimator, TransformerMixin):
     
     def transform(self, df):       
         for feature_tobow in self.categorical_features_tobow:
-            print(f'Adding bow Feature : {feature_tobow}')
-            print('1')
+            print(f'Adding bow Feature. : {feature_tobow}')
+
             df_transformed = df[feature_tobow].str.lower().str.replace(r'[^\w\s]', '').str.get_dummies(sep=' ').add_prefix(feature_tobow +'_')
-            print('2')
             df.drop(labels=feature_tobow, axis=1, inplace=True)
-            print('3')
             df = pd.concat([df, df_transformed], axis=1)
         
         return(df)
@@ -726,10 +737,42 @@ class FeaturesDroper(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, df):       
-        df.drop(labels=self.features_todrop, axis=1, inplace=True)        
+        #df.drop(labels=self.features_todrop, axis=1, inplace=True)  
+        if (self.features_todrop != None):
+            for feature_to_drop in self.features_todrop:
+                df = df.loc[:,~df.columns.str.startswith(feature_to_drop)]
+            print('Features drop done')
+            
         return(df)
     
+class KNNTransform(BaseEstimator, TransformerMixin):
+    def __init__(self, knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree'}):
+        self.knn_params = knn_params
+        self.nbrs = None
+        self.labels = None
     
+    def fit(self, X, labels=None):      
+        print('KNN fit')
+        self.labels = labels
+        self.nbrs = NearestNeighbors(n_neighbors=self.knn_params['n_neighbors'], algorithm=self.knn_params['algorithm']).fit(X)
+        return self
+    
+    def predict(self, X, y=None): # Quand on appelle predict, transform est appelé avant automatiquement
+        print('KNN predict')
+
+        distances_matrix, knn_matrix = self.nbrs.kneighbors(X)
+
+        # Pour chaque film (chaque ligne comprise dans X), on calcule la prédiction du score ci-dessous
+        # On fait la moyenne des scores  (compris dans labels) de chaques films renvoyés par le KNN
+        scoring_predictions = (self.labels[knn_matrix[:,1]] + self.labels[knn_matrix[:,2]] + self.labels[knn_matrix[:,3]] + self.labels[knn_matrix[:,4]] + self.labels[knn_matrix[:,5]])/5
+        
+        return(scoring_predictions)
+    
+    def transform(self, X):   
+        print('KNN transform')
+        #distances_matrix, reco_matrix = nbrs.kneighbors(X)
+        return(self.nbrs.kneighbors(X))    
+
     
 class PipelineFinal(BaseEstimator, TransformerMixin):
     def __init__(self, params=None):
@@ -753,97 +796,218 @@ class PipelineFinal(BaseEstimator, TransformerMixin):
         return(df)
         #return(df.to_numpy())
 
-        
 
-
-# In[60]:
-
-
-df
-
-
-# In[61]:
-
-
-from sklearn import decomposition
-from sklearn import preprocessing
-from sklearn.neighbors import NearestNeighbors
-#from sklearn.neighbors import KNeighborsTransformer
-
-
-preparation_and_recommendation_pipeline = Pipeline([
+preparation_pipeline = Pipeline([
     ('duplicates_remover', DuplicatesRemover()),
     ('numerical_features_imputer', NumericalFeaturesImputer()),
     ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
     ('categoricalfeatures_merger_1hotencoder', CategoricalFeaturesMergerAnd1HotEncoder()),
     ('categoricalfeatures_bow_1hotencoder', CategoricalFeaturesBowEncoder()),
-    ('features_droper', FeaturesDroper()),
-    ('pipeline_final', PipelineFinal()),
+    ('features_droper', FeaturesDroper(features_todrop=['aspect_ratio', 'movie_imdb_link'])),
 
 ])
-# Voir pourquoi il y a 6 colonnes de différence avec le code non industrialisé
 
 
-'''
-preparation_and_recommendation_pipeline = Pipeline([
-    ('duplicates_remover', DuplicatesRemover()),
-    ('numerical_features_imputer', NumericalFeaturesImputer()),
-    ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
-    ('categoricalfeatures_merger_1hotencoder', CategoricalFeaturesMergerAnd1HotEncoder()),
-    ('categoricalfeatures_bow_1hotencoder', CategoricalFeaturesBowEncoder()),
+recommendation_pipeline = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
     ('standardscaler', preprocessing.StandardScaler()),
     ('pca', decomposition.PCA(n_components=200)),
-    ('pipeline_final', PipelineFinal()),
+    ('KNN', KNNTransform()),
+    #('pipeline_final', PipelineFinal()),
 
 ])
-'''
 
-'''
-preparation_and_recommendation_pipeline = Pipeline([
-    ('duplicates_remover', DuplicatesRemover()),
-    ('numerical_features_imputer', NumericalFeaturesImputer()),
-    ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
-    ('categoricalfeatures_merger_1hotencoder', CategoricalFeaturesMergerAnd1HotEncoder()),
-    ('categoricalfeatures_bow_1hotencoder', CategoricalFeaturesBowEncoder()),
+recommendation_pipeline_NMF = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
     ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=200)),
-    ('pipeline_final', PipelineFinal()),
-    ('knn', KNeighborsTransformer(n_neighbors=6, algorithm='ball_tree'))
-nbrs = NearestNeighbors(n_neighbors=6, algorithm='ball_tree').fit(X_reduced)
-distances_matrix, reco_matrix = nbrs.kneighbors(X_reduced)
+    ('NMF', NMF(n_components=200, init='random', random_state=0)),
+    ('KNN', KNNTransform()),
+    #('pipeline_final', PipelineFinal()),
 
 ])
-'''
-
-'''
-preparation_and_recommendation_pipeline = Pipeline([
-    ('pipeline_final', PipelineFinal()),
-
-])
-'''
-
-df_numpy = df.to_numpy()
-
-#df2 = preparation_and_recommendation_pipeline.fit(df)
-#df2 = preparation_and_recommendation_pipeline.transform(df)
-#df2 = preparation_and_recommendation_pipeline.predict(df)
-
-df2 = preparation_and_recommendation_pipeline.fit_transform(df)
 
 
-# In[62]:
+# In[9]:
 
 
-df2.shape
+df_encoded = preparation_pipeline.fit_transform(df)
 
 
-# In[63]:
+# In[10]:
 
 
-df2.shape
+# Récupération des étiquettes de scoring :
+
+# D'abord, dropper les duplicates pour que les index de df soient alignés avec ceux de df_encoded (qui a déjà fait l'objet d'un drop duplicates dans le pipeline)
+df.drop_duplicates(inplace=True)
+df.reset_index(drop=True, inplace=True)
+
+labels = df['imdb_score'].to_numpy()
 
 
-# In[64]:
+# In[37]:
+
+
+recommendation_pipeline.fit(df_encoded, labels)
+
+
+# In[38]:
+
+
+predictions = recommendation_pipeline.predict(df_encoded)
+
+
+# In[39]:
+
+
+from sklearn.metrics import mean_squared_error
+
+mse = mean_squared_error(labels, predictions)
+rmse = np.sqrt(mse)
+print(f"Erreur moyenne de prédiction de l'IMDB score: {rmse}")
+
+
+# ### Erreur moyenne de prédiction de l'IMDB score avec la variable de scoring dans le JDD : 1.0095843224821195 
+# ### Erreur moyenne de prédiction de l'IMDB score sans la variable de scoring dans le JDD : 1.0486754159658844
+# 
+
+# In[ ]:
+
+
+qgrid_show(df_encoded)
+
+
+# In[43]:
+
+
+recommendation_pipeline_NMF.fit(df_encoded, labels)
+
+
+# In[ ]:
+
+
+
+
+
+
+
+>>> model = NMF(n_components=2, init='random', random_state=0)
+>>> W = model.fit_transform(X)
+>>> H = model.components_
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[22]:
+
+
+# Pour afficher uniquement les recos pour certains films  (à utiliser pour l'API)
+#(distances_matrix, reco_matrix) = recommendation_pipeline.transform(df_encoded.loc[np.r_[0:5]])
+
+# Pour calculer les recos pour tous les films :
+(distances_matrix, reco_matrix) = recommendation_pipeline.transform(df_encoded)
+
+
+# In[ ]:
+
+
+
+
+
+# In[23]:
+
+
+reco_matrix
+
+
+# In[24]:
+
+
+df[df['movie_title'].str.contains('Vampire')]
+
+
+# In[25]:
+
+
+def afficher_recos(film_index, reco_matrix):
+    print(f"Film choisi : {(df.loc[film_index]['movie_title'])} - imdb score : {df.loc[film_index]['imdb_score']} - {df.loc[film_index]['movie_imdb_link']}")
+          
+    print(f"\nFilms recommandés : ")
+    for nb_film in range(5):
+        print(f"{df.loc[reco_matrix[film_index, nb_film+1]]['movie_title']} - imdb score : {df.loc[reco_matrix[film_index, nb_film+1]]['imdb_score']} - {df.loc[reco_matrix[film_index, nb_film+1]]['movie_imdb_link']}")
+
+
+# In[26]:
+
+
+df.shape
+
+
+# In[27]:
+
+
+afficher_recos(2703, reco_matrix)
+
+
+# In[28]:
+
+
+afficher_recos(0, reco_matrix)
+
+
+# In[29]:
+
+
+afficher_recos(3, reco_matrix)
+
+
+# In[30]:
+
+
+afficher_recos(4820, reco_matrix)
+
+
+# In[31]:
+
+
+afficher_recos(647, reco_matrix)
+
+
+# In[32]:
+
+
+afficher_recos(124, reco_matrix)
+
+
+# In[33]:
+
+
+afficher_recos(931, reco_matrix)
+
+
+# In[34]:
+
+
+afficher_recos(1172, reco_matrix)
+
+
+# In[35]:
+
+
+afficher_recos(3820, reco_matrix)
+
+
+# In[98]:
 
 
 (df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
