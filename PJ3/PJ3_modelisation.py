@@ -38,7 +38,7 @@ sns.set()
 
 
 
-# In[2]:
+# In[4]:
 
 
 def qgrid_show(df):
@@ -47,7 +47,7 @@ def qgrid_show(df):
 
 # # Téléchargement et décompression des données
 
-# In[3]:
+# In[5]:
 
 
 PROXY_DEF = 'BNP'
@@ -73,7 +73,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[4]:
+# In[6]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -84,7 +84,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Chargement des données
 
-# In[5]:
+# In[2]:
 
 
 import pandas as pd
@@ -96,7 +96,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[6]:
+# In[3]:
 
 
 df = load_data()
@@ -104,7 +104,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[7]:
+# In[4]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -117,7 +117,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[76]:
+# In[8]:
 
 
 df.head()
@@ -580,7 +580,7 @@ df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imd
 
 # # Industralisation du modèle avec Pipeline
 
-# In[42]:
+# In[5]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -596,6 +596,7 @@ from sklearn import decomposition
 from sklearn import preprocessing
 #from sklearn.neighbors import KNeighborsTransformer
 
+from sklearn.neighbors import NeighborhoodComponentsAnalysis
 
 class DuplicatesRemover(BaseEstimator, TransformerMixin):
     def __init__(self):
@@ -746,15 +747,16 @@ class FeaturesDroper(BaseEstimator, TransformerMixin):
         return(df)
     
 class KNNTransform(BaseEstimator, TransformerMixin):
-    def __init__(self, knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree'}):
+    def __init__(self, knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}):
         self.knn_params = knn_params
         self.nbrs = None
         self.labels = None
+        self.metric = None
     
     def fit(self, X, labels=None):      
         print('KNN fit')
         self.labels = labels
-        self.nbrs = NearestNeighbors(n_neighbors=self.knn_params['n_neighbors'], algorithm=self.knn_params['algorithm']).fit(X)
+        self.nbrs = NearestNeighbors(n_neighbors=self.knn_params['n_neighbors'], algorithm=self.knn_params['algorithm'], metric=self.knn_params['metric']).fit(X)
         return self
     
     def predict(self, X, y=None): # Quand on appelle predict, transform est appelé avant automatiquement
@@ -827,13 +829,13 @@ recommendation_pipeline_NMF = Pipeline([
 ])
 
 
-# In[9]:
+# In[6]:
 
 
 df_encoded = preparation_pipeline.fit_transform(df)
 
 
-# In[10]:
+# In[14]:
 
 
 # Récupération des étiquettes de scoring :
@@ -845,31 +847,197 @@ df.reset_index(drop=True, inplace=True)
 labels = df['imdb_score'].to_numpy()
 
 
-# In[37]:
+# In[12]:
 
 
 recommendation_pipeline.fit(df_encoded, labels)
 
 
-# In[38]:
+# In[13]:
 
 
 predictions = recommendation_pipeline.predict(df_encoded)
 
 
-# In[39]:
+# In[9]:
 
 
 from sklearn.metrics import mean_squared_error
 
-mse = mean_squared_error(labels, predictions)
-rmse = np.sqrt(mse)
-print(f"Erreur moyenne de prédiction de l'IMDB score: {rmse}")
+def print_rmse(labels, predictions):
+    mse = mean_squared_error(labels, predictions)
+    rmse = np.sqrt(mse)
+    print(f"Erreur moyenne de prédiction de l'IMDB score: {rmse}")
+
+print_rmse(labels, predictions)
 
 
 # ### Erreur moyenne de prédiction de l'IMDB score avec la variable de scoring dans le JDD : 1.0095843224821195 
 # ### Erreur moyenne de prédiction de l'IMDB score sans la variable de scoring dans le JDD : 1.0486754159658844
 # 
+
+# In[ ]:
+
+
+
+
+
+# In[30]:
+
+
+recommendation_pipeline = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+recommendation_pipeline.fit(df_encoded, labels)
+predictions = recommendation_pipeline.predict(df_encoded)
+
+
+# In[7]:
+
+
+print_rmse(labels, predictions)
+
+
+# ## With NCA instead of PCA
+
+# In[18]:
+
+
+#pd.cut(df_labels[0], bins=[1, 2, 3, 4,5,6,7,8,9,10], right=True)
+labels_discrete = pd.cut(df_labels[0], bins=range(1,10), right=True).astype(str).tolist()
+
+
+# In[35]:
+
+
+features_droper = FeaturesDroper(features_todrop=['imdb_score'])
+standardscaler = preprocessing.StandardScaler()
+
+X_res = features_droper.fit_transform(df_encoded)
+X_res = standardscaler.fit_transform(X_res)
+
+#hparam_n_components = [10, 50, 100, 200, 300, 500]
+hparam_n_components = [10, 50, 100, 200, 300, 500]
+
+for hparam in hparam_n_components:
+    nca = NeighborhoodComponentsAnalysis(random_state=42, n_components=hparam)
+    X_reduced = nca.fit_transform(X_res, labels_discrete)
+    KNN = KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})
+    KNN.fit(X_reduced, labels)
+    predictions = KNN.predict(X_reduced)
+    print('Avec n_components = ' + str(hparam))
+    print_rmse(labels, predictions)
+
+
+# In[36]:
+
+
+features_droper = FeaturesDroper(features_todrop=['imdb_score'])
+standardscaler = preprocessing.StandardScaler()
+
+X_res = features_droper.fit_transform(df_encoded)
+X_res = standardscaler.fit_transform(X_res)
+
+#hparam_n_components = [10, 50, 100, 200, 300, 500]
+hparam_n_components = [2, 5, 8, 9]
+
+for hparam in hparam_n_components:
+    nca = NeighborhoodComponentsAnalysis(random_state=42, n_components=hparam)
+    X_reduced = nca.fit_transform(X_res, labels_discrete)
+    KNN = KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})
+    KNN.fit(X_reduced, labels)
+    predictions = KNN.predict(X_reduced)
+    print('Avec n_components = ' + str(hparam))
+    print_rmse(labels, predictions)
+
+
+# ### Résultats
+# 
+# /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/discriminant_analysis.py:388: UserWarning: Variables are collinear.
+#   warnings.warn("Variables are collinear.")
+# 
+# Avec n_components = 2 
+# Erreur moyenne de prédiction de l'IMDB score: 0.3803446132258534
+# 
+# 
+# Avec n_components = 5 
+# Erreur moyenne de prédiction de l'IMDB score: 0.3309076607635139
+# 
+# Avec n_components = 8 
+# Erreur moyenne de prédiction de l'IMDB score: 0.3495230844373829
+# 
+# Avec n_components = 9 
+# Erreur moyenne de prédiction de l'IMDB score: 0.7302570164839567
+# 
+# Avec n_components = 10 
+# Erreur moyenne de prédiction de l'IMDB score: 0.7178573449279926
+# 
+# Avec n_components = 50 
+# Erreur moyenne de prédiction de l'IMDB score: 0.8670957628917407
+# 
+# Avec n_components = 100 
+# Erreur moyenne de prédiction de l'IMDB score: 0.935546695279086
+# 
+# Avec n_components = 200 
+# Erreur moyenne de prédiction de l'IMDB score: 0.9944914304719338
+# 
+# Avec n_components = 300 
+# Erreur moyenne de prédiction de l'IMDB score: 1.0142304399662543
+# 
+# Avec n_components = 500 
+# Erreur moyenne de prédiction de l'IMDB score: 1.0635176481446682
+# 
+
+# In[34]:
+
+
+recommendation_pipeline = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NeighborhoodComponentsAnalysis(random_state=42, n_components=200)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+recommendation_pipeline.fit(df_encoded, NCA__labels=labels_discrete, KNN__labels=labels)
+predictions = recommendation_pipeline.predict(df_encoded)
+
+
+# In[ ]:
+
+
+print_rmse(labels, predictions)
+
+
+# ### Tentative de KNN avec cosine distance
+
+# In[33]:
+
+
+recommendation_pipeline = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'cosine'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+recommendation_pipeline.fit(df_encoded, labels)
+predictions = recommendation_pipeline.predict(df_encoded)
+
+
+# In[36]:
+
+
+from sklearn import neighbors
+
+sorted(neighbors.VALID_METRICS['ball_tree'])
+
 
 # In[ ]:
 
