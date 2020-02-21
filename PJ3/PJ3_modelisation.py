@@ -38,7 +38,7 @@ sns.set()
 
 
 
-# In[4]:
+# In[2]:
 
 
 def qgrid_show(df):
@@ -47,7 +47,7 @@ def qgrid_show(df):
 
 # # Téléchargement et décompression des données
 
-# In[5]:
+# In[2]:
 
 
 PROXY_DEF = 'BNP'
@@ -73,7 +73,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[6]:
+# In[3]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -84,7 +84,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Chargement des données
 
-# In[2]:
+# In[4]:
 
 
 import pandas as pd
@@ -96,7 +96,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[3]:
+# In[5]:
 
 
 df = load_data()
@@ -104,7 +104,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[4]:
+# In[6]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -168,7 +168,7 @@ df.info()
 
 # ## Identification des typologies de features à traiter 
 
-# In[13]:
+# In[11]:
 
 
 numerical_features = ['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']
@@ -578,9 +578,15 @@ df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imd
 df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']].loc[4]
 
 
+# In[ ]:
+
+
+df 
+
+
 # # Industralisation du modèle avec Pipeline
 
-# In[5]:
+# In[7]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -829,13 +835,13 @@ recommendation_pipeline_NMF = Pipeline([
 ])
 
 
-# In[6]:
+# In[8]:
 
 
 df_encoded = preparation_pipeline.fit_transform(df)
 
 
-# In[14]:
+# In[9]:
 
 
 # Récupération des étiquettes de scoring :
@@ -847,13 +853,45 @@ df.reset_index(drop=True, inplace=True)
 labels = df['imdb_score'].to_numpy()
 
 
-# In[12]:
+# In[48]:
+
+
+from sklearn.preprocessing import MinMaxScaler
+
+'''
+This function returns a similarity score between 0 and 1, for each relevant column 
+between df_encoded.loc[index1] and df_encoded.loc[index2]
+
+Relevant column meaning that at least df_encoded.loc[index1][column] or df_encoded.loc[index2][column] is not 0
+Which means either film 1 or film 2 has the attribute
+'''
+def get_similarity_df(df_encoded, index1, index2):
+    # Transforming data so that values are between 0 and 1, positive
+    scaler = MinMaxScaler() 
+    array_scaled = scaler.fit_transform(df_encoded)
+    df_scaled  = pd.DataFrame(data=array_scaled , columns=df_encoded.columns, index=df_encoded.index)
+    
+    # This line of code allows not to keep 1hot columns that are both 0  (for example, both films NOT having word "the" is not relevant :  1hot features are to sparse to keep 0 values like that)
+    df_relevant_items = df_scaled[df_scaled.columns[(df_scaled.loc[index1] + df_scaled.loc[index2]) > 0]]
+    
+    # We substract from 1 because the higher the score, the higher the similarity
+    # 1 hot columns that have 0 value as a result mean that 1 and only 1 of the 2 films has the attribute
+    return(1 - ((df_relevant_items.loc[index1] - df_relevant_items.loc[index2]).abs())).sort_values(ascending=False)
+
+
+# In[60]:
+
+
+get_similarity_df(df_encoded, 500, 2000).sum()
+
+
+# In[61]:
 
 
 recommendation_pipeline.fit(df_encoded, labels)
 
 
-# In[13]:
+# In[62]:
 
 
 predictions = recommendation_pipeline.predict(df_encoded)
