@@ -47,7 +47,7 @@ def qgrid_show(df):
 
 # # Téléchargement et décompression des données
 
-# In[2]:
+# In[3]:
 
 
 PROXY_DEF = 'BNP'
@@ -73,7 +73,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[3]:
+# In[4]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -84,19 +84,20 @@ if (DOWNLOAD_DATA == True):
 
 # ## Chargement des données
 
-# In[4]:
+# In[5]:
 
 
 import pandas as pd
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', None)
+# Commented, because notebook would be too big and slow :
+pd.set_option('display.max_columns', 20)
+pd.set_option('display.max_rows', 50)
 
 def load_data(data_path=DATA_PATH):
     csv_path = DATA_PATH_FILE
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[5]:
+# In[6]:
 
 
 df = load_data()
@@ -104,7 +105,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[6]:
+# In[7]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -117,7 +118,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[8]:
+# In[23]:
 
 
 df.head()
@@ -125,7 +126,7 @@ df.head()
 
 # ### Vérification s'il y a des doublons
 
-# In[9]:
+# In[128]:
 
 
 df[df.duplicated()]
@@ -133,7 +134,7 @@ df[df.duplicated()]
 
 # ### Suppression des doublons
 
-# In[87]:
+# In[25]:
 
 
 df.drop_duplicates(inplace=True)
@@ -141,7 +142,7 @@ df.drop_duplicates(inplace=True)
 df.reset_index(drop=True, inplace=True)
 
 
-# In[88]:
+# In[26]:
 
 
 df.info()
@@ -160,7 +161,7 @@ df.info()
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
 
-# In[12]:
+# In[27]:
 
 
 (df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
@@ -168,7 +169,7 @@ df.info()
 
 # ## Identification des typologies de features à traiter 
 
-# In[11]:
+# In[28]:
 
 
 numerical_features = ['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']
@@ -193,15 +194,15 @@ features_notkept = ['aspect_ratio', 'movie_imdb_link']
 
 # ## Affichage des features qui seront splittées avant le 1hot encode :
 
-# In[14]:
+# In[30]:
 
 
-df[['genres', 'plot_keywords']]
+df[['genres', 'plot_keywords']].sample(10)
 
 
 # # Imputation des données manquantes
 
-# In[15]:
+# In[31]:
 
 
 # KNN imputer pas encore supporté par la version de sklearn que j'utilise :
@@ -212,19 +213,19 @@ df[['genres', 'plot_keywords']]
 #imputer.fit_transform(df[numerical_features])
 
 
-# In[16]:
+# In[32]:
 
 
 numerical_features_columns = df[numerical_features].columns
 
 
-# In[17]:
+# In[33]:
 
 
 numerical_features_index = df[numerical_features].index
 
 
-# In[18]:
+# In[34]:
 
 
 numerical_features_columns.shape
@@ -232,7 +233,7 @@ numerical_features_columns.shape
 
 # ## Imputation des données numériques par régression linéaire
 
-# In[19]:
+# In[35]:
 
 
 from sklearn.experimental import enable_iterative_imputer
@@ -242,7 +243,7 @@ imp = IterativeImputer(max_iter=10, random_state=0)
 transformed_data = imp.fit_transform(df[numerical_features])  
 
 
-# In[20]:
+# In[48]:
 
 
 df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
@@ -250,13 +251,13 @@ df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=nume
 
 # ### Visualisation de quelques résultats par comparaison avant/après :
 
-# In[21]:
+# In[ ]:
 
 
 qgrid_show(df[numerical_features])
 
 
-# In[22]:
+# In[ ]:
 
 
 qgrid_show(df_numerical_features_imputed)
@@ -264,7 +265,7 @@ qgrid_show(df_numerical_features_imputed)
 
 # ### Constat que toutes les valeurs sont maintenant renseignées :
 
-# In[23]:
+# In[40]:
 
 
 (df_numerical_features_imputed.count()/df_numerical_features_imputed.shape[0]).sort_values(axis=0, ascending=False)
@@ -273,7 +274,7 @@ qgrid_show(df_numerical_features_imputed)
 # ## Transformation des features de catégorie
 # ### Voir le §  Identification des typologies de features à traiter  ci-dessus pour une explication des différents cas de figure
 
-# In[24]:
+# In[41]:
 
 
 '''
@@ -327,58 +328,58 @@ def add_categorical_features_bow_and_1hot(df, df_target, categorical_features_to
     return(df_target)            
 
 
-# In[25]:
+# In[42]:
 
 
 df_imputed = add_categorical_features_1hot(df, df_numerical_features_imputed, categorical_features)
 df_imputed = add_categorical_features_merge_and_1hot(df, df_imputed, categorical_features_tomerge, 'actors_names' )
 
 
-# In[26]:
+# In[43]:
 
 
 df_imputed.shape
 
 
-# In[27]:
+# In[44]:
 
 
 df_imputed = add_categorical_features_bow_and_1hot(df, df_imputed, categorical_features_tobow)
 
 
-# In[28]:
+# In[45]:
 
 
 df_imputed.shape
 
 
-# In[29]:
+# In[51]:
 
 
 df_imputed.head(10)
 
 
-# In[30]:
+# In[ ]:
 
 
-df_imputed.describe()
+#df_imputed.describe()
 
 
 # ## Comparaison avant/après de quelques valeurs 1hot encoded :
 
-# In[31]:
+# In[53]:
 
 
 df[['actor_1_name', 'actor_2_name', 'actor_3_name', 'actors_names', 'country', 'genres']].head(10)
 
 
-# In[32]:
+# In[54]:
 
 
 df_imputed[['actors_names_Johnny Depp', 'actors_names_Orlando Bloom', 'actors_names_Jack Davenport', 'actors_names_Joel David Moore', 'country_USA', 'country_UK', 'genres_Action', 'genres_Adventure']].head(10)
 
 
-# In[33]:
+# In[55]:
 
 
 df_imputed.loc[0]
@@ -404,7 +405,7 @@ df_imputed.loc[0]
 
 # # Réduction de dimensionalité
 
-# In[34]:
+# In[56]:
 
 
 from sklearn import decomposition
@@ -425,19 +426,19 @@ pca = decomposition.PCA(n_components=n_comp)
 pca.fit(X_scaled)
 
 
-# In[35]:
+# In[57]:
 
 
 X_reduced = pca.transform(X_scaled)
 
 
-# In[36]:
+# In[58]:
 
 
 X_reduced.shape
 
 
-# In[37]:
+# In[59]:
 
 
 from sklearn.neighbors import NearestNeighbors
@@ -446,139 +447,162 @@ nbrs = NearestNeighbors(n_neighbors=6, algorithm='ball_tree').fit(X_reduced)
 distances_matrix, reco_matrix = nbrs.kneighbors(X_reduced)
 
 
-# In[38]:
+# In[60]:
 
 
 distances_matrix.shape
 
 
-# In[39]:
+# In[61]:
 
 
 reco_matrix.shape
 
 
-# In[40]:
+# In[62]:
 
 
 reco_matrix
 
 
-# In[41]:
+# In[63]:
 
 
 print(f"{(df.iloc[0]['movie_title'])}")
 
 
-# In[42]:
+# In[64]:
 
 
 df[df['movie_title'].str.contains('Nixon')]
 
 
-# In[43]:
+# In[65]:
 
 
 pd.options.display.max_colwidth = 100
 df.loc[[3820]]
 
 
-# In[44]:
+# In[66]:
 
 
 df.loc[[1116]]
 
 
-# In[45]:
+# In[8]:
 
 
-def afficher_recos(film_index, reco_matrix):
-    print(f"Film choisi : {(df.loc[film_index]['movie_title'])} - imdb score : {df.loc[film_index]['imdb_score']} - {df.loc[film_index]['movie_imdb_link']}")
+from sklearn.preprocessing import MinMaxScaler
+
+'''
+This function returns a similarity score between 0 and 1, for each relevant column 
+between df_encoded.loc[index1] and df_encoded.loc[index2]
+
+Relevant column meaning that at least df_encoded.loc[index1][column] or df_encoded.loc[index2][column] is not 0
+Which means either film 1 or film 2 has the attribute
+'''
+def get_similarity_df(df_encoded, index1, index2):
+    # Transforming data so that values are between 0 and 1, positive
+    scaler = MinMaxScaler() 
+    array_scaled = scaler.fit_transform(df_encoded)
+    df_scaled  = pd.DataFrame(data=array_scaled , columns=df_encoded.columns, index=df_encoded.index)
+    
+    # This line of code allows not to keep 1hot columns that are both 0  (for example, both films NOT having word "the" is not relevant :  1hot features are to sparse to keep 0 values like that)
+    df_relevant_items = df_scaled[df_scaled.columns[(df_scaled.loc[index1] + df_scaled.loc[index2]) > 0]]
+    
+    # We substract from 1 because the higher the score, the higher the similarity
+    # 1 hot columns that have 0 value as a result mean that 1 and only 1 of the 2 films has the attribute
+    # (Those are differenciating attributes, as opposed to attributes that are both 0))
+    return(1 - ((df_relevant_items.loc[index1] - df_relevant_items.loc[index2]).abs())).sort_values(ascending=False)
+
+def get_similarity_df_scaled_input(df_scaled, index1, index2):
+    # Transforming data so that values are between 0 and 1, positive
+    # This function assumes that below code must be run before call
+    '''
+    scaler = MinMaxScaler() 
+    array_scaled = scaler.fit_transform(df_encoded)
+    df_scaled  = pd.DataFrame(data=array_scaled , columns=df_encoded.columns, index=df_encoded.index)
+    '''
+    
+    # This line of code allows not to keep 1hot columns that are both 0  (for example, both films NOT having word "the" is not relevant :  1hot features are to sparse to keep 0 values like that)
+    df_relevant_items = df_scaled[df_scaled.columns[(df_scaled.loc[index1] + df_scaled.loc[index2]) > 0]]
+    
+    # We substract from 1 because the higher the score, the higher the similarity
+    # 1 hot columns that have 0 value as a result mean that 1 and only 1 of the 2 films has the attribute
+    # (Those are differenciating attributes, as opposed to attributes that are both 0))
+    return(1 - ((df_relevant_items.loc[index1] - df_relevant_items.loc[index2]).abs())).sort_values(ascending=False)
+
+
+# In[9]:
+
+
+def afficher_recos(film_index, reco_matrix, df_encoded, with_similarity_display=False):
+    print(f"> Film choisi : {(df.loc[film_index]['movie_title'])} - imdb score : {df.loc[film_index]['imdb_score']} - {df.loc[film_index]['movie_imdb_link']}")
           
     print(f"\nFilms recommandés : ")
     for nb_film in range(5):
         print(f"{df.loc[reco_matrix[film_index, nb_film+1]]['movie_title']} - imdb score : {df.loc[reco_matrix[film_index, nb_film+1]]['imdb_score']} - {df.loc[reco_matrix[film_index, nb_film+1]]['movie_imdb_link']}")
+        if (with_similarity_display == True):
+            print(f'ID film recommandé = {reco_matrix[film_index, nb_film + 1]}')
+            print('\nTableau de similarités (1 = point commun catégoriel.  0 = élément catégoriel différenciant)')
+            print(get_similarity_df(df_encoded, film_index, reco_matrix[film_index, nb_film + 1] ))
+            print('\n')
+              
+    print("\n")
 
 
-# In[46]:
+# In[10]:
 
 
-afficher_recos(2703, reco_matrix)
+def afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=False, films_temoins_indexes=[2703, 0, 3, 4820, 647, 124, 931, 1172, 3820]):
+    for film_temoin_index in films_temoins_indexes:
+        afficher_recos(film_temoin_index, reco_matrix, df_encoded, with_similarity_display=with_similarity_display)
 
 
-# In[47]:
+# In[135]:
 
 
-afficher_recos(0, reco_matrix)
+df.loc[2703]['country']
 
 
-# In[48]:
+# In[137]:
 
 
-afficher_recos(3, reco_matrix)
+afficher_recos_films(reco_matrix, df_encoded)
 
 
-# In[49]:
+# In[140]:
 
 
-afficher_recos(4820, reco_matrix)
+afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 
 
-# In[50]:
-
-
-afficher_recos(647, reco_matrix)
-
-
-# In[51]:
-
-
-afficher_recos(124, reco_matrix)
-
-
-# In[52]:
-
-
-afficher_recos(931, reco_matrix)
-
-
-# In[53]:
-
-
-afficher_recos(1172, reco_matrix)
-
-
-# In[54]:
-
-
-afficher_recos(3820, reco_matrix)
-
-
-# In[55]:
+# In[77]:
 
 
 df.to_numpy()
 
 
-# In[56]:
+# In[78]:
 
 
 df.shape[0]
 
 
-# In[57]:
+# In[79]:
 
 
 df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']]
 
 
-# In[58]:
+# In[80]:
 
 
 df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']].loc[4]
 
 
-# In[ ]:
+# In[81]:
 
 
 df 
@@ -586,7 +610,7 @@ df
 
 # # Industralisation du modèle avec Pipeline
 
-# In[7]:
+# In[11]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -752,6 +776,12 @@ class FeaturesDroper(BaseEstimator, TransformerMixin):
             
         return(df)
     
+'''
+This function predicts imdb_score using KNN technique
+
+
+
+'''
 class KNNTransform(BaseEstimator, TransformerMixin):
     def __init__(self, knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}):
         self.knn_params = knn_params
@@ -759,8 +789,11 @@ class KNNTransform(BaseEstimator, TransformerMixin):
         self.labels = None
         self.metric = None
     
-    def fit(self, X, labels=None):      
+    def fit(self, X, labels=None, df_encoded=None):  
+        # df_encoded sert pour la classe KNNTransform_predict_similarity
+        # df_encoded est le df 1hot encoded numérique après les étapes de transformation
         print('KNN fit')
+        self.df_encoded = df_encoded
         self.labels = labels
         self.nbrs = NearestNeighbors(n_neighbors=self.knn_params['n_neighbors'], algorithm=self.knn_params['algorithm'], metric=self.knn_params['metric']).fit(X)
         return self
@@ -781,6 +814,82 @@ class KNNTransform(BaseEstimator, TransformerMixin):
         #distances_matrix, reco_matrix = nbrs.kneighbors(X)
         return(self.nbrs.kneighbors(X))    
 
+    
+'''
+Cette fonction permet de fournir un score de similarité moyen entre chaque prédiction et le film d'origine
+
+Elle est beaucoup trop lente, il faudrait l'optimiser :(
+De plus elle ne fonctionne que si on passe à predict le même nombre de lignes qu'on a passé à fit
+
+On peut calculer cette similarité en faisant un apply sur 2 variables:  
+en appelant la fonction get_similarity_df(df_encoded, index1, index2).  
+Pour ça, on passe df_encoded à la classe KNNTransform
+
+Le paramètre devra être passé comme ceci:
+recommendation_pipeline_PCA_KNN.fit(df_encoded, labels, KNN__df_encoded = df_encoded)
+'''
+    
+class KNNTransform_predict_similarity(KNNTransform):
+    def predict(self, X, y=None): # Quand on appelle predict, transform est appelé avant automatiquement
+        print('KNN predict')
+
+        distances_matrix, knn_matrix = self.nbrs.kneighbors(X)
+
+        scoring_predictions = []
+        
+        scaler = MinMaxScaler() 
+        array_scaled = scaler.fit_transform(self.df_encoded)
+        df_scaled  = pd.DataFrame(data=array_scaled , columns=self.df_encoded.columns, index=self.df_encoded.index)
+        
+        for i in range(0, X.shape[0]):
+            scoring_1 = get_similarity_df(df_scaled, knn_matrix[i, 0], knn_matrix[i, 1]).sum()
+            scoring_2 = get_similarity_df(df_scaled, knn_matrix[i, 0], knn_matrix[i, 2]).sum()
+            scoring_3 = get_similarity_df(df_scaled, knn_matrix[i, 0], knn_matrix[i, 3]).sum()
+            scoring_4 = get_similarity_df(df_scaled, knn_matrix[i, 0], knn_matrix[i, 4]).sum()
+            scoring_5 = get_similarity_df(df_scaled, knn_matrix[i, 0], knn_matrix[i, 5]).sum()
+                
+            scoring_predictions.append((scoring_1 + scoring_2 + scoring_3 + scoring_4 + scoring_5) / 5)
+            
+        '''
+        df_knn_matrix = pd.DataFrame(data=knn_matrix)
+        
+        df_knn_matrix['similarity_1_score'] = df[[0, 1]].apply(segmentMatch, axis=1)
+        
+        # Pour chaque film (chaque ligne comprise dans X), on calcule la prédiction du score ci-dessous
+        # On fait la moyenne des scores  (compris dans labels) de chaques films renvoyés par le KNN
+        scoring_predictions = (self.labels[knn_matrix[:,1]] + self.labels[knn_matrix[:,2]] + self.labels[knn_matrix[:,3]] + self.labels[knn_matrix[:,4]] + self.labels[knn_matrix[:,5]])/5
+        '''
+        
+        return(scoring_predictions)
+    
+'''
+This function wraps NCA transformer. What it does more, is that it generates discretized categorical labels
+from numerical score labels that are passed as input.
+Labels are mandatory in order to use NCA transformer.
+'''    
+    
+class NCATransform(BaseEstimator, TransformerMixin):
+    def __init__(self, nca_params =  {'random_state':42, 'n_components':200 }):
+        self.nca_params = nca_params
+        self.nca = None
+
+    def fit(self, X, labels=None):      
+        print('NCA fit')
+        self.labels = labels
+
+        # Discretize labels for the need of NCA algorithm :
+        df_labels =  pd.DataFrame(data=labels)
+        self.labels_discrete = pd.cut(df_labels[0], bins=range(1,10), right=True).astype(str).tolist()
+        
+        self.nca = NeighborhoodComponentsAnalysis(random_state=self.nca_params['random_state'], n_components=self.nca_params['n_components'])
+        self.nca.fit(X, self.labels_discrete)
+            
+        return self
+ 
+    def transform(self, X):   
+        print('NCA transform')
+        return(self.nca.transform(X))    
+    
     
 class PipelineFinal(BaseEstimator, TransformerMixin):
     def __init__(self, params=None):
@@ -816,7 +925,7 @@ preparation_pipeline = Pipeline([
 ])
 
 
-recommendation_pipeline = Pipeline([
+recommendation_pipeline_PCA_KNN = Pipeline([
     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
     ('standardscaler', preprocessing.StandardScaler()),
     ('pca', decomposition.PCA(n_components=200)),
@@ -824,6 +933,16 @@ recommendation_pipeline = Pipeline([
     #('pipeline_final', PipelineFinal()),
 
 ])
+
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
 
 recommendation_pipeline_NMF = Pipeline([
     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
@@ -835,13 +954,7 @@ recommendation_pipeline_NMF = Pipeline([
 ])
 
 
-# In[8]:
-
-
-df_encoded = preparation_pipeline.fit_transform(df)
-
-
-# In[9]:
+# In[12]:
 
 
 # Récupération des étiquettes de scoring :
@@ -853,51 +966,13 @@ df.reset_index(drop=True, inplace=True)
 labels = df['imdb_score'].to_numpy()
 
 
-# In[48]:
+# In[15]:
 
 
-from sklearn.preprocessing import MinMaxScaler
-
-'''
-This function returns a similarity score between 0 and 1, for each relevant column 
-between df_encoded.loc[index1] and df_encoded.loc[index2]
-
-Relevant column meaning that at least df_encoded.loc[index1][column] or df_encoded.loc[index2][column] is not 0
-Which means either film 1 or film 2 has the attribute
-'''
-def get_similarity_df(df_encoded, index1, index2):
-    # Transforming data so that values are between 0 and 1, positive
-    scaler = MinMaxScaler() 
-    array_scaled = scaler.fit_transform(df_encoded)
-    df_scaled  = pd.DataFrame(data=array_scaled , columns=df_encoded.columns, index=df_encoded.index)
-    
-    # This line of code allows not to keep 1hot columns that are both 0  (for example, both films NOT having word "the" is not relevant :  1hot features are to sparse to keep 0 values like that)
-    df_relevant_items = df_scaled[df_scaled.columns[(df_scaled.loc[index1] + df_scaled.loc[index2]) > 0]]
-    
-    # We substract from 1 because the higher the score, the higher the similarity
-    # 1 hot columns that have 0 value as a result mean that 1 and only 1 of the 2 films has the attribute
-    return(1 - ((df_relevant_items.loc[index1] - df_relevant_items.loc[index2]).abs())).sort_values(ascending=False)
+df_encoded = preparation_pipeline.fit_transform(df)
 
 
-# In[60]:
-
-
-get_similarity_df(df_encoded, 500, 2000).sum()
-
-
-# In[61]:
-
-
-recommendation_pipeline.fit(df_encoded, labels)
-
-
-# In[62]:
-
-
-predictions = recommendation_pipeline.predict(df_encoded)
-
-
-# In[9]:
+# In[13]:
 
 
 from sklearn.metrics import mean_squared_error
@@ -907,23 +982,33 @@ def print_rmse(labels, predictions):
     rmse = np.sqrt(mse)
     print(f"Erreur moyenne de prédiction de l'IMDB score: {rmse}")
 
-print_rmse(labels, predictions)
+
+# ## Tests avec PCA_KNN :
+
+# In[184]:
 
 
-# ### Erreur moyenne de prédiction de l'IMDB score avec la variable de scoring dans le JDD : 1.0095843224821195 
-# ### Erreur moyenne de prédiction de l'IMDB score sans la variable de scoring dans le JDD : 1.0486754159658844
-# 
+recommendation_pipeline_PCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('KNN', KNNTransform_predict_similarity(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
 
-# In[ ]:
-
-
-
-
-
-# In[30]:
+recommendation_pipeline_PCA_KNN.fit(df_encoded, labels, KNN__df_encoded = df_encoded)
 
 
-recommendation_pipeline = Pipeline([
+# In[188]:
+
+
+# recommendation_pipeline_PCA_KNN.predict(df_encoded)  # TROP LENT :(
+
+
+# In[174]:
+
+
+recommendation_pipeline_PCA_KNN = Pipeline([
     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
     ('standardscaler', preprocessing.StandardScaler()),
     ('pca', decomposition.PCA(n_components=200)),
@@ -931,70 +1016,39 @@ recommendation_pipeline = Pipeline([
     #('pipeline_final', PipelineFinal()),
 ])
 
-recommendation_pipeline.fit(df_encoded, labels)
-predictions = recommendation_pipeline.predict(df_encoded)
+recommendation_pipeline_PCA_KNN.fit(df_encoded, labels)
+predictions = recommendation_pipeline_PCA_KNN.predict(df_encoded)
 
 
-# In[7]:
+# In[ ]:
 
 
 print_rmse(labels, predictions)
 
 
-# ## With NCA instead of PCA
+# ### Résultat de tests effectués avec recommendation_pipeline_PCA_KNN, et n_components à 200 :
+#  #### Erreur moyenne de prédiction de l'IMDB score avec la variable de scoring dans le JDD : 1.0095843224821195 
+#  #### Erreur moyenne de prédiction de l'IMDB score sans la variable de scoring dans le JDD : 1.0486754159658844
+# 
 
-# In[18]:
+# ## Tests avec NCA_KNN :
 
-
-#pd.cut(df_labels[0], bins=[1, 2, 3, 4,5,6,7,8,9,10], right=True)
-labels_discrete = pd.cut(df_labels[0], bins=range(1,10), right=True).astype(str).tolist()
-
-
-# In[35]:
+# In[154]:
 
 
-features_droper = FeaturesDroper(features_todrop=['imdb_score'])
-standardscaler = preprocessing.StandardScaler()
-
-X_res = features_droper.fit_transform(df_encoded)
-X_res = standardscaler.fit_transform(X_res)
-
-#hparam_n_components = [10, 50, 100, 200, 300, 500]
-hparam_n_components = [10, 50, 100, 200, 300, 500]
-
-for hparam in hparam_n_components:
-    nca = NeighborhoodComponentsAnalysis(random_state=42, n_components=hparam)
-    X_reduced = nca.fit_transform(X_res, labels_discrete)
-    KNN = KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})
-    KNN.fit(X_reduced, labels)
-    predictions = KNN.predict(X_reduced)
-    print('Avec n_components = ' + str(hparam))
-    print_rmse(labels, predictions)
+recommendation_pipeline_NCA_KNN.fit(df_encoded, labels)
 
 
-# In[36]:
+# In[158]:
 
 
-features_droper = FeaturesDroper(features_todrop=['imdb_score'])
-standardscaler = preprocessing.StandardScaler()
+predictions = recommendation_pipeline_NCA_KNN.predict(df_encoded)
 
-X_res = features_droper.fit_transform(df_encoded)
-X_res = standardscaler.fit_transform(X_res)
-
-#hparam_n_components = [10, 50, 100, 200, 300, 500]
-hparam_n_components = [2, 5, 8, 9]
-
-for hparam in hparam_n_components:
-    nca = NeighborhoodComponentsAnalysis(random_state=42, n_components=hparam)
-    X_reduced = nca.fit_transform(X_res, labels_discrete)
-    KNN = KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})
-    KNN.fit(X_reduced, labels)
-    predictions = KNN.predict(X_reduced)
-    print('Avec n_components = ' + str(hparam))
-    print_rmse(labels, predictions)
+print('Avec n_components = 200 :')
+print_rmse(labels, predictions)
 
 
-# ### Résultats
+# ### Résultats obtenus pour recommendation_pipeline_NCA_KNN avec différentes valeurs de n_components :
 # 
 # /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/discriminant_analysis.py:388: UserWarning: Variables are collinear.
 #   warnings.warn("Variables are collinear.")
@@ -1031,30 +1085,192 @@ for hparam in hparam_n_components:
 # Erreur moyenne de prédiction de l'IMDB score: 1.0635176481446682
 # 
 
-# In[34]:
+# In[159]:
 
 
-recommendation_pipeline = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('NCA', NeighborhoodComponentsAnalysis(random_state=42, n_components=200)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
+distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.transform(df_encoded)
 
-recommendation_pipeline.fit(df_encoded, NCA__labels=labels_discrete, KNN__labels=labels)
-predictions = recommendation_pipeline.predict(df_encoded)
 
+# ### Affichage de recommendations pour NCA_KNN avec n_components 200 :
+
+# In[161]:
+
+
+afficher_recos_films(reco_matrix, df_encoded)
+
+
+# ### => Les résultats semblent meilleurs avec NCA qu'avec PCA :
+# ### Par exemple avec le 6ème sens on obtient plus de films avec le thème de la mort et les enfants
+# ### Globalement les imdb score obtenus sont meilleurs  (erreur moyenne 0.99 contre 1.048,  confirmé par un examen visuel)
 
 # In[ ]:
 
 
-print_rmse(labels, predictions)
+afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
+
+
+# Affichage de recommendations pour NCA_KNN avec n_components 200 :
+
+# In[165]:
+
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':5 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.fit_transform(df_encoded, labels)
+
+
+# In[166]:
+
+
+afficher_recos_films(reco_matrix, df_encoded)
+
+
+# ### => Les résultats sont clairement moins bons avec NCA components à 5  suivi de KNN : les imdb scores sont meilleurs mais les catégories sont moins bien capturées
+# ### => Pourtant, l'erreur de prédiction de l'imdb score n'était que de 0.33 avec NBCA components = 5,  soit beaucoup moins qu'avec components = 200  :  cela montre que la métrique de prédiction de l'imdb score n'est pas parfaite
+
+# In[167]:
+
+
+afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
+
+
+# 
+# ## Test de différents paramètres avec NCA + KNN
+
+# In[22]:
+
+
+#from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+'''
+        'features_droper__features_todrop':  [None,
+                                              ['imdb_score'],
+                                              ['imdb_score'],
+                                              ['imdb_score', 'actor_1_facebook_likes','actor_2_facebook_likes', 'actor_3_facebook_likes', 'num_user_for_reviews', 'num_critic_for_reviews', 'num_voted_users']
+                                              ['imdb_score'],
+                                              ['imdb_score'],
+                                              ['imdb_score'],
+                                              ['imdb_score'],
+                                              
+                                              
+        ],
+'''
+
+
+'''
+param_grid = {
+        'features_droper__features_todrop':  [#None,
+                                              ['imdb_score'],
+                                              ['imdb_score', 'actor_1_facebook_likes','actor_2_facebook_likes', 'actor_3_facebook_likes', 'num_user_for_reviews', 'num_critic_for_reviews', 'num_voted_users']                                              
+        ],
+    
+        'NCA__nca_params': [{'random_state':42, 'n_components':50 }, {'random_state':42, 'n_components':100 }, 
+                            {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }
+        ],
+    
+        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+                            {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'euclidean'}, 
+                            {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'jaccard'}, 
+                            {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'mahalanobis'}, 
+                            {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'}, 
+                            
+                            {'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'minkowski'},
+                            {'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'manhattan'},
+                            
+                            {'n_neighbors':6, 'algorithm':'brute', 'metric':'minkowski'},
+        ],
+    }
+    
+'''
+# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+
+param_grid = {
+        'features_droper__features_todrop':  [#None,
+                                              ['imdb_score'],
+                                              ['imdb_score', 'actor_1_facebook_likes','actor_2_facebook_likes', 'actor_3_facebook_likes', 'num_user_for_reviews', 'num_critic_for_reviews', 'num_voted_users']                                              
+        ],
+    
+        'NCA__nca_params': [{'random_state':42, 'n_components':50 }, {'random_state':42, 'n_components':100 }, 
+                            {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }
+        ],
+    
+        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'manhattan'},
+                            {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'}, 
+                            {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+                            {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'euclidean'}, 
+                            {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'jaccard'}, 
+                            #{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'mahalanobis'}, 
+                            {'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'minkowski'},
+                            {'n_neighbors':6, 'algorithm':'brute', 'metric':'minkowski'},
+        ],
+    }
+
+grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid,scoring='neg_mean_squared_error', cv=2, verbose=2, error_score=np.nan)
+grid_search.fit(df_encoded, labels)
+
+
+# In[23]:
+
+
+grid_search.cv_results_
+
+
+# In[31]:
+
+
+grid_search.best_estimator_
+
+
+# ### Comme meilleur estimateur on retiendra donc : NCA avec 150 composants,  KNN avec algorithme kd_tree et distance manhattan
+
+# In[26]:
+
+
+df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+
+
+# In[32]:
+
+
+qgrid_show(df_grid_search_results)
+
+
+# In[28]:
+
+
+df_grid_search_results.to_csv('grid_search_results.csv')
+
+
+# In[30]:
+
+
+import pickle
+
+SAVE_GRID_RESULTS = False
+
+if (SAVE_GRID_RESULTS == True):
+    with open('grid_search_results.pickle', 'wb') as f:
+        pickle.dump(grid_search.cv_results_, f, pickle.HIGHEST_PROTOCOL)
 
 
 # ### Tentative de KNN avec cosine distance
 
-# In[33]:
+# In[ ]:
 
 
 recommendation_pipeline = Pipeline([
@@ -1069,21 +1285,15 @@ recommendation_pipeline.fit(df_encoded, labels)
 predictions = recommendation_pipeline.predict(df_encoded)
 
 
-# In[36]:
+# In[197]:
 
 
 from sklearn import neighbors
 
-sorted(neighbors.VALID_METRICS['ball_tree'])
+sorted(neighbors.VALID_METRICS['brute'])
 
 
 # In[ ]:
-
-
-qgrid_show(df_encoded)
-
-
-# In[43]:
 
 
 recommendation_pipeline_NMF.fit(df_encoded, labels)
@@ -1114,7 +1324,7 @@ recommendation_pipeline_NMF.fit(df_encoded, labels)
 
 
 
-# In[22]:
+# In[ ]:
 
 
 # Pour afficher uniquement les recos pour certains films  (à utiliser pour l'API)
@@ -1130,117 +1340,16 @@ recommendation_pipeline_NMF.fit(df_encoded, labels)
 
 
 
-# In[23]:
+# In[ ]:
 
 
 reco_matrix
 
 
-# In[24]:
+# In[ ]:
 
 
 df[df['movie_title'].str.contains('Vampire')]
-
-
-# In[25]:
-
-
-def afficher_recos(film_index, reco_matrix):
-    print(f"Film choisi : {(df.loc[film_index]['movie_title'])} - imdb score : {df.loc[film_index]['imdb_score']} - {df.loc[film_index]['movie_imdb_link']}")
-          
-    print(f"\nFilms recommandés : ")
-    for nb_film in range(5):
-        print(f"{df.loc[reco_matrix[film_index, nb_film+1]]['movie_title']} - imdb score : {df.loc[reco_matrix[film_index, nb_film+1]]['imdb_score']} - {df.loc[reco_matrix[film_index, nb_film+1]]['movie_imdb_link']}")
-
-
-# In[26]:
-
-
-df.shape
-
-
-# In[27]:
-
-
-afficher_recos(2703, reco_matrix)
-
-
-# In[28]:
-
-
-afficher_recos(0, reco_matrix)
-
-
-# In[29]:
-
-
-afficher_recos(3, reco_matrix)
-
-
-# In[30]:
-
-
-afficher_recos(4820, reco_matrix)
-
-
-# In[31]:
-
-
-afficher_recos(647, reco_matrix)
-
-
-# In[32]:
-
-
-afficher_recos(124, reco_matrix)
-
-
-# In[33]:
-
-
-afficher_recos(931, reco_matrix)
-
-
-# In[34]:
-
-
-afficher_recos(1172, reco_matrix)
-
-
-# In[35]:
-
-
-afficher_recos(3820, reco_matrix)
-
-
-# In[98]:
-
-
-(df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
-
-
-# In[65]:
-
-
-(df2.count()/df2.shape[0]).sort_values(axis=0, ascending=False)
-
-
-# In[66]:
-
-
-df.shape
-
-
-# In[67]:
-
-
-df2
-
-
-# In[68]:
-
-
-df = preparation_and_recommendation_pipeline.transform(df)
 
 
 # # Features à transformer / ajouter
@@ -1249,7 +1358,7 @@ df = preparation_and_recommendation_pipeline.transform(df)
 
 # # Annexe : inutile, à effacer plus tard
 
-# In[69]:
+# In[ ]:
 
 
 '''
@@ -1278,7 +1387,7 @@ for feature_totransform in categorical_features_tosplit_andtransform:
 '''
 
 
-# In[70]:
+# In[ ]:
 
 
 '''
@@ -1291,4 +1400,58 @@ for feature_totransform in categorical_features_tosplit_andtransform:
             for feature_name in features_list:
                 df_transformed.at[i, feature_totransform+'_'+feature_name] = 1
 '''
+
+
+# ## Ancien code avant pipelines qui a permis d'obtenir qq résultats
+
+# In[149]:
+
+
+#pd.cut(df_labels[0], bins=[1, 2, 3, 4,5,6,7,8,9,10], right=True)
+df_labels =  pd.DataFrame(data=labels)
+labels_discrete = pd.cut(df_labels[0], bins=range(1,10), right=True).astype(str).tolist()
+
+
+# In[ ]:
+
+
+features_droper = FeaturesDroper(features_todrop=['imdb_score'])
+standardscaler = preprocessing.StandardScaler()
+
+X_res = features_droper.fit_transform(df_encoded)
+X_res = standardscaler.fit_transform(X_res)
+
+#hparam_n_components = [10, 50, 100, 200, 300, 500]
+hparam_n_components = [2, 5, 8, 9]
+
+for hparam in hparam_n_components:
+    nca = NeighborhoodComponentsAnalysis(random_state=42, n_components=hparam)
+    X_reduced = nca.fit_transform(X_res, labels_discrete)
+    KNN = KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})
+    KNN.fit(X_reduced, labels)
+    predictions = KNN.predict(X_reduced)
+    print('Avec n_components = ' + str(hparam))
+    print_rmse(labels, predictions)
+
+
+# In[ ]:
+
+
+features_droper = FeaturesDroper(features_todrop=['imdb_score'])
+standardscaler = preprocessing.StandardScaler()
+
+X_res = features_droper.fit_transform(df_encoded)
+X_res = standardscaler.fit_transform(X_res)
+
+#hparam_n_components = [10, 50, 100, 200, 300, 500]
+hparam_n_components = [10, 50, 100, 200, 300, 500]
+
+for hparam in hparam_n_components:
+    nca = NeighborhoodComponentsAnalysis(random_state=42, n_components=hparam)
+    X_reduced = nca.fit_transform(X_res, labels_discrete)
+    KNN = KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})
+    KNN.fit(X_reduced, labels)
+    predictions = KNN.predict(X_reduced)
+    print('Avec n_components = ' + str(hparam))
+    print_rmse(labels, predictions)
 

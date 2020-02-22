@@ -106,7 +106,7 @@ read_raw_file(2)
 
 # ## Chargement des données
 
-# In[4]:
+# In[6]:
 
 
 import pandas as pd
@@ -118,7 +118,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[5]:
+# In[7]:
 
 
 df = load_data()
@@ -126,7 +126,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[6]:
+# In[8]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -139,20 +139,20 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[9]:
+# In[31]:
 
 
-df.head()
+df.head(20)
 
 
-# In[9]:
+# In[10]:
 
 
 def qgrid_show(df):
     display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
 
 
-# In[10]:
+# In[11]:
 
 
 display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
@@ -532,10 +532,85 @@ plt.show()
 qgrid_show(df[categorical_features])
 
 
-# In[31]:
+# In[30]:
 
 
 print(f'{df.shape[0]} valeurs au total dans le dataframe')
 for col in df[categorical_features]:
     print(f'{col} : {df[col].unique().shape[0]} valeurs uniques')
+
+
+# ## Exploration des informations facebook
+
+# In[33]:
+
+
+plt.scatter(df['actor_1_facebook_likes'], df['title_year'])
+
+
+# In[34]:
+
+
+df[df['title_year'] < 1980]
+
+
+# In[47]:
+
+
+df[(df['actor_1_facebook_likes'].notnull() == True) & (df['title_year'] < 2008)][['movie_title', 'title_year', 'actor_1_facebook_likes']].sample(50)
+
+
+# In[48]:
+
+
+df[(df['actor_1_facebook_likes'].notnull() == True) & (df['title_year'] < 1960)][['movie_title', 'title_year', 'actor_1_facebook_likes']].sample(50)
+
+
+# In[72]:
+
+
+len(df[df['title_year'] < 1980].index)
+
+
+# ### Facebook est un outil récent, mais on voit que les valeurs sont tout de même renseignées pour les anciens films.
+# ### Les likes sont bien présents de 1960 à 2000,  ils sont moins nombreux avant 1960-1980,  mais ils sont tout de même présents.  De plus, il y a beaucoup moins de films dans le jeu de données avant 1960-1980
+# 
+# movie_facebook_likes         1.000000  
+# cast_total_facebook_likes    1.000000  
+# actor_1_facebook_likes       0.998599  
+# actor_2_facebook_likes       0.997399  
+# actor_3_facebook_likes       0.995398  
+# director_facebook_likes      0.979392  
+
+# In[62]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+'''
+trace_1 = go.Scatter(x = df.title_year, y = df['director_facebook_likes'],
+                    name = 'Director facebook likes',
+                    mode = 'markers',
+                    text = df['movie_title']
+                    )
+'''
+
+trace_2 = go.Scatter(x = df.title_year, y = df['actor_1_facebook_likes'],
+                    name = 'Actor 1 facebook likes',
+                    mode = 'markers',
+                    text = df['actor_1_name']
+                    )
+
+layout = go.Layout(title = 'Likes / year graph ',
+                   yaxis = dict(title='Nb FB likes director'),
+                   xaxis = dict(title='Year'),
+                   hovermode = 'closest')
+
+fig = go.Figure(data = [trace_2], layout = layout)
+
+py.offline.iplot(fig)
 
