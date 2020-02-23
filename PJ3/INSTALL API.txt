@@ -1,0 +1,7 @@
+L'API est composée de :
+- flask_app.py :  application Flask  (fichier source commun avec une de mes autres API pour le projet prototube. Attention de modifier le fichier dans les 2 repository)
+- recommender_API.py : renvoie les recommendations de films
+
+L'API necessite le fichier API_model_PJ3.pickle qui est exporté à partir du notebook de modelisation du PJ3
+
+
