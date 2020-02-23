@@ -840,6 +840,15 @@ recommendation_pipeline_PCA_KNN.fit(df_encoded, labels, KNN__df_encoded = df_enc
 '''
     
 class KNNTransform_predict_similarity(KNNTransform):
+    def score(self X, y=None):
+        distances_matrix, knn_matrix = self.nbrs.kneighbors(X)
+
+        scaler = MinMaxScaler() 
+        array_scaled = scaler.fit_transform(self.df_encoded)        
+        
+        scoring_1 = ((array_scaled[:, 0] + array_scaled[:, 1]) / 2)
+        # A compléter
+    
     def predict(self, X, y=None): # Quand on appelle predict, transform est appelé avant automatiquement
         print('KNN predict')
 
