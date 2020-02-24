@@ -139,7 +139,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[31]:
+# In[9]:
 
 
 df.head(20)
@@ -542,31 +542,31 @@ for col in df[categorical_features]:
 
 # ## Exploration des informations facebook
 
-# In[33]:
+# In[31]:
 
 
 plt.scatter(df['actor_1_facebook_likes'], df['title_year'])
 
 
-# In[34]:
+# In[32]:
 
 
 df[df['title_year'] < 1980]
 
 
-# In[47]:
+# In[33]:
 
 
 df[(df['actor_1_facebook_likes'].notnull() == True) & (df['title_year'] < 2008)][['movie_title', 'title_year', 'actor_1_facebook_likes']].sample(50)
 
 
-# In[48]:
+# In[34]:
 
 
 df[(df['actor_1_facebook_likes'].notnull() == True) & (df['title_year'] < 1960)][['movie_title', 'title_year', 'actor_1_facebook_likes']].sample(50)
 
 
-# In[72]:
+# In[35]:
 
 
 len(df[df['title_year'] < 1980].index)
@@ -582,7 +582,7 @@ len(df[df['title_year'] < 1980].index)
 # actor_3_facebook_likes       0.995398  
 # director_facebook_likes      0.979392  
 
-# In[62]:
+# In[36]:
 
 
 import plotly as py
