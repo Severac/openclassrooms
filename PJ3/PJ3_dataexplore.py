@@ -548,6 +548,12 @@ for col in df[categorical_features]:
 plt.scatter(df['actor_1_facebook_likes'], df['title_year'])
 
 
+# In[37]:
+
+
+df['actor_1_facebook_likes'].value_counts()
+
+
 # In[32]:
 
 
@@ -581,6 +587,13 @@ len(df[df['title_year'] < 1980].index)
 # actor_2_facebook_likes       0.997399  
 # actor_3_facebook_likes       0.995398  
 # director_facebook_likes      0.979392  
+# 
+# director_facebook_likes      4939 non-null float64  
+# actor_3_facebook_likes       5020 non-null float64  
+# actor_1_facebook_likes       5036 non-null float64  
+# cast_total_facebook_likes    5043 non-null int64  
+# actor_2_facebook_likes       5030 non-null float64  
+# movie_facebook_likes         5043 non-null int64  
 
 # In[36]:
 
