@@ -502,7 +502,7 @@ df.loc[[3820]]
 df.loc[[1116]]
 
 
-# In[53]:
+# In[79]:
 
 
 from sklearn.preprocessing import MinMaxScaler
@@ -622,7 +622,7 @@ df
 
 # # Industralisation du modèle avec Pipeline
 
-# In[66]:
+# In[84]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -637,6 +637,8 @@ from sklearn.decomposition import NMF
 from sklearn import decomposition
 from sklearn import preprocessing
 #from sklearn.neighbors import KNeighborsTransformer
+
+from sklearn.preprocessing import MinMaxScaler
 
 from sklearn.neighbors import NeighborhoodComponentsAnalysis
 
@@ -831,7 +833,6 @@ class KNNTransform(BaseEstimator, TransformerMixin):
 Cette fonction permet de fournir un score de similarité moyen entre chaque prédiction et le film d'origine
 
 Elle est beaucoup trop lente, il faudrait l'optimiser :(
-De plus elle ne fonctionne que si on passe à predict le même nombre de lignes qu'on a passé à fit
 
 On peut calculer cette similarité en faisant un apply sur 2 variables:  
 en appelant la fonction get_similarity_df(df_encoded, index1, index2).  
@@ -842,7 +843,7 @@ recommendation_pipeline_PCA_KNN.fit(df_encoded, labels, KNN__df_encoded = df_enc
 '''
     
 class KNNTransform_predict_similarity(KNNTransform):
-    def score(self X, y=None):
+    def score(self, X, y=None):
         distances_matrix, knn_matrix = self.nbrs.kneighbors(X)
 
         scaler = MinMaxScaler() 
@@ -862,12 +863,13 @@ class KNNTransform_predict_similarity(KNNTransform):
         array_scaled = scaler.fit_transform(self.df_encoded)
         df_scaled  = pd.DataFrame(data=array_scaled , columns=self.df_encoded.columns, index=self.df_encoded.index)
         
+        print('X.shape[0] : ' + str(X.shape[0]))
         for i in range(0, X.shape[0]):
-            scoring_1 = get_similarity_df(df_scaled, knn_matrix[i, 0], knn_matrix[i, 1]).sum()
-            scoring_2 = get_similarity_df(df_scaled, knn_matrix[i, 0], knn_matrix[i, 2]).sum()
-            scoring_3 = get_similarity_df(df_scaled, knn_matrix[i, 0], knn_matrix[i, 3]).sum()
-            scoring_4 = get_similarity_df(df_scaled, knn_matrix[i, 0], knn_matrix[i, 4]).sum()
-            scoring_5 = get_similarity_df(df_scaled, knn_matrix[i, 0], knn_matrix[i, 5]).sum()
+            scoring_1 = get_similarity_df_scaled_input(df_scaled, knn_matrix[i, 0], knn_matrix[i, 1]).sum()
+            scoring_2 = get_similarity_df_scaled_input(df_scaled, knn_matrix[i, 0], knn_matrix[i, 2]).sum()
+            scoring_3 = get_similarity_df_scaled_input(df_scaled, knn_matrix[i, 0], knn_matrix[i, 3]).sum()
+            scoring_4 = get_similarity_df_scaled_input(df_scaled, knn_matrix[i, 0], knn_matrix[i, 4]).sum()
+            scoring_5 = get_similarity_df_scaled_input(df_scaled, knn_matrix[i, 0], knn_matrix[i, 5]).sum()
                 
             scoring_predictions.append((scoring_1 + scoring_2 + scoring_3 + scoring_4 + scoring_5) / 5)
             
@@ -975,7 +977,7 @@ recommendation_pipeline_NMF = Pipeline([
 ])
 
 
-# In[67]:
+# In[10]:
 
 
 # Récupération des étiquettes de scoring :
@@ -987,13 +989,13 @@ df.reset_index(drop=True, inplace=True)
 labels = df['imdb_score'].to_numpy()
 
 
-# In[68]:
+# In[11]:
 
 
 df_encoded = preparation_pipeline.fit_transform(df)
 
 
-# In[69]:
+# In[12]:
 
 
 from sklearn.metrics import mean_squared_error
@@ -1006,10 +1008,9 @@ def print_rmse(labels, predictions):
 
 # ## Tests avec PCA_KNN :
 
-# In[ ]:
+# In[86]:
 
 
-'''
 recommendation_pipeline_PCA_KNN = Pipeline([
     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
     ('standardscaler', preprocessing.StandardScaler()),
@@ -1019,34 +1020,96 @@ recommendation_pipeline_PCA_KNN = Pipeline([
 ])
 
 recommendation_pipeline_PCA_KNN.fit(df_encoded, labels, KNN__df_encoded = df_encoded)
-'''
 
 
-# In[57]:
+# In[87]:
 
 
-# recommendation_pipeline_PCA_KNN.predict(df_encoded)  # Non exécuté car trop lent
+res = recommendation_pipeline_PCA_KNN.predict(df_encoded)
+
+
+# In[97]:
+
+
+sorted(res)
+
+
+# In[30]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True) :
+    recommendation_pipeline_PCA_KNN = Pipeline([
+        ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+        ('standardscaler', preprocessing.StandardScaler()),
+        ('pca', decomposition.PCA(n_components=200)),
+        ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+        #('pipeline_final', PipelineFinal()),
+    ])
+
+    recommendation_pipeline_PCA_KNN.fit(df_encoded, labels)
+    predictions = recommendation_pipeline_PCA_KNN.predict(df_encoded)
+
+
+# In[31]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    print_rmse(labels, predictions)
+
+
+# Résultat : Erreur moyenne de prédiction de l'IMDB score: 1.0531753089075517
+
+# ### Vérification du ratio de variance expliquée :
+
+# In[39]:
+
+
+recommendation_pipeline_PCA_KNN['pca'].explained_variance_ratio_.sum()
+
+
+# In[42]:
+
+
+# Centrage et Réduction
+std_scale = preprocessing.StandardScaler().fit(df_encoded)
+X_scaled = std_scale.transform(df_encoded)
+
+
+# In[55]:
+
+
+X_scaled.shape
 
 
 # In[58]:
 
 
-recommendation_pipeline_PCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=200)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
-
-recommendation_pipeline_PCA_KNN.fit(df_encoded, labels)
-predictions = recommendation_pipeline_PCA_KNN.predict(df_encoded)
+range(X_scaled.shape[0])
 
 
-# In[73]:
+# In[51]:
 
 
-print_rmse(labels, predictions)
+# Calcul des composantes principales
+pca = decomposition.PCA(n_components=4998)
+pca.fit(X_scaled)
+
+
+# In[56]:
+
+
+
+pca.explained_variance_ratio_.cumsum()
+
+
+# In[70]:
+
+
+fig = plt.figure()
+fig.suptitle('% de variance expliquée en fonction du nb de dimensions')
+plt.plot(range(X_scaled.shape[0]), pca.explained_variance_ratio_.cumsum())
+plt.ylabel("% explained variance")
+plt.xlabel("Dimensions")
 
 
 # ### Résultat de tests effectués avec recommendation_pipeline_PCA_KNN, et n_components à 200 :
@@ -1056,20 +1119,27 @@ print_rmse(labels, predictions)
 
 # ## Tests avec NCA_KNN :
 
-# In[74]:
+# In[17]:
 
 
-recommendation_pipeline_NCA_KNN.fit(df_encoded, labels)
+EXECUTE_INTERMEDIATE_MODELS = True
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    recommendation_pipeline_NCA_KNN.fit(df_encoded, labels)
 
 
 # In[75]:
 
 
-predictions = recommendation_pipeline_NCA_KNN.predict(df_encoded)
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    predictions = recommendation_pipeline_NCA_KNN.predict(df_encoded)
 
-print('Avec n_components = 200 :')
-print_rmse(labels, predictions)
+    print('Avec n_components = 200 :')
+    print_rmse(labels, predictions)
 
+
+# Résultat : 
+# Avec n_components = 200 :  
+# Erreur moyenne de prédiction de l'IMDB score: 0.9944914304719338  
 
 # ### Résultats obtenus pour recommendation_pipeline_NCA_KNN avec différentes valeurs de n_components :
 # 
