@@ -212,7 +212,7 @@ features_notkept = ['aspect_ratio', 'movie_imdb_link']
 df[['genres', 'plot_keywords']].sample(10)
 
 
-# # Imputation des données manquantes
+# # Encodage des features
 
 # In[15]:
 
@@ -377,7 +377,7 @@ df_imputed.head(10)
 #df_imputed.describe()
 
 
-# ## Comparaison avant/après de quelques valeurs 1hot encoded :
+# ### Comparaison avant/après de quelques valeurs 1hot encoded :
 
 # In[ ]:
 
@@ -397,25 +397,9 @@ df_imputed[['actors_names_Johnny Depp', 'actors_names_Orlando Bloom', 'actors_na
 df_imputed.loc[0]
 
 
-# # Sélection des features pour le clustering
+# # Construction d'un premier modèle de recommendation
 
-# La sélection des features restera à compléter, et à faire avant les 1 hot encode
-# 
-# 2 features à supprimer :
-# movie_imdb_link              1.000000
-# aspect_ratio                 0.934574 => information technique  
-# 
-# Elles ne sont déjà plus dans df_imputed,  pas besoin de les supprimer de df
-# 
-# facenumber_in_poster         0.997399  => voir la relation de ces variables avec les scores  
-# num_user_for_reviews         0.995798  => voir la relation de ces variables avec les scores  
-# num_critic_for_reviews       0.990196  => voir la relation de ces variables avec les scores  
-# 
-# 
-# 
-# 
-
-# # Réduction de dimensionalité
+# ## Scaling et réduction de dimensionalité
 
 # In[ ]:
 
@@ -449,6 +433,8 @@ X_reduced = pca.transform(X_scaled)
 
 X_reduced.shape
 
+
+# ## Algorithme KNN
 
 # In[ ]:
 
@@ -502,7 +488,9 @@ df.loc[[3820]]
 df.loc[[1116]]
 
 
-# In[79]:
+# ## Affichage d'échantillon de recommandations
+
+# In[22]:
 
 
 from sklearn.preprocessing import MinMaxScaler
@@ -528,6 +516,11 @@ def get_similarity_df(df_encoded, index1, index2):
     # (Those are differenciating attributes, as opposed to attributes that are both 0))
     return(1 - ((df_relevant_items.loc[index1] - df_relevant_items.loc[index2]).abs())).sort_values(ascending=False)
 
+'''
+get_similarity_df_scaled_input  does the same as above, except that it does not scale input and does not drop irrelevant features for similarity
+It does not do that to optimize performance, so that it can be called from a scikit learn Estimator's score() function
+
+'''
 def get_similarity_df_scaled_input(df_scaled, index1, index2):
     # Transforming data so that values are between 0 and 1, positive
     # This function assumes that below code must be run before call
@@ -535,6 +528,11 @@ def get_similarity_df_scaled_input(df_scaled, index1, index2):
     scaler = MinMaxScaler() 
     array_scaled = scaler.fit_transform(df_encoded)
     df_scaled  = pd.DataFrame(data=array_scaled , columns=df_encoded.columns, index=df_encoded.index)
+    '''
+    
+    # This function also assumes that you drop all non-relevant items for similarity score before call, like this :
+    '''
+    df_scaled.drop(labels=['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score', 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes'], axis=1, inplace=True)
     '''
     
     # This line of code allows not to keep 1hot columns that are both 0  (for example, both films NOT having word "the" is not relevant :  1hot features are to sparse to keep 0 values like that)
@@ -590,12 +588,6 @@ afficher_recos_films(reco_matrix, df_imputed)
 afficher_recos_films(reco_matrix, df_imputed, with_similarity_display=True)
 
 
-# In[61]:
-
-
-df.to_numpy()
-
-
 # In[62]:
 
 
@@ -622,7 +614,7 @@ df
 
 # # Industralisation du modèle avec Pipeline
 
-# In[84]:
+# In[41]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -641,6 +633,8 @@ from sklearn import preprocessing
 from sklearn.preprocessing import MinMaxScaler
 
 from sklearn.neighbors import NeighborhoodComponentsAnalysis
+
+import statistics
 
 class DuplicatesRemover(BaseEstimator, TransformerMixin):
     def __init__(self):
@@ -811,6 +805,48 @@ class KNNTransform(BaseEstimator, TransformerMixin):
         self.labels = labels
         self.nbrs = NearestNeighbors(n_neighbors=self.knn_params['n_neighbors'], algorithm=self.knn_params['algorithm'], metric=self.knn_params['metric']).fit(X)
         return self
+
+    
+    '''
+    # This function returns similarity score for each film instance in X  (summed for all X instances)
+    # The more the score is, the more recommended films (knn_matrix[film_instance, 1...5]) 
+    # are close to input film (knn_matrix[film_instance, 0]) 
+
+    /!\ To calculate similarity,  this method requires to set global variable df_encoded 
+    (df_encoded as being the output of preparation_pipeline)
+    
+    Previous version of the method used to accept df_encoded pass as a parameter to KNNTransform fit function
+    Parameter was passed like this :
+    recommendation_pipeline_PCA_KNN.fit(df_encoded, labels, KNN__df_encoded = df_encoded)
+    > But this did not work with GridSearchCV (that does not support third customer parameter to fit function)
+    '''
+    def score(self, X, y=None):
+        print('KNN score')
+
+        distances_matrix, knn_matrix = self.nbrs.kneighbors(X)
+
+        scorings = []
+        
+        scaler = MinMaxScaler() 
+        array_scaled = scaler.fit_transform(df_encoded)
+        df_scaled  = pd.DataFrame(data=array_scaled , columns=df_encoded.columns, index=df_encoded.index)
+        
+    
+        # Drop features that have nothing to do with the film items themselves, and are not to be taken into account for similarity
+        df_scaled.drop(labels=['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score', 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes'], axis=1, inplace=True)
+        
+        
+        for i in range(0, X.shape[0]):
+            scoring_1 = get_similarity_df_scaled_input(df_scaled, knn_matrix[i, 0], knn_matrix[i, 1]).sum()
+            scoring_2 = get_similarity_df_scaled_input(df_scaled, knn_matrix[i, 0], knn_matrix[i, 2]).sum()
+            scoring_3 = get_similarity_df_scaled_input(df_scaled, knn_matrix[i, 0], knn_matrix[i, 3]).sum()
+            scoring_4 = get_similarity_df_scaled_input(df_scaled, knn_matrix[i, 0], knn_matrix[i, 4]).sum()
+            scoring_5 = get_similarity_df_scaled_input(df_scaled, knn_matrix[i, 0], knn_matrix[i, 5]).sum()
+                
+            scorings.append((scoring_1 + scoring_2 + scoring_3 + scoring_4 + scoring_5) / 5)
+        
+        return(statistics.mean(scorings))
+    
     
     def predict(self, X, y=None): # Quand on appelle predict, transform est appelé avant automatiquement
         print('KNN predict')
@@ -831,8 +867,6 @@ class KNNTransform(BaseEstimator, TransformerMixin):
     
 '''
 Cette fonction permet de fournir un score de similarité moyen entre chaque prédiction et le film d'origine
-
-Elle est beaucoup trop lente, il faudrait l'optimiser :(
 
 On peut calculer cette similarité en faisant un apply sur 2 variables:  
 en appelant la fonction get_similarity_df(df_encoded, index1, index2).  
@@ -977,7 +1011,7 @@ recommendation_pipeline_NMF = Pipeline([
 ])
 
 
-# In[10]:
+# In[24]:
 
 
 # Récupération des étiquettes de scoring :
@@ -989,13 +1023,13 @@ df.reset_index(drop=True, inplace=True)
 labels = df['imdb_score'].to_numpy()
 
 
-# In[11]:
+# In[10]:
 
 
 df_encoded = preparation_pipeline.fit_transform(df)
 
 
-# In[12]:
+# In[11]:
 
 
 from sklearn.metrics import mean_squared_error
@@ -1006,10 +1040,51 @@ def print_rmse(labels, predictions):
     print(f"Erreur moyenne de prédiction de l'IMDB score: {rmse}")
 
 
-# ## Tests avec PCA_KNN :
+# ## Tests avec PCA_KNN et la métrique scoring imdb
+
+# In[12]:
+
+
+recommendation_pipeline_PCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+recommendation_pipeline_PCA_KNN.fit(df_encoded, labels)
+predictions = recommendation_pipeline_PCA_KNN.predict(df_encoded)
+
+
+# ## Tests avec PCA_KNN et la métrique similarité :
+
+# In[25]:
+
+
+recommendation_pipeline_PCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+recommendation_pipeline_PCA_KNN.fit(df_encoded, labels, KNN__df_encoded = df_encoded)
+scores = recommendation_pipeline_PCA_KNN.score(df_encoded)
+
+
+# In[26]:
+
+
+scores
+
 
 # In[86]:
 
+
+'''
+With old class :
 
 recommendation_pipeline_PCA_KNN = Pipeline([
     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
@@ -1020,18 +1095,8 @@ recommendation_pipeline_PCA_KNN = Pipeline([
 ])
 
 recommendation_pipeline_PCA_KNN.fit(df_encoded, labels, KNN__df_encoded = df_encoded)
-
-
-# In[87]:
-
-
 res = recommendation_pipeline_PCA_KNN.predict(df_encoded)
-
-
-# In[97]:
-
-
-sorted(res)
+'''
 
 
 # In[30]:
@@ -1059,7 +1124,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # Résultat : Erreur moyenne de prédiction de l'IMDB score: 1.0531753089075517
 
-# ### Vérification du ratio de variance expliquée :
+# ## Vérification du ratio de variance expliquée :
 
 # In[39]:
 
@@ -1236,6 +1301,115 @@ afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 # 
 # ## Test de différents paramètres avec NCA + KNN
 
+# In[42]:
+
+
+#from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+
+# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+
+param_grid = {
+        'features_droper__features_todrop':  [#None,
+                                              ['imdb_score'],
+                                    
+        ],
+
+        'pca__n_components': [5, 150, 200],
+
+        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+        ],
+    }
+
+grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=2, verbose=2, error_score=np.nan)
+grid_search.fit(df_encoded, labels)
+
+
+# In[43]:
+
+
+df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+
+
+# In[46]:
+
+
+#df_grid_search_results.to_csv('gridresult_temp.csv')  # Uncomment to save in CSV file
+
+
+# In[44]:
+
+
+grid_search.best_estimator_
+
+
+# In[45]:
+
+
+qgrid_show(df_grid_search_results)
+
+
+# Résultats :  
+# 	KNN__knn_params	features_droper__features_todrop	pca__n_components	Accuracy  
+# 0	{'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	5	17.8511543428785  
+# 1	{'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	150	17.249940674509965  
+# 2	{'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	200	17.071650735669575
+# 
+# Après avoir modifié la fonction de comparaison des similarités pour enlever de nombreuses features qui ne concernent pas la similarité des items car ce ne sont pas des propriétés des films en eux mêmes (nb facebook likes,  nb votes, ....), on obtient toujours le même classement :
+# 
+# ,KNN__knn_params,features_droper__features_todrop,pca__n_components,Accuracy  
+# 0,"{'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}",['imdb_score'],5,8.667589217027963  
+# 1,"{'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}",['imdb_score'],150,7.985189799589674  
+# 2,"{'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}",['imdb_score'],200,7.863198934075221  
+# 
+# 
+# => Ces résultats restent contradictoires avec l'examen humain qui montre que nb_components = 5 n'est pas adapté (alors qu'ici, le score de similarité moyen est meilleur)
+# 
+
+# In[27]:
+
+
+#from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+
+# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+
+param_grid = {
+        'features_droper__features_todrop':  [#None,
+                                              ['imdb_score'],
+                                    
+        ],
+
+        'NCA__nca_params': [{'random_state':42, 'n_components':5 }, 
+                            {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }
+        ],
+
+        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+        ],
+    }
+
+grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=2, verbose=2, error_score=np.nan)
+grid_search.fit(df_encoded, labels, KNN__df_encoded = df_encoded)
+
+
 # In[103]:
 
 
@@ -1309,7 +1483,7 @@ if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
     grid_search_cv_results
 
 
-# ### Comme meilleur estimateur on retiendra donc : NCA avec 150 composants,  KNN avec algorithme kd_tree et distance manhattan
+# ### Comme meilleur estimateur, avec la métrique prédiction on a donc : NCA avec 150 composants,  KNN avec algorithme kd_tree et distance manhattan
 
 # In[106]:
 
@@ -1370,7 +1544,7 @@ if (SAVE_API_MODEL == True):
         pickle.dump(API_model, f, pickle.HIGHEST_PROTOCOL)    
 
 
-# ### Tentative de KNN avec cosine distance
+# ## Tentative de KNN avec cosine distance
 
 # In[ ]:
 
@@ -1453,8 +1627,6 @@ reco_matrix
 
 df[df['movie_title'].str.contains('Vampire')]
 
-
-# # Features à transformer / ajouter
 
 # movie_title                  1.000000   => La distance entre chaque valeur devra être une distance de chaîne de caractère.   Mais comment faire un algo de clustering qui ne calcule pas la distance de la même façon pour cet attribut là que pour les autres ?  Faire un vecteur one hot avec le nombre distinct de titres de films dedans, et réduire sa dimensionalité  ?
 
