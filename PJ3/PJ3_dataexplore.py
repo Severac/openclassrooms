@@ -548,31 +548,31 @@ for col in df[categorical_features]:
 plt.scatter(df['actor_1_facebook_likes'], df['title_year'])
 
 
-# In[37]:
+# In[32]:
 
 
 df['actor_1_facebook_likes'].value_counts()
 
 
-# In[32]:
+# In[33]:
 
 
 df[df['title_year'] < 1980]
 
 
-# In[33]:
+# In[34]:
 
 
 df[(df['actor_1_facebook_likes'].notnull() == True) & (df['title_year'] < 2008)][['movie_title', 'title_year', 'actor_1_facebook_likes']].sample(50)
 
 
-# In[34]:
+# In[35]:
 
 
 df[(df['actor_1_facebook_likes'].notnull() == True) & (df['title_year'] < 1960)][['movie_title', 'title_year', 'actor_1_facebook_likes']].sample(50)
 
 
-# In[35]:
+# In[36]:
 
 
 len(df[df['title_year'] < 1980].index)
@@ -595,7 +595,7 @@ len(df[df['title_year'] < 1980].index)
 # actor_2_facebook_likes       5030 non-null float64  
 # movie_facebook_likes         5043 non-null int64  
 
-# In[36]:
+# In[37]:
 
 
 import plotly as py
@@ -626,4 +626,5 @@ layout = go.Layout(title = 'Likes / year graph ',
 fig = go.Figure(data = [trace_2], layout = layout)
 
 py.offline.iplot(fig)
+py.offline.plot(fig, filename='dataexplore_facebook_plot.html') 
 

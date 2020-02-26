@@ -2118,15 +2118,3 @@ for hparam in hparam_n_components:
     print('Avec n_components = ' + str(hparam))
     print_rmse(labels, predictions)
 
-
-# In[33]:
-
-
-print("aaaa")
-
-
-# In[32]:
-
-
-print(var)
-
