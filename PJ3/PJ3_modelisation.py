@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ3 : IMDB dataset :  data clean and modelisation notebook 
 
-# In[1]:
+# In[5]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -50,7 +50,7 @@ API_MODEL_PICKLE_FILE = 'API_model_PJ3.pickle'
 EXECUTE_INTERMEDIATE_MODELS = False # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
 
 
-# In[2]:
+# In[36]:
 
 
 def qgrid_show(df):
@@ -59,7 +59,7 @@ def qgrid_show(df):
 
 # # Téléchargement et décompression des données
 
-# In[3]:
+# In[7]:
 
 
 PROXY_DEF = 'BNP'
@@ -85,7 +85,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[4]:
+# In[8]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -96,7 +96,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Chargement des données
 
-# In[5]:
+# In[9]:
 
 
 import pandas as pd
@@ -109,7 +109,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[6]:
+# In[10]:
 
 
 df = load_data()
@@ -117,7 +117,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[7]:
+# In[11]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -130,7 +130,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[8]:
+# In[12]:
 
 
 df.head()
@@ -138,7 +138,7 @@ df.head()
 
 # ### Vérification s'il y a des doublons
 
-# In[9]:
+# In[117]:
 
 
 df[df.duplicated()]
@@ -146,7 +146,7 @@ df[df.duplicated()]
 
 # ### Suppression des doublons
 
-# In[10]:
+# In[9]:
 
 
 df.drop_duplicates(inplace=True)
@@ -214,7 +214,7 @@ df[['genres', 'plot_keywords']].sample(10)
 
 # # Encodage des features
 
-# In[15]:
+# In[14]:
 
 
 # KNN imputer pas encore supporté par la version de sklearn que j'utilise :
@@ -225,19 +225,19 @@ df[['genres', 'plot_keywords']].sample(10)
 #imputer.fit_transform(df[numerical_features])
 
 
-# In[16]:
+# In[15]:
 
 
 numerical_features_columns = df[numerical_features].columns
 
 
-# In[17]:
+# In[16]:
 
 
 numerical_features_index = df[numerical_features].index
 
 
-# In[18]:
+# In[17]:
 
 
 numerical_features_columns.shape
@@ -245,7 +245,7 @@ numerical_features_columns.shape
 
 # ## Imputation des données numériques par régression linéaire
 
-# In[19]:
+# In[18]:
 
 
 from sklearn.experimental import enable_iterative_imputer
@@ -255,7 +255,7 @@ imp = IterativeImputer(max_iter=10, random_state=0)
 transformed_data = imp.fit_transform(df[numerical_features])  
 
 
-# In[20]:
+# In[19]:
 
 
 df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
@@ -263,7 +263,7 @@ df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=nume
 
 # ### Visualisation de quelques résultats par comparaison avant/après :
 
-# In[21]:
+# In[19]:
 
 
 qgrid_show(df[numerical_features])
@@ -614,7 +614,7 @@ df
 
 # # Industralisation du modèle avec Pipeline
 
-# In[41]:
+# In[20]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -1010,8 +1010,22 @@ recommendation_pipeline_NMF = Pipeline([
 
 ])
 
+reducer_pipeline = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+])
 
-# In[24]:
+'''
+kmeans_transformer_pipeline = Pipeline([
+    ('kmeans', KMeans(n_clusters=10)),
+    #('pipeline_final', PipelineFinal()),
+
+])
+'''
+
+
+# In[21]:
 
 
 # Récupération des étiquettes de scoring :
@@ -1023,13 +1037,13 @@ df.reset_index(drop=True, inplace=True)
 labels = df['imdb_score'].to_numpy()
 
 
-# In[10]:
+# In[22]:
 
 
 df_encoded = preparation_pipeline.fit_transform(df)
 
 
-# In[11]:
+# In[23]:
 
 
 from sklearn.metrics import mean_squared_error
@@ -1528,6 +1542,381 @@ afficher_recos_films(reco_matrix, df_encoded)
 afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 
 
+# # Visualisation des films avec KMeans
+
+# In[12]:
+
+
+df_reduced = reducer_pipeline.fit_transform(df_encoded, labels)
+
+
+# ## Tentative de KMeans sur les données non réduites (22000 dimensions)
+
+# In[58]:
+
+
+X = df_encoded.values
+
+features = df_encoded.columns
+
+# Centrage et Réduction
+std_scale = preprocessing.StandardScaler().fit(X)
+X_scaled = std_scale.transform(X)
+
+
+# Affichage des coefs. de silhouette pour différentes valeurs de k :
+
+# In[59]:
+
+
+from sklearn.metrics import silhouette_score
+
+kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(X_scaled)
+                for k in range(1, 10)]
+#inertias = [model.inertia_ for model in kmeans_per_k]
+
+
+# In[62]:
+
+
+silhouette_scores = [silhouette_score(X, model.labels_)
+                     for model in kmeans_per_k[1:]]
+
+
+# In[65]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 10), silhouette_scores, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Silhouette score", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# => Mauvais résultat (scores négatifs)
+
+# ## Tentative de KMeans sur données réduites à 200 dimensions avec NCA
+
+# In[70]:
+
+
+kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_reduced)
+                for k in range(1, 50)]
+
+
+# In[71]:
+
+
+silhouette_scores = [silhouette_score(X, model.labels_)
+                     for model in kmeans_per_k[1:]]
+
+
+# In[72]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), silhouette_scores, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Silhouette score", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# => Résultat : là encore on a des coefficients de silhouette négatifs
+
+# ## Tentative de KMeans distance cosine, k=10
+
+# In[84]:
+
+
+from nltk.cluster import KMeansClusterer
+import nltk
+
+k = 200 
+model_kmeans = KMeansClusterer(k, distance=nltk.cluster.util.cosine_distance, avoid_empty_clusters=True, repeats=10)      
+get_ipython().run_line_magic('time', 'cluster = model_kmeans.cluster(X_scaled, assign_clusters = True)')
+
+
+# In[87]:
+
+
+get_ipython().run_line_magic('time', 'cluster_labels = np.array([ model_kmeans.classify(X_scaled_instance) for X_scaled_instance in X_scaled ], np.short)')
+get_ipython().run_line_magic('time', "sklearn_silhouette_avg = silhouette_score(X_scaled, cluster_labels, metric='cosine')")
+
+
+# In[90]:
+
+
+sklearn_silhouette_avg
+
+
+# **Visualisation avec TSNE**
+
+# In[145]:
+
+
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore",category=FutureWarning)
+    from yellowbrick.text import TSNEVisualizer # FUTURE WARNING : Due to yellowbrick imports we currently have a "FutureWarning" : he sklearn.metrics.classification module is  deprecated in version 0.22 and will be removed in version 0.24. The corresponding classes / functions should instead be imported from sklearn.metrics. Anything that cannot be imported from sklearn.metrics is now part of the private API.
+
+my_cmap = plt.matplotlib.colors.ListedColormap(['#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9', '#9A6324','#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabebe', '#469990', '#e6beff','#000000', '#fffac8'])                                                        
+tsne = TSNEVisualizer(metric='cosine', decompose='pca', colormap=my_cmap)
+
+tsne.fit(X_scaled, ["cluster{}".format(c) for c in cluster_labels])
+tsne.poof()
+
+
+# In[91]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = X_reduced_n2[:, 0], y = X_reduced_n2[:, 1],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=cluster_labels),
+                    text = df['movie_title']
+                    )
+
+
+layout = go.Layout(title = 'Films clustered',
+                   hovermode = 'closest')
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot.html') 
+
+
+# ## Lancement d'un clustering, et visualisation
+
+# In[47]:
+
+
+from sklearn.cluster import KMeans
+
+kmeans_clusterer = KMeans(n_clusters=200)
+
+clusters = kmeans_clusterer.fit_transform(df_reduced)
+
+
+# In[42]:
+
+
+clusters
+
+
+# ## Réduction de dimensionalité à 2 et 3 pour la visualisation
+
+# In[52]:
+
+
+X = df_encoded.values
+
+features = df_encoded.columns
+
+# Centrage et Réduction
+std_scale = preprocessing.StandardScaler().fit(X)
+X_scaled = std_scale.transform(X)
+
+# Calcul des composantes principales
+pca = decomposition.PCA(n_components=2)
+X_reduced_n2 = pca.fit_transform(X_scaled)
+
+# Calcul des composantes principales
+pca = decomposition.PCA(n_components=3)
+X_reduced_n3 = pca.fit_transform(X_scaled)
+
+
+# In[27]:
+
+
+X_reduced_n2[:, 1].shape
+
+
+# In[21]:
+
+
+clusters.shape
+
+
+# In[39]:
+
+
+kmeans_clusterer.labels_[800]
+
+
+# In[51]:
+
+
+go.Scatter3d
+
+
+# In[56]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = X_reduced_n2[:, 0], y = X_reduced_n2[:, 1],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=kmeans_clusterer.labels_),
+                    text = df['movie_title']
+                    )
+
+
+layout = go.Layout(title = 'Films clustered',
+                   hovermode = 'closest')
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot.html') 
+
+
+# In[57]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+'''
+trace_1 = go.Scatter(x = X_reduced_n2[:, 0], y = X_reduced_n2[:, 1],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=kmeans_clusterer.labels_),
+                    text = df['movie_title']
+                    )
+'''
+
+trace_1 = go.Scatter3d(x = X_reduced_n3[:, 0], y = X_reduced_n3[:, 1], z = X_reduced_n3[:, 2],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=kmeans_clusterer.labels_),
+                    text = df['movie_title']
+                    )
+
+layout = go.Layout(title = 'Films clustered',
+                   hovermode = 'closest')
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot.html') 
+
+
+# # Visualisation des fims colorés selon leur imdb_score
+
+# In[95]:
+
+
+
+
+
+# In[102]:
+
+
+imdb_score_cat.to_list()
+
+
+# In[112]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = X_reduced_n2[:, 0], y = X_reduced_n2[:, 1],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=imdb_score_cat.to_list()),
+                    text = df['movie_title']
+                    )
+
+
+layout = go.Layout(title = 'Films clustered',
+                   hovermode = 'closest')
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb.html') 
+
+
+# # Visualisation avec réduction dimensionnelle à partir du DataFrame d'origine (features numériques seulement)
+
+# In[24]:
+
+
+X_numerical = df_numerical_features_imputed.values
+
+# Centrage et Réduction
+std_scale = preprocessing.StandardScaler().fit(X_numerical)
+X_numerical_scaled = std_scale.transform(X_numerical)
+
+# Calcul des composantes principales
+pca = decomposition.PCA(n_components=2)
+X_numerical_reduced = pca.fit_transform(X_numerical_scaled)
+
+
+# In[25]:
+
+
+imdb_score_cat = pd.cut(df_numerical_features_imputed['imdb_score'], bins=[-np.inf,0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], labels=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+
+# In[26]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = X_numerical_reduced[:, 0], y = X_numerical_reduced[:, 1],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=cluster_labels),
+                    text = df['movie_title']
+                    )
+
+
+layout = go.Layout(title = 'Films clustered',
+                   hovermode = 'closest')
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb.html') 
+
+
 # # Sauvegarde du modèle retenu pour l'API
 
 # In[121]:
@@ -1728,4 +2117,16 @@ for hparam in hparam_n_components:
     predictions = KNN.predict(X_reduced)
     print('Avec n_components = ' + str(hparam))
     print_rmse(labels, predictions)
+
+
+# In[33]:
+
+
+print("aaaa")
+
+
+# In[32]:
+
+
+print(var)
 
