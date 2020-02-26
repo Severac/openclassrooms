@@ -588,6 +588,37 @@ afficher_recos_films(reco_matrix, df_imputed)
 afficher_recos_films(reco_matrix, df_imputed, with_similarity_display=True)
 
 
+# In[46]:
+
+
+df[df['movie_title'].str.contains('night')]['movie_title']
+
+
+# In[59]:
+
+
+pd.set_option('display.max_columns', 50)
+df.loc[[3]]['movie_title']
+
+
+# In[58]:
+
+
+df.loc[[66]]['movie_title']
+
+
+# In[57]:
+
+
+df_encoded.loc[[3]]['movie_title_knight']
+
+
+# In[53]:
+
+
+df_encoded.loc[[66]]['movie_title_knight']
+
+
 # In[62]:
 
 
