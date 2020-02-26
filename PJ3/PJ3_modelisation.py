@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ3 : IMDB dataset :  data clean and modelisation notebook 
 
-# In[5]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -50,7 +50,7 @@ API_MODEL_PICKLE_FILE = 'API_model_PJ3.pickle'
 EXECUTE_INTERMEDIATE_MODELS = False # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
 
 
-# In[36]:
+# In[2]:
 
 
 def qgrid_show(df):
@@ -59,7 +59,7 @@ def qgrid_show(df):
 
 # # Téléchargement et décompression des données
 
-# In[7]:
+# In[3]:
 
 
 PROXY_DEF = 'BNP'
@@ -85,7 +85,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[8]:
+# In[4]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -96,7 +96,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Chargement des données
 
-# In[9]:
+# In[5]:
 
 
 import pandas as pd
@@ -109,7 +109,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[10]:
+# In[6]:
 
 
 df = load_data()
@@ -117,7 +117,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[11]:
+# In[7]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -130,7 +130,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[12]:
+# In[8]:
 
 
 df.head()
@@ -138,7 +138,7 @@ df.head()
 
 # ### Vérification s'il y a des doublons
 
-# In[117]:
+# In[9]:
 
 
 df[df.duplicated()]
@@ -146,7 +146,7 @@ df[df.duplicated()]
 
 # ### Suppression des doublons
 
-# In[9]:
+# In[10]:
 
 
 df.drop_duplicates(inplace=True)
@@ -214,7 +214,7 @@ df[['genres', 'plot_keywords']].sample(10)
 
 # # Encodage des features
 
-# In[14]:
+# In[15]:
 
 
 # KNN imputer pas encore supporté par la version de sklearn que j'utilise :
@@ -225,19 +225,19 @@ df[['genres', 'plot_keywords']].sample(10)
 #imputer.fit_transform(df[numerical_features])
 
 
-# In[15]:
+# In[16]:
 
 
 numerical_features_columns = df[numerical_features].columns
 
 
-# In[16]:
+# In[17]:
 
 
 numerical_features_index = df[numerical_features].index
 
 
-# In[17]:
+# In[18]:
 
 
 numerical_features_columns.shape
@@ -245,7 +245,7 @@ numerical_features_columns.shape
 
 # ## Imputation des données numériques par régression linéaire
 
-# In[18]:
+# In[19]:
 
 
 from sklearn.experimental import enable_iterative_imputer
@@ -255,7 +255,7 @@ imp = IterativeImputer(max_iter=10, random_state=0)
 transformed_data = imp.fit_transform(df[numerical_features])  
 
 
-# In[19]:
+# In[20]:
 
 
 df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
@@ -263,13 +263,13 @@ df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=nume
 
 # ### Visualisation de quelques résultats par comparaison avant/après :
 
-# In[19]:
+# In[23]:
 
 
 qgrid_show(df[numerical_features])
 
 
-# In[22]:
+# In[24]:
 
 
 qgrid_show(df_numerical_features_imputed)
@@ -277,7 +277,7 @@ qgrid_show(df_numerical_features_imputed)
 
 # ### Constat que toutes les valeurs sont maintenant renseignées :
 
-# In[23]:
+# In[25]:
 
 
 (df_numerical_features_imputed.count()/df_numerical_features_imputed.shape[0]).sort_values(axis=0, ascending=False)
@@ -286,7 +286,7 @@ qgrid_show(df_numerical_features_imputed)
 # ## Transformation des features de catégorie
 # ### Voir le §  Identification des typologies de features à traiter  ci-dessus pour une explication des différents cas de figure
 
-# In[24]:
+# In[26]:
 
 
 '''
@@ -335,57 +335,160 @@ def add_categorical_features_bow_and_1hot(df, df_target, categorical_features_to
     for feature_totransform in categorical_features_totransform:
         print(f'Adding 1hot Feature : {feature_totransform}')
         df_transformed = df[feature_totransform].str.lower().str.replace(r'[^\w\s]', '').str.get_dummies(sep=' ').add_prefix(feature_totransform +'_')
+        
         df_target = pd.concat([df_target, df_transformed], axis=1)
         
     return(df_target)            
 
 
-# In[ ]:
+# In[27]:
 
 
 df_imputed = add_categorical_features_1hot(df, df_numerical_features_imputed, categorical_features)
 df_imputed = add_categorical_features_merge_and_1hot(df, df_imputed, categorical_features_tomerge, 'actors_names' )
 
 
-# In[ ]:
+# In[29]:
 
 
 df_imputed.shape
 
 
-# In[ ]:
+# In[30]:
 
 
 df_imputed = add_categorical_features_bow_and_1hot(df, df_imputed, categorical_features_tobow)
 
 
-# In[ ]:
+# In[31]:
 
 
 df_imputed.shape
 
 
-# In[ ]:
+# In[32]:
 
 
 df_imputed.head(10)
 
 
-# In[ ]:
+# In[33]:
 
 
 #df_imputed.describe()
 
 
+# In[38]:
+
+
+df_imputed.loc[[66]]['movie_title_knight']
+
+
+# In[41]:
+
+
+df.loc[[65]]['movie_title']
+
+
+# In[46]:
+
+
+df_imputed.loc[[65]]['movie_title_apocalypse']
+
+
+# In[47]:
+
+
+df_temp = df['movie_title'].str.lower().str.replace(r'[^\w\s]', '')
+
+
+# In[52]:
+
+
+df_temp.loc[[65]].str.get_dummies(sep=' ').add_prefix('movie_title' +'_')
+
+
+# In[126]:
+
+
+#df1 = pd.DataFrame({'A': [1, 0], 'B': [1, 0]})
+df1 = pd.DataFrame({'B': [1, 0]})
+df2 = pd.DataFrame({'A': [0, 0], 'B' : [0,0]})
+
+
+# In[79]:
+
+
+df1.info()
+
+
+# In[80]:
+
+
+df2.info()
+
+
+# In[95]:
+
+
+combine_1hot = lambda s1, s2: (s1 | s2)
+
+
+# In[157]:
+
+
+def combine_1hot(s1, s2):
+    print('first function call :')
+    print(s1)
+    print(s2)
+    print('s1 is nan : ')
+    print(np.isnan(s1[0]))
+    
+    if (np.isnan(s1[0])):
+        return(s2.astype(int))
+    
+    return(s1 | s2)
+
+
+# In[83]:
+
+
+combine_1hot = lambda s1, s2: np.union1d(s1,s2)
+
+
+# In[89]:
+
+
+df1 | df2
+
+
+# In[127]:
+
+
+df1
+
+
+# In[128]:
+
+
+df2
+
+
+# In[161]:
+
+
+df1.combine(df2, combine_1hot, overwrite=False)
+
+
 # ### Comparaison avant/après de quelques valeurs 1hot encoded :
 
-# In[ ]:
+# In[34]:
 
 
 df[['actor_1_name', 'actor_2_name', 'actor_3_name', 'actors_names', 'country', 'genres']].head(10)
 
 
-# In[ ]:
+# In[35]:
 
 
 df_imputed[['actors_names_Johnny Depp', 'actors_names_Orlando Bloom', 'actors_names_Jack Davenport', 'actors_names_Joel David Moore', 'country_USA', 'country_UK', 'genres_Action', 'genres_Adventure']].head(10)
