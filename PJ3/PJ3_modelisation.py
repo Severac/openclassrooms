@@ -1038,7 +1038,7 @@ labels = df['imdb_score'].to_numpy()
 df_encoded = preparation_pipeline.fit_transform(df)
 
 
-# ## Recherche de paramètres PCA (5, 150, 200) + KNN
+# ## Recherche de paramètres PCA (5, 150, 200) + KNN, métrique similarité
 
 # In[71]:
 
@@ -1046,7 +1046,7 @@ df_encoded = preparation_pipeline.fit_transform(df)
 #from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import GridSearchCV
 
-recommendation_pipeline_NCA_KNN = Pipeline([
+recommendation_pipeline_PCA_KNN = Pipeline([
     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
     ('standardscaler', preprocessing.StandardScaler()),
     ('pca', decomposition.PCA(n_components=200)),
@@ -1068,7 +1068,7 @@ param_grid = {
         ],
     }
 
-grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
+grid_search = GridSearchCV(recommendation_pipeline_PCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
 grid_search.fit(df_encoded, labels)
 
 
@@ -1121,6 +1121,84 @@ def print_rmse(labels, predictions):
     mse = mean_squared_error(labels, predictions)
     rmse = np.sqrt(mse)
     print(f"Erreur moyenne de prédiction de l'IMDB score: {rmse}")
+
+
+# ## Recherche de paramètres NCA (5, 150, 200) + KNN, métrique imdb
+
+# In[ ]:
+
+
+#from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+
+# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+
+param_grid = {
+        'features_droper__features_todrop':  [#None,
+                                              ['imdb_score'],
+                                    
+        ],
+
+        'NCA__nca_params': [{'random_state':42, 'n_components':5 }, {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }],
+
+        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+        ],
+    }
+
+grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan, scoring='neg_mean_squared_error')
+grid_search.fit(df_encoded, labels)
+
+
+# In[ ]:
+
+
+grid_search.best_estimator_
+
+
+# ## Recherche de paramètres NCA (5, 150, 200) + KNN, métrique similarité
+
+# In[ ]:
+
+
+#from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+
+# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+
+param_grid = {
+        'features_droper__features_todrop':  [#None,
+                                              ['imdb_score'],
+                                    
+        ],
+
+        'NCA__nca_params': [{'random_state':42, 'n_components':5 }, {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }],
+
+        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+        ],
+    }
+
+grid_search_sim = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
+grid_search_sim.fit(df_encoded, labels)
+
+
+# In[ ]:
+
+
+grid_search_sim.best_estimator_
 
 
 # 
