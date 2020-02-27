@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ3 : IMDB dataset :  data clean and modelisation notebook 
 
-# In[1]:
+# In[57]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -47,10 +47,10 @@ LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from GRI
 SAVE_API_MODEL = True # If True : API model containing recommendation matrix and DataFrame (with duplicates removed) will be saved
 API_MODEL_PICKLE_FILE = 'API_model_PJ3.pickle'
 
-EXECUTE_INTERMEDIATE_MODELS = False # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
+EXECUTE_INTERMEDIATE_MODELS = True # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
 
 
-# In[2]:
+# In[3]:
 
 
 def qgrid_show(df):
@@ -59,7 +59,7 @@ def qgrid_show(df):
 
 # # Téléchargement et décompression des données
 
-# In[3]:
+# In[4]:
 
 
 PROXY_DEF = 'BNP'
@@ -85,7 +85,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[4]:
+# In[5]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -96,7 +96,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Chargement des données
 
-# In[5]:
+# In[6]:
 
 
 import pandas as pd
@@ -109,7 +109,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[6]:
+# In[7]:
 
 
 df = load_data()
@@ -117,7 +117,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[7]:
+# In[8]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -130,7 +130,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[8]:
+# In[9]:
 
 
 df.head()
@@ -138,7 +138,7 @@ df.head()
 
 # ### Vérification s'il y a des doublons
 
-# In[9]:
+# In[10]:
 
 
 df[df.duplicated()]
@@ -146,7 +146,7 @@ df[df.duplicated()]
 
 # ### Suppression des doublons
 
-# In[10]:
+# In[11]:
 
 
 df.drop_duplicates(inplace=True)
@@ -154,7 +154,7 @@ df.drop_duplicates(inplace=True)
 df.reset_index(drop=True, inplace=True)
 
 
-# In[11]:
+# In[12]:
 
 
 df.info()
@@ -173,7 +173,7 @@ df.info()
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
 
-# In[12]:
+# In[13]:
 
 
 (df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
@@ -181,7 +181,7 @@ df.info()
 
 # ## Identification des typologies de features à traiter 
 
-# In[13]:
+# In[14]:
 
 
 numerical_features = ['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']
@@ -206,7 +206,7 @@ features_notkept = ['aspect_ratio', 'movie_imdb_link']
 
 # ## Affichage des features qui seront splittées avant le 1hot encode :
 
-# In[14]:
+# In[15]:
 
 
 df[['genres', 'plot_keywords']].sample(10)
@@ -214,7 +214,19 @@ df[['genres', 'plot_keywords']].sample(10)
 
 # # Encodage des features
 
-# In[15]:
+# In[16]:
+
+
+#df = df.loc[[65, 976, 1559]]
+
+
+# In[17]:
+
+
+#df
+
+
+# In[18]:
 
 
 # KNN imputer pas encore supporté par la version de sklearn que j'utilise :
@@ -225,19 +237,19 @@ df[['genres', 'plot_keywords']].sample(10)
 #imputer.fit_transform(df[numerical_features])
 
 
-# In[16]:
+# In[19]:
 
 
 numerical_features_columns = df[numerical_features].columns
 
 
-# In[17]:
+# In[20]:
 
 
 numerical_features_index = df[numerical_features].index
 
 
-# In[18]:
+# In[21]:
 
 
 numerical_features_columns.shape
@@ -245,7 +257,7 @@ numerical_features_columns.shape
 
 # ## Imputation des données numériques par régression linéaire
 
-# In[19]:
+# In[22]:
 
 
 from sklearn.experimental import enable_iterative_imputer
@@ -255,7 +267,7 @@ imp = IterativeImputer(max_iter=10, random_state=0)
 transformed_data = imp.fit_transform(df[numerical_features])  
 
 
-# In[20]:
+# In[23]:
 
 
 df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
@@ -263,13 +275,13 @@ df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=nume
 
 # ### Visualisation de quelques résultats par comparaison avant/après :
 
-# In[23]:
+# In[24]:
 
 
 qgrid_show(df[numerical_features])
 
 
-# In[24]:
+# In[25]:
 
 
 qgrid_show(df_numerical_features_imputed)
@@ -277,7 +289,7 @@ qgrid_show(df_numerical_features_imputed)
 
 # ### Constat que toutes les valeurs sont maintenant renseignées :
 
-# In[25]:
+# In[26]:
 
 
 (df_numerical_features_imputed.count()/df_numerical_features_imputed.shape[0]).sort_values(axis=0, ascending=False)
@@ -286,7 +298,7 @@ qgrid_show(df_numerical_features_imputed)
 # ## Transformation des features de catégorie
 # ### Voir le §  Identification des typologies de features à traiter  ci-dessus pour une explication des différents cas de figure
 
-# In[26]:
+# In[51]:
 
 
 '''
@@ -334,14 +346,15 @@ def add_categorical_features_merge_and_1hot(df, df_target, categorical_features_
 def add_categorical_features_bow_and_1hot(df, df_target, categorical_features_totransform):
     for feature_totransform in categorical_features_totransform:
         print(f'Adding 1hot Feature : {feature_totransform}')
-        df_transformed = df[feature_totransform].str.lower().str.replace(r'[^\w\s]', '').str.get_dummies(sep=' ').add_prefix(feature_totransform +'_')
+        df_transformed = df[feature_totransform].str.lower().str.replace(r'[^\w\s]', '').str.replace(u'\xa0', u'').str.get_dummies(sep=' ').add_prefix(feature_totransform +'_')
+        # \xa0  character present at the end of film titles prevented last character to be catched by dummies
         
         df_target = pd.concat([df_target, df_transformed], axis=1)
         
     return(df_target)            
 
 
-# In[27]:
+# In[28]:
 
 
 df_imputed = add_categorical_features_1hot(df, df_numerical_features_imputed, categorical_features)
@@ -360,16 +373,23 @@ df_imputed.shape
 df_imputed = add_categorical_features_bow_and_1hot(df, df_imputed, categorical_features_tobow)
 
 
-# In[31]:
+# In[93]:
 
 
-df_imputed.shape
+pd.set_option('display.max_columns', 100)
+df_imputed.head(10)
 
 
 # In[32]:
 
 
-df_imputed.head(10)
+df_imputed.loc[66][['movie_title_dark']]
+
+
+# In[49]:
+
+
+df_imputed.loc[66][['movie_title_knight']]
 
 
 # In[33]:
@@ -378,34 +398,166 @@ df_imputed.head(10)
 #df_imputed.describe()
 
 
-# In[38]:
+# In[33]:
+
+
+df.loc[66]['movie_title']
+
+
+# In[34]:
 
 
 df_imputed.loc[[66]]['movie_title_knight']
 
 
-# In[41]:
+# In[35]:
 
 
 df.loc[[65]]['movie_title']
 
 
-# In[46]:
+# In[36]:
 
 
 df_imputed.loc[[65]]['movie_title_apocalypse']
 
 
+# In[28]:
+
+
+df_temp = df['movie_title'].str.lower().str.replace(r'[^\w\s]', '').str.get_dummies(sep=' ').add_prefix('movie_title' +'_')
+
+
+# In[31]:
+
+
+df_temp.loc[[65]]['movie_title_apocalypse']
+
+
+# In[36]:
+
+
+df_temp2_simplified = df['movie_title'].str.lower().str.replace(r'[^\w\s]', '')
+
+
+# In[37]:
+
+
+df_temp2_simplified_cleaned = df_temp2_simplified.str.replace(u'\xa0', u'')
+
+
+# In[38]:
+
+
+df_temp2_simplified.loc[65]
+
+
+# In[39]:
+
+
+df_temp2_simplified_cleaned.loc[65]
+
+
+# In[40]:
+
+
+df_temp2_simplified.loc[[65]]
+
+
+# In[41]:
+
+
+df_temp2_dummies = df_temp2_simplified.str.get_dummies(sep=' ').add_prefix('movie_title' +'_')
+
+
+# In[43]:
+
+
+df_temp2_dummies.loc[[65]]['movie_title_apocalypse']
+
+
+# In[45]:
+
+
+df_temp2_dummies_cleaned = df_temp2_simplified_cleaned.str.get_dummies(sep=' ').add_prefix('movie_title' +'_')
+
+
+# In[53]:
+
+
+df_temp2_dummies_cleaned[df_temp2_dummies_cleaned['movie_title_apocalypse'] == 1]
+
+
+# In[57]:
+
+
+df_temp2_dummies_cleaned.loc[[65]]
+
+
+# In[49]:
+
+
+df_temp2_dummies_cleaned.loc[[65]]['movie_title_apocalypse']
+
+
+# In[59]:
+
+
+type(df_imputed)
+
+
 # In[47]:
 
 
-df_temp = df['movie_title'].str.lower().str.replace(r'[^\w\s]', '')
+df_imputed = pd.concat([df_imputed, df_temp2_dummies_cleaned], axis=1)
 
 
-# In[52]:
+# In[61]:
 
 
-df_temp.loc[[65]].str.get_dummies(sep=' ').add_prefix('movie_title' +'_')
+df_imputed.loc[[65]]['movie_title_apocalypse'].drop_duplicates()
+
+
+# In[84]:
+
+
+df_temp2_simplified.loc[68]
+
+
+# In[95]:
+
+
+df_temp2_dummies.loc[[68]]['movie_title_aliens']
+
+
+# In[94]:
+
+
+df_temp2_dummies_cleaned.loc[[68]]['movie_title_aliens']
+
+
+# In[88]:
+
+
+df.loc[[68]]['movie_title']
+
+
+# In[33]:
+
+
+df_temp2.loc[[65]]
+
+
+# In[ ]:
+
+
+#df_temp.loc[[65]].str.get_dummies(sep=' ').add_prefix('movie_title' +'_')
+
+
+# In[21]:
+
+
+df_imputed = pd.concat([df_imputed, df_temp], axis=1)
 
 
 # In[126]:
@@ -697,26 +849,26 @@ afficher_recos_films(reco_matrix, df_imputed, with_similarity_display=True)
 df[df['movie_title'].str.contains('night')]['movie_title']
 
 
-# In[59]:
+# In[37]:
 
 
 pd.set_option('display.max_columns', 50)
 df.loc[[3]]['movie_title']
 
 
-# In[58]:
+# In[47]:
 
 
 df.loc[[66]]['movie_title']
 
 
-# In[57]:
+# In[45]:
 
 
 df_encoded.loc[[3]]['movie_title_knight']
 
 
-# In[53]:
+# In[55]:
 
 
 df_encoded.loc[[66]]['movie_title_knight']
@@ -748,7 +900,7 @@ df
 
 # # Industralisation du modèle avec Pipeline
 
-# In[20]:
+# In[52]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -896,7 +1048,7 @@ class CategoricalFeaturesBowEncoder(BaseEstimator, TransformerMixin):
         for feature_tobow in self.categorical_features_tobow:
             print(f'Adding bow Feature. : {feature_tobow}')
 
-            df_transformed = df[feature_tobow].str.lower().str.replace(r'[^\w\s]', '').str.get_dummies(sep=' ').add_prefix(feature_tobow +'_')
+            df_transformed = df[feature_tobow].str.lower().str.replace(r'[^\w\s]', '').str.replace(u'\xa0', u'').str.get_dummies(sep=' ').add_prefix(feature_tobow +'_')
             df.drop(labels=feature_tobow, axis=1, inplace=True)
             df = pd.concat([df, df_transformed], axis=1)
         
@@ -1159,7 +1311,7 @@ kmeans_transformer_pipeline = Pipeline([
 '''
 
 
-# In[21]:
+# In[53]:
 
 
 # Récupération des étiquettes de scoring :
@@ -1171,13 +1323,13 @@ df.reset_index(drop=True, inplace=True)
 labels = df['imdb_score'].to_numpy()
 
 
-# In[22]:
+# In[54]:
 
 
 df_encoded = preparation_pipeline.fit_transform(df)
 
 
-# In[23]:
+# In[43]:
 
 
 from sklearn.metrics import mean_squared_error
@@ -1247,7 +1399,7 @@ res = recommendation_pipeline_PCA_KNN.predict(df_encoded)
 '''
 
 
-# In[30]:
+# In[58]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True) :
@@ -1332,7 +1484,7 @@ plt.xlabel("Dimensions")
 
 # ## Tests avec NCA_KNN :
 
-# In[17]:
+# In[ ]:
 
 
 EXECUTE_INTERMEDIATE_MODELS = True
@@ -1391,7 +1543,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # Erreur moyenne de prédiction de l'IMDB score: 1.0635176481446682
 # 
 
-# In[76]:
+# In[59]:
 
 
 distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.transform(df_encoded)
