@@ -1125,7 +1125,7 @@ def print_rmse(labels, predictions):
 
 # ## Recherche de paramètres NCA (5, 150, 200) + KNN, métrique imdb
 
-# In[ ]:
+# In[78]:
 
 
 #from sklearn.model_selection import RandomizedSearchCV
@@ -1156,15 +1156,27 @@ grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, ve
 grid_search.fit(df_encoded, labels)
 
 
-# In[ ]:
+# In[80]:
 
 
 grid_search.best_estimator_
 
 
+# In[82]:
+
+
+df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+
+
+# In[92]:
+
+
+df_grid_search_results
+
+
 # ## Recherche de paramètres NCA (5, 150, 200) + KNN, métrique similarité
 
-# In[ ]:
+# In[79]:
 
 
 #from sklearn.model_selection import RandomizedSearchCV
@@ -1195,14 +1207,26 @@ grid_search_sim = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5
 grid_search_sim.fit(df_encoded, labels)
 
 
-# In[ ]:
+# In[81]:
 
 
 grid_search_sim.best_estimator_
 
 
+# In[86]:
+
+
+df_grid_search_sim_results = pd.concat([pd.DataFrame(grid_search_sim.cv_results_["params"]),pd.DataFrame(grid_search_sim.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+
+
+# In[93]:
+
+
+df_grid_search_sim_results
+
+
 # 
-# ## Test de différents paramètres avec NCA + KNN
+# ## Recherche de différents paramètres avec NCA + KNN
 
 # In[103]:
 
@@ -1288,7 +1312,7 @@ if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
 
 # ### Les paramètres qui sortent du lot sont la dimension 150, la métrique de minkowski, en ne dropant pas d'autre feature que l'imdb_score
 
-# ## Tests avec NCA_KNN (Meilleur modèle trouvé jusqu'à présent) :
+# ## Affichage de recommendations avec NCA_KNN n_components 200 (Meilleur modèle trouvé jusqu'à présent) :
 
 # In[60]:
 
@@ -1303,8 +1327,6 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.transform(df_encoded)
 
-
-# ### Affichage de recommendations pour NCA_KNN avec n_components 200 :
 
 # In[67]:
 
@@ -1355,7 +1377,7 @@ afficher_recos_films(reco_matrix, df_encoded)
 afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 
 
-# # Calcul et examen du modèle avec NCA KNN , composants à 150
+# ## Affichage de recommendations avec NCA KNN , n_components à 150
 
 # In[107]:
 
@@ -1389,9 +1411,59 @@ afficher_recos_films(reco_matrix, df_encoded)
 afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 
 
+# ## Affichage de recommandations avec PCA (5 components) + KNN
+
+# In[89]:
+
+
+recommendation_pipeline_PCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=5)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+distances_matrix, reco_matrix = recommendation_pipeline_PCA_KNN.fit_transform(df_encoded, labels)
+
+
+# In[90]:
+
+
+afficher_recos_films(reco_matrix, df_encoded)
+
+
+# In[91]:
+
+
+afficher_recos_films(reco_matrix, df_imputed, with_similarity_display=True)
+
+
+# ## Affichage de recommandations avec PCA (200 components) + KNN
+
+# In[94]:
+
+
+recommendation_pipeline_PCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+distances_matrix, reco_matrix = recommendation_pipeline_PCA_KNN.fit_transform(df_encoded, labels)
+
+
+# In[95]:
+
+
+afficher_recos_films(reco_matrix, df_encoded)
+
+
 # # Visualisation des films avec KMeans
 
-# In[12]:
+# In[96]:
 
 
 df_reduced = reducer_pipeline.fit_transform(df_encoded, labels)
@@ -1399,7 +1471,7 @@ df_reduced = reducer_pipeline.fit_transform(df_encoded, labels)
 
 # ## Tentative de KMeans sur les données non réduites (22000 dimensions)
 
-# In[58]:
+# In[97]:
 
 
 X = df_encoded.values
@@ -1413,24 +1485,25 @@ X_scaled = std_scale.transform(X)
 
 # Affichage des coefs. de silhouette pour différentes valeurs de k :
 
-# In[59]:
+# In[99]:
 
 
 from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans
 
 kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(X_scaled)
                 for k in range(1, 10)]
 #inertias = [model.inertia_ for model in kmeans_per_k]
 
 
-# In[62]:
+# In[100]:
 
 
 silhouette_scores = [silhouette_score(X, model.labels_)
                      for model in kmeans_per_k[1:]]
 
 
-# In[65]:
+# In[101]:
 
 
 plt.figure(figsize=(8, 3))
@@ -1446,21 +1519,21 @@ plt.show()
 
 # ## Tentative de KMeans sur données réduites à 200 dimensions avec NCA
 
-# In[70]:
+# In[102]:
 
 
 kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_reduced)
                 for k in range(1, 50)]
 
 
-# In[71]:
+# In[109]:
 
 
-silhouette_scores = [silhouette_score(X, model.labels_)
+silhouette_scores = [silhouette_score(df_reduced, model.labels_)
                      for model in kmeans_per_k[1:]]
 
 
-# In[72]:
+# In[110]:
 
 
 plt.figure(figsize=(8, 3))
@@ -1472,7 +1545,7 @@ plt.ylabel("Silhouette score", fontsize=14)
 plt.show()
 
 
-# => Résultat : là encore on a des coefficients de silhouette négatifs
+# => Résultat : instable
 
 # ## Tentative de KMeans distance cosine, k=10
 
@@ -1547,17 +1620,17 @@ py.offline.plot(fig, filename='clusters_plot.html')
 
 # ## Lancement d'un clustering, et visualisation
 
-# In[47]:
+# In[127]:
 
 
 from sklearn.cluster import KMeans
 
-kmeans_clusterer = KMeans(n_clusters=200)
+kmeans_clusterer = KMeans(n_clusters=19, random_state=42)
 
 clusters = kmeans_clusterer.fit_transform(df_reduced)
 
 
-# In[42]:
+# In[128]:
 
 
 clusters
@@ -1565,7 +1638,7 @@ clusters
 
 # ## Réduction de dimensionalité à 2 et 3 pour la visualisation
 
-# In[52]:
+# In[130]:
 
 
 X = df_encoded.values
@@ -1585,31 +1658,25 @@ pca = decomposition.PCA(n_components=3)
 X_reduced_n3 = pca.fit_transform(X_scaled)
 
 
-# In[27]:
+# In[114]:
 
 
 X_reduced_n2[:, 1].shape
 
 
-# In[21]:
+# In[115]:
 
 
 clusters.shape
 
 
-# In[39]:
+# In[116]:
 
 
 kmeans_clusterer.labels_[800]
 
 
-# In[51]:
-
-
-go.Scatter3d
-
-
-# In[56]:
+# In[131]:
 
 
 import plotly as py
@@ -1686,7 +1753,7 @@ py.offline.plot(fig, filename='clusters_plot.html')
 imdb_score_cat.to_list()
 
 
-# In[112]:
+# In[123]:
 
 
 import plotly as py
