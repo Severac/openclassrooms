@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ3 : IMDB dataset :  data clean and modelisation notebook 
 
-# In[57]:
+# In[36]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -38,11 +38,15 @@ sns.set()
 ####### Paramètres pour sauver et restaurer les modèles :
 import pickle
 
+####### Paramètres à changer par l'utilisateur selon son besoin :
+RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
+SAVE_GRID_RESULTS = True # If True : grid results object will be saved to GRIDSEARCH_PICKLE_FILE, and accuracy results to SEARCH_CSV_FILE
+LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from GRIDSEARCH_PICKLE_FILE
+
 GRIDSEARCH_PICKLE_FILE = 'grid_search_results.pickle'
 GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
-SAVE_GRID_RESULTS = False # If True : grid results object will be saved to GRIDSEARCH_PICKLE_FILE, and accuracy results to SEARCH_CSV_FILE
-RECOMPUTE_GRIDSEARCH = False  # CAUTION : computation is about 2 hours long
-LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from GRIDSEARCH_PICKLE_FILE
+
+GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
 
 SAVE_API_MODEL = True # If True : API model containing recommendation matrix and DataFrame (with duplicates removed) will be saved
 API_MODEL_PICKLE_FILE = 'API_model_PJ3.pickle'
@@ -50,7 +54,7 @@ API_MODEL_PICKLE_FILE = 'API_model_PJ3.pickle'
 EXECUTE_INTERMEDIATE_MODELS = True # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
 
 
-# In[3]:
+# In[2]:
 
 
 def qgrid_show(df):
@@ -59,7 +63,7 @@ def qgrid_show(df):
 
 # # Téléchargement et décompression des données
 
-# In[4]:
+# In[3]:
 
 
 PROXY_DEF = 'BNP'
@@ -85,7 +89,7 @@ def fetch_dataset(data_url=DATA_URL, data_path=DATA_PATH):
     data_archive.close()
 
 
-# In[5]:
+# In[4]:
 
 
 if (DOWNLOAD_DATA == True):
@@ -96,7 +100,7 @@ if (DOWNLOAD_DATA == True):
 
 # ## Chargement des données
 
-# In[6]:
+# In[5]:
 
 
 import pandas as pd
@@ -109,7 +113,7 @@ def load_data(data_path=DATA_PATH):
     return pd.read_csv(csv_path, sep=',', header=0, encoding='utf-8')
 
 
-# In[7]:
+# In[6]:
 
 
 df = load_data()
@@ -117,7 +121,7 @@ df = load_data()
 
 # ###  On vérifie que le nombre de lignes intégrées dans le Dataframe correspond au nombre de lignes du fichier
 
-# In[8]:
+# In[7]:
 
 
 num_lines = sum(1 for line in open(DATA_PATH_FILE, encoding='utf-8'))
@@ -130,7 +134,7 @@ print(message)
 
 # ### Puis on affiche quelques instances de données :
 
-# In[9]:
+# In[8]:
 
 
 df.head()
@@ -138,7 +142,7 @@ df.head()
 
 # ### Vérification s'il y a des doublons
 
-# In[10]:
+# In[9]:
 
 
 df[df.duplicated()]
@@ -146,7 +150,7 @@ df[df.duplicated()]
 
 # ### Suppression des doublons
 
-# In[11]:
+# In[10]:
 
 
 df.drop_duplicates(inplace=True)
@@ -154,7 +158,7 @@ df.drop_duplicates(inplace=True)
 df.reset_index(drop=True, inplace=True)
 
 
-# In[12]:
+# In[11]:
 
 
 df.info()
@@ -173,7 +177,7 @@ df.info()
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
 
-# In[13]:
+# In[12]:
 
 
 (df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
@@ -181,7 +185,7 @@ df.info()
 
 # ## Identification des typologies de features à traiter 
 
-# In[14]:
+# In[13]:
 
 
 numerical_features = ['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']
@@ -206,7 +210,7 @@ features_notkept = ['aspect_ratio', 'movie_imdb_link']
 
 # ## Affichage des features qui seront splittées avant le 1hot encode :
 
-# In[15]:
+# In[14]:
 
 
 df[['genres', 'plot_keywords']].sample(10)
@@ -225,19 +229,19 @@ df[['genres', 'plot_keywords']].sample(10)
 #imputer.fit_transform(df[numerical_features])
 
 
-# In[19]:
+# In[18]:
 
 
 numerical_features_columns = df[numerical_features].columns
 
 
-# In[20]:
+# In[19]:
 
 
 numerical_features_index = df[numerical_features].index
 
 
-# In[21]:
+# In[20]:
 
 
 numerical_features_columns.shape
@@ -481,7 +485,7 @@ df.loc[[1116]]
 
 # ## Affichage d'échantillon de recommandations
 
-# In[69]:
+# In[15]:
 
 
 from sklearn.preprocessing import MinMaxScaler
@@ -535,7 +539,7 @@ def get_similarity_df_scaled_input(df_scaled, index1, index2):
     return(1 - ((df_relevant_items.loc[index1] - df_relevant_items.loc[index2]).abs())).sort_values(ascending=False)
 
 
-# In[65]:
+# In[16]:
 
 
 def afficher_recos(film_index, reco_matrix, df_encoded, with_similarity_display=False):
@@ -553,7 +557,7 @@ def afficher_recos(film_index, reco_matrix, df_encoded, with_similarity_display=
     print("\n")
 
 
-# In[66]:
+# In[17]:
 
 
 def afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=False, films_temoins_indexes=[2703, 0, 3, 4820, 647, 124, 931, 1172, 3820]):
@@ -607,7 +611,7 @@ df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imd
 
 # ## Définition des Pipelines et métriques
 
-# In[52]:
+# In[18]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -940,7 +944,46 @@ class NCATransform(BaseEstimator, TransformerMixin):
         print('NCA transform')
         return(self.nca.transform(X))    
     
-    
+'''
+This class wraps either NCA transformer, or PCA transformer (to be used with grid search)
+'''
+
+class DimensionalityReduction_Transform(BaseEstimator, TransformerMixin):
+    def __init__(self, reduction_params =  {'reduction_type': 'PCA', 'n_components':200 }):
+        self.reduction_params = reduction_params
+        self.model = None
+        #self.pca = None
+
+    def fit(self, X, labels=None):      
+        if (self.reduction_params['reduction_type'] == 'NCA'):        
+            print('NCA fit')
+            self.labels = labels
+
+            # Discretize labels for the need of NCA algorithm :
+            df_labels =  pd.DataFrame(data=labels)
+            self.labels_discrete = pd.cut(df_labels[0], bins=range(1,10), right=True).astype(str).tolist()
+
+            self.model = NeighborhoodComponentsAnalysis(random_state=42, n_components=self.reduction_params['n_components'])
+            self.model.fit(X, self.labels_discrete)
+
+            return self
+ 
+        if (self.reduction_params['reduction_type'] == 'PCA'):
+            self.model = decomposition.PCA(n_components=self.reduction_params['n_components'])
+            self.model.fit(X)
+            
+            return self
+            
+
+    def transform(self, X):   
+        if (self.reduction_params['reduction_type'] == 'NCA'):
+            print('NCA transform')
+        
+        if (self.reduction_params['reduction_type'] == 'PCA'):
+            print('PCA transform')
+        
+        return(self.model.transform(X))
+
 class PipelineFinal(BaseEstimator, TransformerMixin):
     def __init__(self, params=None):
         print('init')
@@ -1020,7 +1063,7 @@ kmeans_transformer_pipeline = Pipeline([
 
 # ## Lancement du pipeline preparation
 
-# In[53]:
+# In[19]:
 
 
 # Récupération des étiquettes de scoring :
@@ -1032,215 +1075,25 @@ df.reset_index(drop=True, inplace=True)
 labels = df['imdb_score'].to_numpy()
 
 
-# In[54]:
+# In[20]:
 
 
 df_encoded = preparation_pipeline.fit_transform(df)
 
 
-# ## Recherche de paramètres PCA (5, 150, 200) + KNN, métrique similarité
+# ## Recherche multiple de paramètres avec métrique similarité
 
-# In[71]:
-
-
-#from sklearn.model_selection import RandomizedSearchCV
-from sklearn.model_selection import GridSearchCV
-
-recommendation_pipeline_PCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=200)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-])
-
-
-# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
-
-param_grid = {
-        'features_droper__features_todrop':  [#None,
-                                              ['imdb_score'],
-                                    
-        ],
-
-        'pca__n_components': [5, 150, 200],
-
-        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
-        ],
-    }
-
-grid_search = GridSearchCV(recommendation_pipeline_PCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
-grid_search.fit(df_encoded, labels)
-
-
-# In[72]:
-
-
-df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
-
-
-# In[73]:
-
-
-#df_grid_search_results.to_csv('gridresult_temp.csv')  # Uncomment to save in CSV file
-
-
-# In[74]:
-
-
-grid_search.best_estimator_
-
-
-# In[76]:
-
-
-df_grid_search_results.to_csv('gridsearch_PCA_results.csv')
-
-
-# In[75]:
-
-
-qgrid_show(df_grid_search_results)
-
-
-# Résultats :  
-#     KNN__knn_params	features_droper__features_todrop	pca__n_components	Accuracy  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	5	8.492163788152574  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	150	8.214512311933097  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	200	8.04523852877884  
-# 
-# => Ces résultats restent contradictoires avec l'examen humain qui montre que nb_components = 5 n'est pas adapté (alors qu'ici, le score de similarité moyen est meilleur)  
-# 
-# Après avoir modifié la fonction de comparaison des similarités pour enlever de nombreuses features qui ne concernent pas la similarité des items car ce ne sont pas des propriétés des films en eux mêmes (nb facebook likes,  nb votes, ....), on obtient toujours le même classement
-
-# In[43]:
-
-
-from sklearn.metrics import mean_squared_error
-
-def print_rmse(labels, predictions):
-    mse = mean_squared_error(labels, predictions)
-    rmse = np.sqrt(mse)
-    print(f"Erreur moyenne de prédiction de l'IMDB score: {rmse}")
-
-
-# ## Recherche de paramètres NCA (5, 150, 200) + KNN, métrique imdb
-
-# In[78]:
-
-
-#from sklearn.model_selection import RandomizedSearchCV
-from sklearn.model_selection import GridSearchCV
-
-recommendation_pipeline_NCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-])
-
-# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
-
-param_grid = {
-        'features_droper__features_todrop':  [#None,
-                                              ['imdb_score'],
-                                    
-        ],
-
-        'NCA__nca_params': [{'random_state':42, 'n_components':5 }, {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }],
-
-        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
-        ],
-    }
-
-grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan, scoring='neg_mean_squared_error')
-grid_search.fit(df_encoded, labels)
-
-
-# In[80]:
-
-
-grid_search.best_estimator_
-
-
-# In[82]:
-
-
-df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
-
-
-# In[92]:
-
-
-df_grid_search_results
-
-
-# ## Recherche de paramètres NCA (5, 150, 200) + KNN, métrique similarité
-
-# In[79]:
-
-
-#from sklearn.model_selection import RandomizedSearchCV
-from sklearn.model_selection import GridSearchCV
-
-recommendation_pipeline_NCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-])
-
-# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
-
-param_grid = {
-        'features_droper__features_todrop':  [#None,
-                                              ['imdb_score'],
-                                    
-        ],
-
-        'NCA__nca_params': [{'random_state':42, 'n_components':5 }, {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }],
-
-        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
-        ],
-    }
-
-grid_search_sim = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
-grid_search_sim.fit(df_encoded, labels)
-
-
-# In[81]:
-
-
-grid_search_sim.best_estimator_
-
-
-# In[86]:
-
-
-df_grid_search_sim_results = pd.concat([pd.DataFrame(grid_search_sim.cv_results_["params"]),pd.DataFrame(grid_search_sim.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
-
-
-# In[93]:
-
-
-df_grid_search_sim_results
-
-
-# 
-# ## Recherche de différents paramètres avec NCA + KNN
-
-# In[103]:
+# In[21]:
 
 
 if (RECOMPUTE_GRIDSEARCH == True):
-    #from sklearn.model_selection import RandomizedSearchCV
     from sklearn.model_selection import GridSearchCV
 
-    recommendation_pipeline_NCA_KNN = Pipeline([
+    recommendation_pipeline_KNN = Pipeline([
         ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
         ('standardscaler', preprocessing.StandardScaler()),
-        ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+        ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type' : 'PCA', 'n_components' : 200 })),
         ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-        #('pipeline_final', PipelineFinal()),
     ])
 
 
@@ -1248,40 +1101,61 @@ if (RECOMPUTE_GRIDSEARCH == True):
 
     param_grid = {
             'features_droper__features_todrop':  [#None,
-                                                  ['imdb_score'],
-                                                  ['imdb_score', 'actor_1_facebook_likes','actor_2_facebook_likes', 'actor_3_facebook_likes', 'num_user_for_reviews', 'num_critic_for_reviews', 'num_voted_users']                                              
+                                                  #['imdb_score'],
+            
+                ## Drop de tout ce qui est en haut à droite du plan factoriel :
+                #['title_year', 'cast_total_facebook_likes', 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'actor_3_facebook_likes'],
+
+                # Drop de tout ce qui est en bas à droite sur le plan factoriel :
+                ['movie_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'num_user_for_reviews', 'num_voted_users', 'duration', 'imdb_score'],
+                
+                # Conservation de cast_total_facebook_likes (en haut à droite) + imdb_score (en bas à droite) + les features OHE
+                ['title_year', 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'actor_3_facebook_likes', 'movie_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'num_user_for_reviews', 'num_voted_users', 'duration'],
+                
             ],
 
-            'NCA__nca_params': [{'random_state':42, 'n_components':50 }, {'random_state':42, 'n_components':100 }, 
-                                {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }
+            'reduction__reduction_params': [{'reduction_type' : 'NCA', 'n_components' : 200 },
+                                            #{'reduction_type' : 'NCA', 'n_components' : 150 },
+                                            {'reduction_type' : 'NCA', 'n_components' : 100 },
+                                            {'reduction_type' : 'NCA', 'n_components' : 10 },
+                                            {'reduction_type' : 'PCA', 'n_components' : 200 },
+                                            #{'reduction_type' : 'PCA', 'n_components' : 150 },
+                                            {'reduction_type' : 'PCA', 'n_components' : 100 },
+                                            {'reduction_type' : 'PCA', 'n_components' : 10 },
+                                            
+
             ],
 
-            'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'manhattan'},
+
+            'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
                                 {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'}, 
-                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
                                 {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'euclidean'}, 
-                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'jaccard'}, 
-                                #{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'mahalanobis'}, 
-                                {'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'minkowski'},
-                                {'n_neighbors':6, 'algorithm':'brute', 'metric':'minkowski'},
             ],
         }
 
-    grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid,scoring='neg_mean_squared_error', cv=2, verbose=2, error_score=np.nan)
+    grid_search = GridSearchCV(recommendation_pipeline_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
     grid_search.fit(df_encoded, labels)
+
+    
 
 
 # ### Sauvegarde et restauration des résultats
 
-# In[104]:
+# In[35]:
 
 
 if (SAVE_GRID_RESULTS == True):
-    df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+    #df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+    #df_grid_search_results.to_csv(GRIDSEARCH_CSV_FILE)
+
+    df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["mean_test_score"])],axis=1)
+    df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["std_test_score"], columns=["std_test_score"])],axis=1)
+    df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_fit_time"], columns=["mean_fit_time"])],axis=1)
+    df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
     df_grid_search_results.to_csv(GRIDSEARCH_CSV_FILE)
     
     with open(GRIDSEARCH_PICKLE_FILE, 'wb') as f:
-        pickle.dump(grid_search.cv_results_, f, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(grid_search, f, pickle.HIGHEST_PROTOCOL)
         
 if (LOAD_GRID_RESULTS == True):
     if ((SAVE_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
@@ -1289,58 +1163,275 @@ if (LOAD_GRID_RESULTS == True):
         
     else:
         with open(GRIDSEARCH_PICKLE_FILE, 'rb') as f:
-            grid_search_cv_results = pickle.load(f)
+            grid_search = pickle.load(f)
            
-        df_grid_search_results = pd.concat([pd.DataFrame(grid_search_cv_results["params"]),pd.DataFrame(grid_search_cv_results["mean_test_score"], columns=["Accuracy"])],axis=1)
+        df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["mean_test_score"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["std_test_score"], columns=["std_test_score"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_fit_time"], columns=["mean_fit_time"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
 
 
-# In[105]:
-
-
-if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
-    grid_search_cv_results
-
-
-# ### Comme meilleur estimateur, avec la métrique prédiction on a donc : NCA avec 150 composants,  KNN avec algorithme kd_tree et distance manhattan
-
-# In[106]:
+# In[23]:
 
 
 if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
-    qgrid_show(df_grid_search_results)
+    display(grid_search.cv_results_)
 
 
-# ### Les paramètres qui sortent du lot sont la dimension 150, la métrique de minkowski, en ne dropant pas d'autre feature que l'imdb_score
-
-# ## Affichage de recommendations avec NCA_KNN n_components 200 (Meilleur modèle trouvé jusqu'à présent) :
-
-# In[60]:
+# In[34]:
 
 
-EXECUTE_INTERMEDIATE_MODELS = True
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    recommendation_pipeline_NCA_KNN.fit(df_encoded, labels)
+if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
+    display(df_grid_search_results.sort_values(by=['mean_test_score'], ascending=False))
 
 
-# In[61]:
+# ### Définition d'une fonction de sauvegarde / chargement résultats pour les prochains tests
+
+# In[40]:
 
 
-distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.transform(df_encoded)
+def save_or_load_search_params(grid_search, save_file_suffix):
+    if (SAVE_GRID_RESULTS == True):
+        #df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+        #df_grid_search_results.to_csv(GRIDSEARCH_CSV_FILE)
+
+        df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["mean_test_score"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["std_test_score"], columns=["std_test_score"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_fit_time"], columns=["mean_fit_time"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
+        df_grid_search_results.to_csv(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.csv')
+
+        with open(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.pickle', 'wb') as f:
+            pickle.dump(grid_search, f, pickle.HIGHEST_PROTOCOL)
+            
+        return(df_grid_search_results)
+
+    if (LOAD_GRID_RESULTS == True):
+        if ((SAVE_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
+            print('Error : if want to load grid results, you should not have saved them or recomputed them before, or you will loose all your training data')
+
+        else:
+            with open(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.pickle', 'rb') as f:
+                grid_search = pickle.load(f)
+
+            df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["mean_test_score"])],axis=1)
+            df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["std_test_score"], columns=["std_test_score"])],axis=1)
+            df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_fit_time"], columns=["mean_fit_time"])],axis=1)
+            df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
+            
+            return(df_grid_search_results)
 
 
-# In[67]:
+# ### On complète la recherche multiple précédente avec des combinatoires de features drop supplémentaires
+
+# In[39]:
+
+
+if (RECOMPUTE_GRIDSEARCH == True):
+    from sklearn.model_selection import GridSearchCV
+
+    recommendation_pipeline_KNN = Pipeline([
+        ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+        ('standardscaler', preprocessing.StandardScaler()),
+        ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type' : 'PCA', 'n_components' : 200 })),
+        ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    ])
+
+
+    # Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+
+    param_grid = {
+            'features_droper__features_todrop':  [None,
+                                                  ['imdb_score'],
+            
+                ## Drop de tout ce qui est en haut à droite du plan factoriel :
+                #['title_year', 'cast_total_facebook_likes', 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'actor_3_facebook_likes'],
+
+                # Drop de tout ce qui est en bas à droite sur le plan factoriel :
+                #['movie_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'num_user_for_reviews', 'num_voted_users', 'duration', 'imdb_score'],
+                
+                # Conservation de cast_total_facebook_likes (en haut à droite) + imdb_score (en bas à droite) + les features OHE
+                #['title_year', 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'actor_3_facebook_likes', 'movie_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'num_user_for_reviews', 'num_voted_users', 'duration'],
+                
+            ],
+
+            'reduction__reduction_params': [{'reduction_type' : 'NCA', 'n_components' : 200 },
+                                            #{'reduction_type' : 'NCA', 'n_components' : 150 },
+                                            {'reduction_type' : 'NCA', 'n_components' : 100 },
+                                            {'reduction_type' : 'NCA', 'n_components' : 10 },
+                                            {'reduction_type' : 'PCA', 'n_components' : 200 },
+                                            #{'reduction_type' : 'PCA', 'n_components' : 150 },
+                                            {'reduction_type' : 'PCA', 'n_components' : 100 },
+                                            {'reduction_type' : 'PCA', 'n_components' : 10 },
+                                            
+
+            ],
+
+
+            'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'}, 
+                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'euclidean'}, 
+            ],
+        }
+
+    grid_search = GridSearchCV(recommendation_pipeline_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
+    grid_search.fit(df_encoded, labels)
+
+    
+
+
+# In[43]:
+
+
+df_grid_search_results_new = save_or_load_search_params(grid_search, 'otherfeats_20200229')
+
+
+# => En combinant les résultats obtenus par les 2 recherches ci-dessus (sauvegardées dans les fichiers grid_search_results.csv et grid_search_results_otherfeats_20200229.csv, que l'on a mergées ensemble dans grid_search_results_similarity_metric.csv), on obtient que le meilleur estimateur pour la métrique similarité des films est :  
+# knn_params : {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}  
+# features_todrop : ['imdb_score']  
+# reduction_params : {'reduction_type': 'NCA', 'n_components': 100}  
+# 
+
+# ## Recherche multiple de paramètres avec métrique score IMDB
+
+# In[ ]:
+
+
+if (RECOMPUTE_GRIDSEARCH == True):
+    from sklearn.model_selection import GridSearchCV
+
+    recommendation_pipeline_KNN = Pipeline([
+        ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+        ('standardscaler', preprocessing.StandardScaler()),
+        ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type' : 'PCA', 'n_components' : 200 })),
+        ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    ])
+
+
+    # Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+    
+    param_grid = {
+            'features_droper__features_todrop':  [None,
+                                                  ['imdb_score'],
+            
+                ## Drop de tout ce qui est en haut à droite du plan factoriel :
+                #['title_year', 'cast_total_facebook_likes', 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'actor_3_facebook_likes'],
+
+                # Drop de tout ce qui est en bas à droite sur le plan factoriel :
+                ['movie_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'num_user_for_reviews', 'num_voted_users', 'duration', 'imdb_score'],
+                
+                # Conservation de cast_total_facebook_likes (en haut à droite) + imdb_score (en bas à droite) + les features OHE
+                ['title_year', 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'actor_3_facebook_likes', 'movie_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'num_user_for_reviews', 'num_voted_users', 'duration'],
+                
+            ],
+
+            'reduction__reduction_params': [{'reduction_type' : 'NCA', 'n_components' : 200 },
+                                            #{'reduction_type' : 'NCA', 'n_components' : 150 },
+                                            {'reduction_type' : 'NCA', 'n_components' : 100 },
+                                            {'reduction_type' : 'NCA', 'n_components' : 10 },
+                                            {'reduction_type' : 'PCA', 'n_components' : 200 },
+                                            #{'reduction_type' : 'PCA', 'n_components' : 150 },
+                                            {'reduction_type' : 'PCA', 'n_components' : 100 },
+                                            {'reduction_type' : 'PCA', 'n_components' : 10 },
+                                            
+
+            ],
+
+
+            'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'}, 
+                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'euclidean'}, 
+            ],
+        }
+
+    grid_search = GridSearchCV(recommendation_pipeline_KNN, param_grid, cv=5, verbose=2, error_score=np.nan, scoring='neg_mean_squared_error')
+    grid_search.fit(df_encoded, labels)
+
+    
+
+
+# ### Sauvegarde et restauration des résultats
+
+# In[ ]:
+
+
+df_grid_search_results_new = save_or_load_search_params(grid_search, 'metric_imdb_20200229')
+
+
+# => En combinant les résultats obtenus par les 2 recherches ci-dessus (sauvegardées dans les fichiers grid_search_results.csv et grid_search_results_otherfeats_20200229.csv, que l'on a mergées ensemble dans grid_search_results_similarity_metric.csv), on obtient que le meilleur estimateur pour la métrique similarité des films est :  
+# knn_params : {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}  
+# features_todrop : ['imdb_score']  
+# reduction_params : {'reduction_type': 'NCA', 'n_components': 100}  
+# 
+
+# ## Affichage de recommendations avec NCA_KNN n_components 100 (Meilleur modèle trouvé ci-dessus) :
+
+# In[44]:
+
+
+recommendation_pipeline_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type': 'NCA', 'n_components': 100} )),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'})),
+])
+
+recommendation_pipeline_KNN.fit(df_encoded, labels)
+
+
+# In[45]:
+
+
+distances_matrix, reco_matrix = recommendation_pipeline_KNN.transform(df_encoded)
+
+
+# In[46]:
 
 
 afficher_recos_films(reco_matrix, df_encoded)
 
 
-# ### => Les résultats semblent meilleurs avec NCA qu'avec PCA :
+# In[47]:
+
+
+afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
+
+
+# ## Affichage de recommendations avec NCA_KNN n_components 200 (Meilleur modèle trouvé avec examen humain des résultats) :
+
+# Ce modèle correspond au 7ème meilleur avec la métrique similarité
+
+# In[48]:
+
+
+recommendation_pipeline_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type': 'NCA', 'n_components': 200} )),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+
+recommendation_pipeline_KNN.fit(df_encoded, labels)
+
+
+# In[49]:
+
+
+distances_matrix, reco_matrix = recommendation_pipeline_KNN.transform(df_encoded)
+
+
+# In[50]:
+
+
+afficher_recos_films(reco_matrix, df_encoded)
+
+
+# ### => Avec un examen humain, les résultats semblent meilleurs avec NCA qu'avec PCA,  et également meilleurs avec NCA 200 qu'avec NCA 100 :
 # ### Par exemple avec le 6ème sens on obtient plus de films avec le thème de la mort et les enfants
-# ### Globalement les imdb score obtenus sont meilleurs  (erreur moyenne 0.99 contre 1.048,  confirmé par un examen visuel)
 
 # ### Affichage des similarités des recos
 
-# In[70]:
+# In[51]:
 
 
 afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
@@ -1861,7 +1952,7 @@ py.offline.plot(fig, filename='clusters_plot_imdb.html')
 
 # # Sauvegarde du modèle retenu pour l'API
 
-# In[121]:
+# In[52]:
 
 
 if (SAVE_API_MODEL == True):
@@ -2132,6 +2223,289 @@ predictions = recommendation_pipeline_PCA_KNN.predict(df_encoded)
 #  #### Erreur moyenne de prédiction de l'IMDB score avec la variable de scoring dans le JDD : 1.0095843224821195 
 #  #### Erreur moyenne de prédiction de l'IMDB score sans la variable de scoring dans le JDD : 1.0486754159658844
 # 
+
+# ## Recherche de paramètres PCA (5, 150, 200) + KNN, métrique similarité
+
+# In[71]:
+
+
+#from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
+
+recommendation_pipeline_PCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+
+
+# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+
+param_grid = {
+        'features_droper__features_todrop':  [#None,
+                                              ['imdb_score'],
+                                    
+        ],
+
+        'pca__n_components': [5, 150, 200],
+
+        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+        ],
+    }
+
+grid_search = GridSearchCV(recommendation_pipeline_PCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
+grid_search.fit(df_encoded, labels)
+
+
+# In[72]:
+
+
+df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+
+
+# In[73]:
+
+
+#df_grid_search_results.to_csv('gridresult_temp.csv')  # Uncomment to save in CSV file
+
+
+# In[74]:
+
+
+grid_search.best_estimator_
+
+
+# In[76]:
+
+
+df_grid_search_results.to_csv('gridsearch_PCA_results.csv')
+
+
+# In[75]:
+
+
+qgrid_show(df_grid_search_results)
+
+
+# Résultats :  
+#     KNN__knn_params	features_droper__features_todrop	pca__n_components	Accuracy  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	5	8.492163788152574  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	150	8.214512311933097  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	200	8.04523852877884  
+# 
+# => Ces résultats restent contradictoires avec l'examen humain qui montre que nb_components = 5 n'est pas adapté (alors qu'ici, le score de similarité moyen est meilleur)  
+# 
+# Après avoir modifié la fonction de comparaison des similarités pour enlever de nombreuses features qui ne concernent pas la similarité des items car ce ne sont pas des propriétés des films en eux mêmes (nb facebook likes,  nb votes, ....), on obtient toujours le même classement
+
+# In[43]:
+
+
+from sklearn.metrics import mean_squared_error
+
+def print_rmse(labels, predictions):
+    mse = mean_squared_error(labels, predictions)
+    rmse = np.sqrt(mse)
+    print(f"Erreur moyenne de prédiction de l'IMDB score: {rmse}")
+
+
+# ## Recherche de paramètres NCA (5, 150, 200) + KNN, métrique imdb
+
+# In[78]:
+
+
+#from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+
+# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+
+param_grid = {
+        'features_droper__features_todrop':  [#None,
+                                              ['imdb_score'],
+                                    
+        ],
+
+        'NCA__nca_params': [{'random_state':42, 'n_components':5 }, {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }],
+
+        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+        ],
+    }
+
+grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan, scoring='neg_mean_squared_error')
+grid_search.fit(df_encoded, labels)
+
+
+# In[80]:
+
+
+grid_search.best_estimator_
+
+
+# In[82]:
+
+
+df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+
+
+# In[92]:
+
+
+df_grid_search_results
+
+
+# ## Recherche de paramètres NCA (5, 150, 200) + KNN, métrique similarité
+
+# In[79]:
+
+
+#from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+
+# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+
+param_grid = {
+        'features_droper__features_todrop':  [#None,
+                                              ['imdb_score'],
+                                    
+        ],
+
+        'NCA__nca_params': [{'random_state':42, 'n_components':5 }, {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }],
+
+        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+        ],
+    }
+
+grid_search_sim = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
+grid_search_sim.fit(df_encoded, labels)
+
+
+# In[81]:
+
+
+grid_search_sim.best_estimator_
+
+
+# In[86]:
+
+
+df_grid_search_sim_results = pd.concat([pd.DataFrame(grid_search_sim.cv_results_["params"]),pd.DataFrame(grid_search_sim.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+
+
+# In[93]:
+
+
+df_grid_search_sim_results
+
+
+# 
+# ## Recherche de différents paramètres avec NCA + KNN
+
+# In[103]:
+
+
+'''
+if (RECOMPUTE_GRIDSEARCH == True):
+    #from sklearn.model_selection import RandomizedSearchCV
+    from sklearn.model_selection import GridSearchCV
+
+    recommendation_pipeline_NCA_KNN = Pipeline([
+        ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+        ('standardscaler', preprocessing.StandardScaler()),
+        ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+        ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+        #('pipeline_final', PipelineFinal()),
+    ])
+
+
+    # Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+
+    param_grid = {
+            'features_droper__features_todrop':  [#None,
+                                                  ['imdb_score'],
+                                                  ['imdb_score', 'actor_1_facebook_likes','actor_2_facebook_likes', 'actor_3_facebook_likes', 'num_user_for_reviews', 'num_critic_for_reviews', 'num_voted_users']                                              
+            ],
+
+            'NCA__nca_params': [{'random_state':42, 'n_components':50 }, {'random_state':42, 'n_components':100 }, 
+                                {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }
+            ],
+
+            'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'manhattan'},
+                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'}, 
+                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'euclidean'}, 
+                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'jaccard'}, 
+                                #{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'mahalanobis'}, 
+                                {'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'minkowski'},
+                                {'n_neighbors':6, 'algorithm':'brute', 'metric':'minkowski'},
+            ],
+        }
+
+    grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid,scoring='neg_mean_squared_error', cv=2, verbose=2, error_score=np.nan)
+    grid_search.fit(df_encoded, labels)
+'''
+
+
+# ### Sauvegarde et restauration des résultats
+
+# In[104]:
+
+
+'''
+if (SAVE_GRID_RESULTS == True):
+    df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+    df_grid_search_results.to_csv(GRIDSEARCH_CSV_FILE)
+    
+    with open(GRIDSEARCH_PICKLE_FILE, 'wb') as f:
+        pickle.dump(grid_search.cv_results_, f, pickle.HIGHEST_PROTOCOL)
+        
+if (LOAD_GRID_RESULTS == True):
+    if ((SAVE_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
+        print('Error : if want to load grid results, you should not have saved them or recomputed them before, or you will loose all your training data')
+        
+    else:
+        with open(GRIDSEARCH_PICKLE_FILE, 'rb') as f:
+            grid_search_cv_results = pickle.load(f)
+           
+        df_grid_search_results = pd.concat([pd.DataFrame(grid_search_cv_results["params"]),pd.DataFrame(grid_search_cv_results["mean_test_score"], columns=["Accuracy"])],axis=1)
+        
+''''''
+
+
+# In[105]:
+
+
+'''
+if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
+    grid_search_cv_results
+'''
+
+
+# ### Comme meilleur estimateur, avec la métrique prédiction on a donc : NCA avec 150 composants,  KNN avec algorithme kd_tree et distance manhattan
+
+# In[106]:
+
+
+'''
+if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
+    qgrid_show(df_grid_search_results)
+''''''
+
+
+# ### Les paramètres qui sortent du lot sont la dimension 150, la métrique de minkowski, en ne dropant pas d'autre feature que l'imdb_score
 
 # # Annexe 3 : Vérification du ratio de variance expliquée :
 
