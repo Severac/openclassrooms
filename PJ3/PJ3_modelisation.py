@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ3 : IMDB dataset :  data clean and modelisation notebook 
 
-# In[36]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -39,19 +39,19 @@ sns.set()
 import pickle
 
 ####### Paramètres à changer par l'utilisateur selon son besoin :
-RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
-SAVE_GRID_RESULTS = True # If True : grid results object will be saved to GRIDSEARCH_PICKLE_FILE, and accuracy results to SEARCH_CSV_FILE
-LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from GRIDSEARCH_PICKLE_FILE
+RECOMPUTE_GRIDSEARCH = False  # CAUTION : computation is several hours long
+SAVE_GRID_RESULTS = False # If True : grid results object will be saved to GRIDSEARCH_PICKLE_FILE, and accuracy results to SEARCH_CSV_FILE
+LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from GRIDSEARCH_PICKLE_FILE
 
 GRIDSEARCH_PICKLE_FILE = 'grid_search_results.pickle'
 GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
 
 GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
 
-SAVE_API_MODEL = True # If True : API model containing recommendation matrix and DataFrame (with duplicates removed) will be saved
+SAVE_API_MODEL = False # If True : API model containing recommendation matrix and DataFrame (with duplicates removed) will be saved
 API_MODEL_PICKLE_FILE = 'API_model_PJ3.pickle'
 
-EXECUTE_INTERMEDIATE_MODELS = True # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
+EXECUTE_INTERMEDIATE_MODELS = False # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
 
 
 # In[2]:
@@ -218,7 +218,7 @@ df[['genres', 'plot_keywords']].sample(10)
 
 # # Encodage des features
 
-# In[18]:
+# In[15]:
 
 
 # KNN imputer pas encore supporté par la version de sklearn que j'utilise :
@@ -229,19 +229,19 @@ df[['genres', 'plot_keywords']].sample(10)
 #imputer.fit_transform(df[numerical_features])
 
 
-# In[18]:
+# In[16]:
 
 
 numerical_features_columns = df[numerical_features].columns
 
 
-# In[19]:
+# In[17]:
 
 
 numerical_features_index = df[numerical_features].index
 
 
-# In[20]:
+# In[18]:
 
 
 numerical_features_columns.shape
@@ -249,7 +249,7 @@ numerical_features_columns.shape
 
 # ## Imputation des données numériques par régression linéaire
 
-# In[22]:
+# In[19]:
 
 
 from sklearn.experimental import enable_iterative_imputer
@@ -259,7 +259,7 @@ imp = IterativeImputer(max_iter=10, random_state=0)
 transformed_data = imp.fit_transform(df[numerical_features])  
 
 
-# In[23]:
+# In[20]:
 
 
 df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=numerical_features_columns, index=numerical_features_index)
@@ -267,13 +267,13 @@ df_numerical_features_imputed = pd.DataFrame(data=transformed_data, columns=nume
 
 # ### Visualisation de quelques résultats par comparaison avant/après :
 
-# In[24]:
+# In[21]:
 
 
 qgrid_show(df[numerical_features])
 
 
-# In[25]:
+# In[22]:
 
 
 qgrid_show(df_numerical_features_imputed)
@@ -281,7 +281,7 @@ qgrid_show(df_numerical_features_imputed)
 
 # ### Constat que toutes les valeurs sont maintenant renseignées :
 
-# In[26]:
+# In[23]:
 
 
 (df_numerical_features_imputed.count()/df_numerical_features_imputed.shape[0]).sort_values(axis=0, ascending=False)
@@ -290,7 +290,7 @@ qgrid_show(df_numerical_features_imputed)
 # ## Transformation des features de catégorie
 # ### Voir le §  Identification des typologies de features à traiter  ci-dessus pour une explication des différents cas de figure
 
-# In[51]:
+# In[24]:
 
 
 '''
@@ -346,26 +346,26 @@ def add_categorical_features_bow_and_1hot(df, df_target, categorical_features_to
     return(df_target)            
 
 
-# In[28]:
+# In[25]:
 
 
 df_imputed = add_categorical_features_1hot(df, df_numerical_features_imputed, categorical_features)
 df_imputed = add_categorical_features_merge_and_1hot(df, df_imputed, categorical_features_tomerge, 'actors_names' )
 
 
-# In[29]:
+# In[26]:
 
 
 df_imputed.shape
 
 
-# In[30]:
+# In[27]:
 
 
 df_imputed = add_categorical_features_bow_and_1hot(df, df_imputed, categorical_features_tobow)
 
 
-# In[93]:
+# In[28]:
 
 
 pd.set_option('display.max_columns', 100)
@@ -374,19 +374,19 @@ df_imputed.head(10)
 
 # ### Comparaison avant/après de quelques valeurs 1hot encoded :
 
-# In[34]:
+# In[29]:
 
 
 df[['actor_1_name', 'actor_2_name', 'actor_3_name', 'actors_names', 'country', 'genres']].head(10)
 
 
-# In[35]:
+# In[30]:
 
 
 df_imputed[['actors_names_Johnny Depp', 'actors_names_Orlando Bloom', 'actors_names_Jack Davenport', 'actors_names_Joel David Moore', 'country_USA', 'country_UK', 'genres_Action', 'genres_Adventure']].head(10)
 
 
-# In[ ]:
+# In[31]:
 
 
 df_imputed.loc[0]
@@ -396,7 +396,7 @@ df_imputed.loc[0]
 
 # ## Scaling et réduction de dimensionalité
 
-# In[ ]:
+# In[32]:
 
 
 from sklearn import decomposition
@@ -417,13 +417,13 @@ pca = decomposition.PCA(n_components=n_comp)
 pca.fit(X_scaled)
 
 
-# In[ ]:
+# In[33]:
 
 
 X_reduced = pca.transform(X_scaled)
 
 
-# In[ ]:
+# In[34]:
 
 
 X_reduced.shape
@@ -431,7 +431,7 @@ X_reduced.shape
 
 # ## Algorithme KNN
 
-# In[ ]:
+# In[35]:
 
 
 from sklearn.neighbors import NearestNeighbors
@@ -440,44 +440,44 @@ nbrs = NearestNeighbors(n_neighbors=6, algorithm='ball_tree').fit(X_reduced)
 distances_matrix, reco_matrix = nbrs.kneighbors(X_reduced)
 
 
-# In[ ]:
+# In[36]:
 
 
 distances_matrix.shape
 
 
-# In[ ]:
+# In[37]:
 
 
 reco_matrix.shape
 
 
-# In[ ]:
+# In[38]:
 
 
 reco_matrix
 
 
-# In[ ]:
+# In[39]:
 
 
 print(f"{(df.iloc[0]['movie_title'])}")
 
 
-# In[ ]:
+# In[40]:
 
 
 df[df['movie_title'].str.contains('Nixon')]
 
 
-# In[51]:
+# In[41]:
 
 
 pd.options.display.max_colwidth = 100
 df.loc[[3820]]
 
 
-# In[52]:
+# In[42]:
 
 
 df.loc[[1116]]
@@ -485,7 +485,7 @@ df.loc[[1116]]
 
 # ## Affichage d'échantillon de recommandations
 
-# In[15]:
+# In[43]:
 
 
 from sklearn.preprocessing import MinMaxScaler
@@ -539,7 +539,7 @@ def get_similarity_df_scaled_input(df_scaled, index1, index2):
     return(1 - ((df_relevant_items.loc[index1] - df_relevant_items.loc[index2]).abs())).sort_values(ascending=False)
 
 
-# In[16]:
+# In[44]:
 
 
 def afficher_recos(film_index, reco_matrix, df_encoded, with_similarity_display=False):
@@ -557,7 +557,7 @@ def afficher_recos(film_index, reco_matrix, df_encoded, with_similarity_display=
     print("\n")
 
 
-# In[17]:
+# In[45]:
 
 
 def afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=False, films_temoins_indexes=[2703, 0, 3, 4820, 647, 124, 931, 1172, 3820]):
@@ -565,43 +565,43 @@ def afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=False,
         afficher_recos(film_temoin_index, reco_matrix, df_encoded, with_similarity_display=with_similarity_display)
 
 
-# In[58]:
+# In[46]:
 
 
 df.loc[2703]['country']
 
 
-# In[59]:
+# In[47]:
 
 
 afficher_recos_films(reco_matrix, df_imputed)
 
 
-# In[60]:
+# In[48]:
 
 
 afficher_recos_films(reco_matrix, df_imputed, with_similarity_display=True)
 
 
-# In[46]:
+# In[49]:
 
 
 df[df['movie_title'].str.contains('night')]['movie_title']
 
 
-# In[62]:
+# In[50]:
 
 
 df.shape[0]
 
 
-# In[63]:
+# In[51]:
 
 
 df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']]
 
 
-# In[64]:
+# In[52]:
 
 
 df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imdb_score' , 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'facenumber_in_poster', 'duration', 'num_user_for_reviews', 'actor_3_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'budget', 'gross','title_year']].loc[4]
@@ -611,7 +611,7 @@ df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imd
 
 # ## Définition des Pipelines et métriques
 
-# In[64]:
+# In[53]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -1018,6 +1018,13 @@ preparation_pipeline = Pipeline([
 ])
 
 
+recommendation_pipeline_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type' : 'PCA', 'n_components' : 200 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+
 recommendation_pipeline_PCA_KNN = Pipeline([
     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
     ('standardscaler', preprocessing.StandardScaler()),
@@ -1069,7 +1076,7 @@ kmeans_transformer_pipeline = Pipeline([
 
 # ## Lancement du pipeline preparation
 
-# In[19]:
+# In[54]:
 
 
 # Récupération des étiquettes de scoring :
@@ -1081,7 +1088,7 @@ df.reset_index(drop=True, inplace=True)
 labels = df['imdb_score'].to_numpy()
 
 
-# In[20]:
+# In[55]:
 
 
 df_encoded = preparation_pipeline.fit_transform(df)
@@ -1089,7 +1096,7 @@ df_encoded = preparation_pipeline.fit_transform(df)
 
 # ## Recherche multiple de paramètres avec métrique similarité
 
-# In[21]:
+# In[56]:
 
 
 if (RECOMPUTE_GRIDSEARCH == True):
@@ -1147,7 +1154,7 @@ if (RECOMPUTE_GRIDSEARCH == True):
 
 # ### Sauvegarde et restauration des résultats
 
-# In[35]:
+# In[57]:
 
 
 if (SAVE_GRID_RESULTS == True):
@@ -1177,14 +1184,14 @@ if (LOAD_GRID_RESULTS == True):
         df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
 
 
-# In[23]:
+# In[58]:
 
 
 if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
     display(grid_search.cv_results_)
 
 
-# In[34]:
+# In[59]:
 
 
 if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
@@ -1193,7 +1200,7 @@ if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
 
 # ### Définition d'une fonction de sauvegarde / chargement résultats pour les prochains tests
 
-# In[40]:
+# In[60]:
 
 
 def save_or_load_search_params(grid_search, save_file_suffix):
@@ -1230,7 +1237,7 @@ def save_or_load_search_params(grid_search, save_file_suffix):
 
 # ### On complète la recherche multiple précédente avec des combinatoires de features drop supplémentaires
 
-# In[39]:
+# In[61]:
 
 
 if (RECOMPUTE_GRIDSEARCH == True):
@@ -1286,7 +1293,7 @@ if (RECOMPUTE_GRIDSEARCH == True):
     
 
 
-# In[43]:
+# In[62]:
 
 
 df_grid_search_results_new = save_or_load_search_params(grid_search, 'otherfeats_20200229')
@@ -1313,7 +1320,7 @@ df_grid_search_results_new = save_or_load_search_params(grid_search, 'otherfeats
 
 # ## Recherche multiple de paramètres avec métrique score IMDB
 
-# In[53]:
+# In[63]:
 
 
 if (RECOMPUTE_GRIDSEARCH == True):
@@ -1371,7 +1378,7 @@ if (RECOMPUTE_GRIDSEARCH == True):
 
 # ### Sauvegarde et restauration des résultats
 
-# In[55]:
+# In[64]:
 
 
 df_grid_search_results_new = save_or_load_search_params(grid_search, 'metric_imdb_20200229')
@@ -1393,7 +1400,7 @@ df_grid_search_results_new = save_or_load_search_params(grid_search, 'metric_imd
 
 # ## Affichage de recommendations avec NCA_KNN n_components 100 (Meilleur modèle trouvé avec métrique similarité) :
 
-# In[44]:
+# In[65]:
 
 
 recommendation_pipeline_KNN = Pipeline([
@@ -1406,19 +1413,19 @@ recommendation_pipeline_KNN = Pipeline([
 recommendation_pipeline_KNN.fit(df_encoded, labels)
 
 
-# In[45]:
+# In[66]:
 
 
 distances_matrix, reco_matrix = recommendation_pipeline_KNN.transform(df_encoded)
 
 
-# In[46]:
+# In[67]:
 
 
 afficher_recos_films(reco_matrix, df_encoded)
 
 
-# In[47]:
+# In[68]:
 
 
 afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
@@ -1426,7 +1433,7 @@ afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 
 # ## Affichage de recommendations avec NCA_KNN n_components 10 (Meilleur modèle trouvé avec métrique imdb) :
 
-# In[56]:
+# In[69]:
 
 
 recommendation_pipeline_KNN = Pipeline([
@@ -1439,13 +1446,13 @@ recommendation_pipeline_KNN = Pipeline([
 recommendation_pipeline_KNN.fit(df_encoded, labels)
 
 
-# In[57]:
+# In[70]:
 
 
 distances_matrix, reco_matrix = recommendation_pipeline_KNN.transform(df_encoded)
 
 
-# In[58]:
+# In[71]:
 
 
 afficher_recos_films(reco_matrix, df_encoded)
@@ -1455,7 +1462,7 @@ afficher_recos_films(reco_matrix, df_encoded)
 
 # Ce modèle correspond au 7ème meilleur parmi ceux évalués avec les métriques (que ce soit avec la métrique similarité ou la métrique imdb)
 
-# In[59]:
+# In[72]:
 
 
 recommendation_pipeline_KNN = Pipeline([
@@ -1468,13 +1475,13 @@ recommendation_pipeline_KNN = Pipeline([
 recommendation_pipeline_KNN.fit(df_encoded, labels)
 
 
-# In[60]:
+# In[73]:
 
 
 distances_matrix, reco_matrix = recommendation_pipeline_KNN.transform(df_encoded)
 
 
-# In[61]:
+# In[74]:
 
 
 afficher_recos_films(reco_matrix, df_encoded)
@@ -1484,7 +1491,7 @@ afficher_recos_films(reco_matrix, df_encoded)
 
 # ### Affichage des similarités des recos
 
-# In[62]:
+# In[75]:
 
 
 afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
@@ -1492,7 +1499,7 @@ afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 
 # # Sauvegarde du modèle retenu pour l'API
 
-# In[63]:
+# In[76]:
 
 
 if (SAVE_API_MODEL == True):
@@ -1506,115 +1513,131 @@ if (SAVE_API_MODEL == True):
         pickle.dump(API_model, f, pickle.HIGHEST_PROTOCOL)    
 
 
-# # Visualisation des films avec KMeans
+# # Annexe : visualisation des films avec KMeans
 
-# In[96]:
-
-
-df_reduced = reducer_pipeline.fit_transform(df_encoded, labels)
-
-
-# ## Tentative de KMeans sur les données non réduites (22000 dimensions)
-
-# In[97]:
-
-
-X = df_encoded.values
-
-features = df_encoded.columns
-
-# Centrage et Réduction
-std_scale = preprocessing.StandardScaler().fit(X)
-X_scaled = std_scale.transform(X)
-
-
-# Affichage des coefs. de silhouette pour différentes valeurs de k :
-
-# In[99]:
+# In[77]:
 
 
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
 
-kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(X_scaled)
-                for k in range(1, 10)]
-#inertias = [model.inertia_ for model in kmeans_per_k]
+
+# In[78]:
 
 
-# In[100]:
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_reduced = reducer_pipeline.fit_transform(df_encoded, labels)
 
 
-silhouette_scores = [silhouette_score(X, model.labels_)
-                     for model in kmeans_per_k[1:]]
+# ## Tentative de KMeans sur les données non réduites (22000 dimensions)
+
+# In[79]:
 
 
-# In[101]:
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    X = df_encoded.values
+
+    features = df_encoded.columns
+
+    # Centrage et Réduction
+    std_scale = preprocessing.StandardScaler().fit(X)
+    X_scaled = std_scale.transform(X)
 
 
-plt.figure(figsize=(8, 3))
-plt.plot(range(2, 10), silhouette_scores, "bo-")
-plt.xlabel("$k$", fontsize=14)
-plt.ylabel("Silhouette score", fontsize=14)
-#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
-#save_fig("silhouette_score_vs_k_plot")
-plt.show()
+# Affichage des coefs. de silhouette pour différentes valeurs de k :
+
+# In[80]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    from sklearn.metrics import silhouette_score
+    from sklearn.cluster import KMeans
+
+    kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(X_scaled)
+                    for k in range(1, 10)]
+    #inertias = [model.inertia_ for model in kmeans_per_k]
+
+
+# In[81]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    silhouette_scores = [silhouette_score(X, model.labels_)
+                         for model in kmeans_per_k[1:]]
+
+
+# In[82]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    plt.figure(figsize=(8, 3))
+    plt.plot(range(2, 10), silhouette_scores, "bo-")
+    plt.xlabel("$k$", fontsize=14)
+    plt.ylabel("Silhouette score", fontsize=14)
+    #plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+    #save_fig("silhouette_score_vs_k_plot")
+    plt.show()
 
 
 # => Mauvais résultat (scores négatifs)
 
 # ## Tentative de KMeans sur données réduites à 200 dimensions avec NCA
 
-# In[102]:
+# In[83]:
 
 
-kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_reduced)
-                for k in range(1, 50)]
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_reduced)
+                    for k in range(1, 50)]
 
 
-# In[109]:
+# In[84]:
 
 
-silhouette_scores = [silhouette_score(df_reduced, model.labels_)
-                     for model in kmeans_per_k[1:]]
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    silhouette_scores = [silhouette_score(df_reduced, model.labels_)
+                         for model in kmeans_per_k[1:]]
 
 
-# In[110]:
+# In[85]:
 
 
-plt.figure(figsize=(8, 3))
-plt.plot(range(2, 50), silhouette_scores, "bo-")
-plt.xlabel("$k$", fontsize=14)
-plt.ylabel("Silhouette score", fontsize=14)
-#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
-#save_fig("silhouette_score_vs_k_plot")
-plt.show()
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    plt.figure(figsize=(8, 3))
+    plt.plot(range(2, 50), silhouette_scores, "bo-")
+    plt.xlabel("$k$", fontsize=14)
+    plt.ylabel("Silhouette score", fontsize=14)
+    #plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+    #save_fig("silhouette_score_vs_k_plot")
+    plt.show()
 
 
-# => Résultat : instable
+# => Résultat : instable. Scores très proches de 0 la plupart du temps, avec pics au dessus de 0.4
 
 # ## Tentative de KMeans sur données réduites à 10 dimensions avec NCA
 
-# In[65]:
+# In[86]:
 
 
 df_reduced = reducer_pipeline10.fit_transform(df_encoded, labels)
 
 
-# In[66]:
+# In[87]:
 
 
+from sklearn.cluster import KMeans
 kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_reduced)
                 for k in range(1, 50)]
 
 
-# In[ ]:
+# In[88]:
 
 
 silhouette_scores = [silhouette_score(df_reduced, model.labels_)
                      for model in kmeans_per_k[1:]]
 
 
-# In[ ]:
+# In[89]:
 
 
 plt.figure(figsize=(8, 3))
@@ -1626,100 +1649,94 @@ plt.ylabel("Silhouette score", fontsize=14)
 plt.show()
 
 
-# => Résultat : instable
+# => Résultat : On a un coefficient de silhouette à 0.1 : ce n'est pas très bon, mais meilleur que les tentatives précédentes
 
 # ## Tentative de KMeans distance cosine, k=10
-
-# In[84]:
-
-
-from nltk.cluster import KMeansClusterer
-import nltk
-
-k = 200 
-model_kmeans = KMeansClusterer(k, distance=nltk.cluster.util.cosine_distance, avoid_empty_clusters=True, repeats=10)      
-get_ipython().run_line_magic('time', 'cluster = model_kmeans.cluster(X_scaled, assign_clusters = True)')
-
-
-# In[87]:
-
-
-get_ipython().run_line_magic('time', 'cluster_labels = np.array([ model_kmeans.classify(X_scaled_instance) for X_scaled_instance in X_scaled ], np.short)')
-get_ipython().run_line_magic('time', "sklearn_silhouette_avg = silhouette_score(X_scaled, cluster_labels, metric='cosine')")
-
 
 # In[90]:
 
 
-sklearn_silhouette_avg
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    from nltk.cluster import KMeansClusterer
+    import nltk
+
+    k = 200 
+    model_kmeans = KMeansClusterer(k, distance=nltk.cluster.util.cosine_distance, avoid_empty_clusters=True, repeats=10)      
+    get_ipython().run_line_magic('time', 'cluster = model_kmeans.cluster(X_scaled, assign_clusters = True)')
 
 
-# **Visualisation avec TSNE**
-
-# In[145]:
-
-
-import warnings
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore",category=FutureWarning)
-    from yellowbrick.text import TSNEVisualizer # FUTURE WARNING : Due to yellowbrick imports we currently have a "FutureWarning" : he sklearn.metrics.classification module is  deprecated in version 0.22 and will be removed in version 0.24. The corresponding classes / functions should instead be imported from sklearn.metrics. Anything that cannot be imported from sklearn.metrics is now part of the private API.
-
-my_cmap = plt.matplotlib.colors.ListedColormap(['#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9', '#9A6324','#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabebe', '#469990', '#e6beff','#000000', '#fffac8'])                                                        
-tsne = TSNEVisualizer(metric='cosine', decompose='pca', colormap=my_cmap)
-
-tsne.fit(X_scaled, ["cluster{}".format(c) for c in cluster_labels])
-tsne.poof()
-
+# Résultat:  
+# CPU times: user 4h 39min 33s, sys: 31.5 s, total: 4h 40min 5s  
+# Wall time: 1h 10min 54s  
 
 # In[91]:
 
 
-import plotly as py
-import plotly.graph_objects as go
-import ipywidgets as widgets
-
-py.offline.init_notebook_mode(connected=True)
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    get_ipython().run_line_magic('time', 'cluster_labels = np.array([ model_kmeans.classify(X_scaled_instance) for X_scaled_instance in X_scaled ], np.short)')
+    get_ipython().run_line_magic('time', "sklearn_silhouette_avg = silhouette_score(X_scaled, cluster_labels, metric='cosine')")
 
 
-trace_1 = go.Scatter(x = X_reduced_n2[:, 0], y = X_reduced_n2[:, 1],
-                    name = 'Films',
-                    mode = 'markers',
-                    marker=dict(color=cluster_labels),
-                    text = df['movie_title']
-                    )
+# Résultat :  
+# CPU times: user 2min 56s, sys: 284 ms, total: 2min 56s  
+# Wall time: 44.2 s  
+# CPU times: user 29.1 s, sys: 4.44 s, total: 33.5 s  
+# Wall time: 8.71 s  
+
+# In[92]:
 
 
-layout = go.Layout(title = 'Films clustered',
-                   hovermode = 'closest')
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    sklearn_silhouette_avg
 
-fig = go.Figure(data = [trace_1], layout = layout)
 
-py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+# Résultat:  
+# 0.000757044627637612
 
-py.offline.plot(fig, filename='clusters_plot.html') 
+# In[93]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    import plotly as py
+    import plotly.graph_objects as go
+    import ipywidgets as widgets
+
+    py.offline.init_notebook_mode(connected=True)
+
+
+    trace_1 = go.Scatter(x = X_reduced_n2[:, 0], y = X_reduced_n2[:, 1],
+                        name = 'Films',
+                        mode = 'markers',
+                        marker=dict(color=cluster_labels),
+                        text = df['movie_title']
+                        )
+
+
+    layout = go.Layout(title = 'Films clustered',
+                       hovermode = 'closest')
+
+    fig = go.Figure(data = [trace_1], layout = layout)
+
+    py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+    py.offline.plot(fig, filename='clusters_plot.html') 
 
 
 # ## Lancement d'un clustering, et visualisation
 
-# In[127]:
+# In[94]:
 
 
 from sklearn.cluster import KMeans
 
-kmeans_clusterer = KMeans(n_clusters=19, random_state=42)
+kmeans_clusterer = KMeans(n_clusters=10, random_state=42)
 
 clusters = kmeans_clusterer.fit_transform(df_reduced)
 
 
-# In[128]:
-
-
-clusters
-
-
 # ## Réduction de dimensionalité à 2 et 3 pour la visualisation
 
-# In[130]:
+# In[95]:
 
 
 X = df_encoded.values
@@ -1739,25 +1756,19 @@ pca = decomposition.PCA(n_components=3)
 X_reduced_n3 = pca.fit_transform(X_scaled)
 
 
-# In[114]:
+# In[96]:
 
 
 X_reduced_n2[:, 1].shape
 
 
-# In[115]:
+# In[97]:
 
 
 clusters.shape
 
 
-# In[116]:
-
-
-kmeans_clusterer.labels_[800]
-
-
-# In[131]:
+# In[98]:
 
 
 import plotly as py
@@ -1785,7 +1796,7 @@ py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but
 py.offline.plot(fig, filename='clusters_plot.html') 
 
 
-# In[57]:
+# In[99]:
 
 
 import plotly as py
@@ -1820,51 +1831,9 @@ py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but
 py.offline.plot(fig, filename='clusters_plot.html') 
 
 
-# # Visualisation des fims colorés selon leur imdb_score
+# # Annexe : Visualisation avec réduction dimensionnelle à partir du DataFrame d'origine (features numériques seulement)
 
-# In[95]:
-
-
-
-
-
-# In[102]:
-
-
-imdb_score_cat.to_list()
-
-
-# In[123]:
-
-
-import plotly as py
-import plotly.graph_objects as go
-import ipywidgets as widgets
-
-py.offline.init_notebook_mode(connected=True)
-
-
-trace_1 = go.Scatter(x = X_reduced_n2[:, 0], y = X_reduced_n2[:, 1],
-                    name = 'Films',
-                    mode = 'markers',
-                    marker=dict(color=imdb_score_cat.to_list()),
-                    text = df['movie_title']
-                    )
-
-
-layout = go.Layout(title = 'Films clustered',
-                   hovermode = 'closest')
-
-fig = go.Figure(data = [trace_1], layout = layout)
-
-py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
-
-py.offline.plot(fig, filename='clusters_plot_imdb.html') 
-
-
-# # Visualisation avec réduction dimensionnelle à partir du DataFrame d'origine (features numériques seulement)
-
-# In[24]:
+# In[100]:
 
 
 X_numerical = df_numerical_features_imputed.values
@@ -1878,13 +1847,19 @@ pca = decomposition.PCA(n_components=2)
 X_numerical_reduced = pca.fit_transform(X_numerical_scaled)
 
 
-# In[25]:
+# In[101]:
 
 
 imdb_score_cat = pd.cut(df_numerical_features_imputed['imdb_score'], bins=[-np.inf,0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], labels=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
 
-# In[26]:
+# In[102]:
+
+
+pca.explained_variance_ratio_
+
+
+# In[103]:
 
 
 import plotly as py
@@ -1897,8 +1872,8 @@ py.offline.init_notebook_mode(connected=True)
 trace_1 = go.Scatter(x = X_numerical_reduced[:, 0], y = X_numerical_reduced[:, 1],
                     name = 'Films',
                     mode = 'markers',
-                    marker=dict(color=cluster_labels),
-                    text = df['movie_title']
+                    marker=dict(color=imdb_score_cat), #kmeans_clusterer.labels_
+                    text = df['movie_title'],
                     )
 
 
@@ -1912,123 +1887,95 @@ py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but
 py.offline.plot(fig, filename='clusters_plot_imdb.html') 
 
 
-# In[26]:
+# In[104]:
 
 
-import plotly as py
-import plotly.graph_objects as go
-import ipywidgets as widgets
-
-py.offline.init_notebook_mode(connected=True)
-
-
-trace_1 = go.Scatter(x = X_numerical_reduced[:, 0], y = X_numerical_reduced[:, 1],
-                    name = 'Films',
-                    mode = 'markers',
-                    marker=dict(color=cluster_labels),
-                    text = df['movie_title']
-                    )
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    plt.figure(figsize=(8, 3))
+    plt.plot(range(2, 10), silhouette_scores, "bo-")
+    plt.xlabel("$k$", fontsize=14)
+    plt.ylabel("Silhouette score", fontsize=14)
+    #plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+    #save_fig("silhouette_score_vs_k_plot")
+    plt.show()
 
 
-layout = go.Layout(title = 'Films clustered',
-                   hovermode = 'closest')
+# In[105]:
 
-fig = go.Figure(data = [trace_1], layout = layout)
 
-py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    import plotly as py
+    import plotly.graph_objects as go
+    import ipywidgets as widgets
 
-py.offline.plot(fig, filename='clusters_plot_imdb.html') 
+    py.offline.init_notebook_mode(connected=True)
+
+
+    trace_1 = go.Scatter(x = X_numerical_reduced[:, 0], y = X_numerical_reduced[:, 1],
+                        name = 'Films',
+                        mode = 'markers',
+                        marker=dict(color=cluster_labels),
+                        text = df['movie_title']
+                        )
+
+
+    layout = go.Layout(title = 'Films clustered',
+                       hovermode = 'closest')
+
+    fig = go.Figure(data = [trace_1], layout = layout)
+
+    py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+    py.offline.plot(fig, filename='clusters_plot_imdb.html') 
 
 
 # ## Tentative de KNN avec cosine distance
 
-# In[ ]:
+# In[106]:
 
 
-recommendation_pipeline = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=200)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'cosine'})),
-    #('pipeline_final', PipelineFinal()),
-])
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    recommendation_pipeline = Pipeline([
+        ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+        ('standardscaler', preprocessing.StandardScaler()),
+        ('pca', decomposition.PCA(n_components=200)),
+        ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'cosine'})),
+        #('pipeline_final', PipelineFinal()),
+    ])
 
-recommendation_pipeline.fit(df_encoded, labels)
-predictions = recommendation_pipeline.predict(df_encoded)
-
-
-# In[ ]:
+    recommendation_pipeline.fit(df_encoded, labels)
+    predictions = recommendation_pipeline.predict(df_encoded)
 
 
-from sklearn import neighbors
-
-sorted(neighbors.VALID_METRICS['brute'])
+# In[107]:
 
 
-# In[ ]:
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    from sklearn import neighbors
+
+    sorted(neighbors.VALID_METRICS['brute'])
 
 
-recommendation_pipeline_NMF.fit(df_encoded, labels)
+# In[108]:
 
 
-# In[ ]:
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    recommendation_pipeline_NMF.fit(df_encoded, labels)
 
 
+# In[109]:
 
 
+'''
+model = NMF(n_components=2, init='random', random_state=0)
+W = model.fit_transform(X)
+H = model.components_
+'''
 
-
-
->>> model = NMF(n_components=2, init='random', random_state=0)
->>> W = model.fit_transform(X)
->>> H = model.components_
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-# Pour afficher uniquement les recos pour certains films  (à utiliser pour l'API)
-#(distances_matrix, reco_matrix) = recommendation_pipeline.transform(df_encoded.loc[np.r_[0:5]])
-
-# Pour calculer les recos pour tous les films :
-(distances_matrix, reco_matrix) = recommendation_pipeline.transform(df_encoded)
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-reco_matrix
-
-
-# In[ ]:
-
-
-df[df['movie_title'].str.contains('Vampire')]
-
-
-# movie_title                  1.000000   => La distance entre chaque valeur devra être une distance de chaîne de caractère.   Mais comment faire un algo de clustering qui ne calcule pas la distance de la même façon pour cet attribut là que pour les autres ?  Faire un vecteur one hot avec le nombre distinct de titres de films dedans, et réduire sa dimensionalité  ?
 
 # # Annexe : inutile, à effacer plus tard
 
-# In[ ]:
+# In[110]:
 
 
 '''
@@ -2057,7 +2004,7 @@ for feature_totransform in categorical_features_tosplit_andtransform:
 '''
 
 
-# In[ ]:
+# In[111]:
 
 
 '''
@@ -2074,124 +2021,92 @@ for feature_totransform in categorical_features_tosplit_andtransform:
 
 # ## Ancien code avant pipelines qui a permis d'obtenir qq résultats
 
-# In[ ]:
+# #pd.cut(df_labels[0], bins=[1, 2, 3, 4,5,6,7,8,9,10], right=True)
+# df_labels =  pd.DataFrame(data=labels)
+# labels_discrete = pd.cut(df_labels[0], bins=range(1,10), right=True).astype(str).tolist()
 
+# features_droper = FeaturesDroper(features_todrop=['imdb_score'])
+# standardscaler = preprocessing.StandardScaler()
+# 
+# X_res = features_droper.fit_transform(df_encoded)
+# X_res = standardscaler.fit_transform(X_res)
+# 
+# #hparam_n_components = [10, 50, 100, 200, 300, 500]
+# hparam_n_components = [2, 5, 8, 9]
+# 
+# for hparam in hparam_n_components:
+#     nca = NeighborhoodComponentsAnalysis(random_state=42, n_components=hparam)
+#     X_reduced = nca.fit_transform(X_res, labels_discrete)
+#     KNN = KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})
+#     KNN.fit(X_reduced, labels)
+#     predictions = KNN.predict(X_reduced)
+#     print('Avec n_components = ' + str(hparam))
+#     print_rmse(labels, predictions)
 
-#pd.cut(df_labels[0], bins=[1, 2, 3, 4,5,6,7,8,9,10], right=True)
-df_labels =  pd.DataFrame(data=labels)
-labels_discrete = pd.cut(df_labels[0], bins=range(1,10), right=True).astype(str).tolist()
-
-
-# In[ ]:
-
-
-features_droper = FeaturesDroper(features_todrop=['imdb_score'])
-standardscaler = preprocessing.StandardScaler()
-
-X_res = features_droper.fit_transform(df_encoded)
-X_res = standardscaler.fit_transform(X_res)
-
-#hparam_n_components = [10, 50, 100, 200, 300, 500]
-hparam_n_components = [2, 5, 8, 9]
-
-for hparam in hparam_n_components:
-    nca = NeighborhoodComponentsAnalysis(random_state=42, n_components=hparam)
-    X_reduced = nca.fit_transform(X_res, labels_discrete)
-    KNN = KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})
-    KNN.fit(X_reduced, labels)
-    predictions = KNN.predict(X_reduced)
-    print('Avec n_components = ' + str(hparam))
-    print_rmse(labels, predictions)
-
-
-# In[ ]:
-
-
-features_droper = FeaturesDroper(features_todrop=['imdb_score'])
-standardscaler = preprocessing.StandardScaler()
-
-X_res = features_droper.fit_transform(df_encoded)
-X_res = standardscaler.fit_transform(X_res)
-
-#hparam_n_components = [10, 50, 100, 200, 300, 500]
-hparam_n_components = [10, 50, 100, 200, 300, 500]
-
-for hparam in hparam_n_components:
-    nca = NeighborhoodComponentsAnalysis(random_state=42, n_components=hparam)
-    X_reduced = nca.fit_transform(X_res, labels_discrete)
-    KNN = KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})
-    KNN.fit(X_reduced, labels)
-    predictions = KNN.predict(X_reduced)
-    print('Avec n_components = ' + str(hparam))
-    print_rmse(labels, predictions)
-
+# features_droper = FeaturesDroper(features_todrop=['imdb_score'])
+# standardscaler = preprocessing.StandardScaler()
+# 
+# X_res = features_droper.fit_transform(df_encoded)
+# X_res = standardscaler.fit_transform(X_res)
+# 
+# #hparam_n_components = [10, 50, 100, 200, 300, 500]
+# hparam_n_components = [10, 50, 100, 200, 300, 500]
+# 
+# for hparam in hparam_n_components:
+#     nca = NeighborhoodComponentsAnalysis(random_state=42, n_components=hparam)
+#     X_reduced = nca.fit_transform(X_res, labels_discrete)
+#     KNN = KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})
+#     KNN.fit(X_reduced, labels)
+#     predictions = KNN.predict(X_reduced)
+#     print('Avec n_components = ' + str(hparam))
+#     print_rmse(labels, predictions)
 
 # # Annexe 2 : ancien code de pipelines
 
 # ## Tests avec PCA_KNN et la métrique similarité :
 
-# In[25]:
+# recommendation_pipeline_PCA_KNN = Pipeline([
+#     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#     ('standardscaler', preprocessing.StandardScaler()),
+#     ('pca', decomposition.PCA(n_components=200)),
+#     ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+#     #('pipeline_final', PipelineFinal()),
+# ])
+# 
+# recommendation_pipeline_PCA_KNN.fit(df_encoded, labels, KNN__df_encoded = df_encoded)
+# scores = recommendation_pipeline_PCA_KNN.score(df_encoded)
 
+# scores
 
-recommendation_pipeline_PCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=200)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
+# if (EXECUTE_INTERMEDIATE_MODELS == True) :
+#     recommendation_pipeline_PCA_KNN = Pipeline([
+#         ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#         ('standardscaler', preprocessing.StandardScaler()),
+#         ('pca', decomposition.PCA(n_components=200)),
+#         ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+#         #('pipeline_final', PipelineFinal()),
+#     ])
+# 
+#     recommendation_pipeline_PCA_KNN.fit(df_encoded, labels)
+#     predictions = recommendation_pipeline_PCA_KNN.predict(df_encoded)
 
-recommendation_pipeline_PCA_KNN.fit(df_encoded, labels, KNN__df_encoded = df_encoded)
-scores = recommendation_pipeline_PCA_KNN.score(df_encoded)
-
-
-# In[26]:
-
-
-scores
-
-
-# In[58]:
-
-
-if (EXECUTE_INTERMEDIATE_MODELS == True) :
-    recommendation_pipeline_PCA_KNN = Pipeline([
-        ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-        ('standardscaler', preprocessing.StandardScaler()),
-        ('pca', decomposition.PCA(n_components=200)),
-        ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-        #('pipeline_final', PipelineFinal()),
-    ])
-
-    recommendation_pipeline_PCA_KNN.fit(df_encoded, labels)
-    predictions = recommendation_pipeline_PCA_KNN.predict(df_encoded)
-
-
-# In[31]:
-
-
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    print_rmse(labels, predictions)
-
+# if (EXECUTE_INTERMEDIATE_MODELS == True):
+#     print_rmse(labels, predictions)
 
 # Résultat : Erreur moyenne de prédiction de l'IMDB score: 1.0531753089075517
 
 # ## Tests avec PCA_KNN et la métrique scoring imdb
 
-# In[12]:
-
-
-recommendation_pipeline_PCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=200)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
-
-recommendation_pipeline_PCA_KNN.fit(df_encoded, labels)
-predictions = recommendation_pipeline_PCA_KNN.predict(df_encoded)
-
+# recommendation_pipeline_PCA_KNN = Pipeline([
+#     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#     ('standardscaler', preprocessing.StandardScaler()),
+#     ('pca', decomposition.PCA(n_components=200)),
+#     ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+#     #('pipeline_final', PipelineFinal()),
+# ])
+# 
+# recommendation_pipeline_PCA_KNN.fit(df_encoded, labels)
+# predictions = recommendation_pipeline_PCA_KNN.predict(df_encoded)
 
 # ### Résultat de tests effectués avec recommendation_pipeline_PCA_KNN, et n_components à 200 :
 #  #### Erreur moyenne de prédiction de l'IMDB score avec la variable de scoring dans le JDD : 1.0095843224821195 
@@ -2200,67 +2115,43 @@ predictions = recommendation_pipeline_PCA_KNN.predict(df_encoded)
 
 # ## Recherche de paramètres PCA (5, 150, 200) + KNN, métrique similarité
 
-# In[71]:
+# #from sklearn.model_selection import RandomizedSearchCV
+# from sklearn.model_selection import GridSearchCV
+# 
+# recommendation_pipeline_PCA_KNN = Pipeline([
+#     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#     ('standardscaler', preprocessing.StandardScaler()),
+#     ('pca', decomposition.PCA(n_components=200)),
+#     ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+# ])
+# 
+# 
+# # Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+# 
+# param_grid = {
+#         'features_droper__features_todrop':  [#None,
+#                                               ['imdb_score'],
+#                                     
+#         ],
+# 
+#         'pca__n_components': [5, 150, 200],
+# 
+#         'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+#         ],
+#     }
+# 
+# grid_search = GridSearchCV(recommendation_pipeline_PCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
+# grid_search.fit(df_encoded, labels)
 
+# df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
 
-#from sklearn.model_selection import RandomizedSearchCV
-from sklearn.model_selection import GridSearchCV
+# #df_grid_search_results.to_csv('gridresult_temp.csv')  # Uncomment to save in CSV file
 
-recommendation_pipeline_PCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=200)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-])
+# grid_search.best_estimator_
 
+# df_grid_search_results.to_csv('gridsearch_PCA_results.csv')
 
-# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
-
-param_grid = {
-        'features_droper__features_todrop':  [#None,
-                                              ['imdb_score'],
-                                    
-        ],
-
-        'pca__n_components': [5, 150, 200],
-
-        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
-        ],
-    }
-
-grid_search = GridSearchCV(recommendation_pipeline_PCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
-grid_search.fit(df_encoded, labels)
-
-
-# In[72]:
-
-
-df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
-
-
-# In[73]:
-
-
-#df_grid_search_results.to_csv('gridresult_temp.csv')  # Uncomment to save in CSV file
-
-
-# In[74]:
-
-
-grid_search.best_estimator_
-
-
-# In[76]:
-
-
-df_grid_search_results.to_csv('gridsearch_PCA_results.csv')
-
-
-# In[75]:
-
-
-qgrid_show(df_grid_search_results)
-
+# qgrid_show(df_grid_search_results)
 
 # Résultats :  
 #     KNN__knn_params	features_droper__features_todrop	pca__n_components	Accuracy  
@@ -2272,379 +2163,255 @@ qgrid_show(df_grid_search_results)
 # 
 # Après avoir modifié la fonction de comparaison des similarités pour enlever de nombreuses features qui ne concernent pas la similarité des items car ce ne sont pas des propriétés des films en eux mêmes (nb facebook likes,  nb votes, ....), on obtient toujours le même classement
 
-# In[43]:
-
-
-from sklearn.metrics import mean_squared_error
-
-def print_rmse(labels, predictions):
-    mse = mean_squared_error(labels, predictions)
-    rmse = np.sqrt(mse)
-    print(f"Erreur moyenne de prédiction de l'IMDB score: {rmse}")
-
+# from sklearn.metrics import mean_squared_error
+# 
+# def print_rmse(labels, predictions):
+#     mse = mean_squared_error(labels, predictions)
+#     rmse = np.sqrt(mse)
+#     print(f"Erreur moyenne de prédiction de l'IMDB score: {rmse}")
+# 
 
 # ## Recherche de paramètres NCA (5, 150, 200) + KNN, métrique imdb
 
-# In[78]:
+# #from sklearn.model_selection import RandomizedSearchCV
+# from sklearn.model_selection import GridSearchCV
+# 
+# recommendation_pipeline_NCA_KNN = Pipeline([
+#     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#     ('standardscaler', preprocessing.StandardScaler()),
+#     ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+#     ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+# ])
+# 
+# # Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+# 
+# param_grid = {
+#         'features_droper__features_todrop':  [#None,
+#                                               ['imdb_score'],
+#                                     
+#         ],
+# 
+#         'NCA__nca_params': [{'random_state':42, 'n_components':5 }, {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }],
+# 
+#         'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+#         ],
+#     }
+# 
+# grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan, scoring='neg_mean_squared_error')
+# grid_search.fit(df_encoded, labels)
 
+# grid_search.best_estimator_
 
-#from sklearn.model_selection import RandomizedSearchCV
-from sklearn.model_selection import GridSearchCV
+# df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
 
-recommendation_pipeline_NCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-])
-
-# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
-
-param_grid = {
-        'features_droper__features_todrop':  [#None,
-                                              ['imdb_score'],
-                                    
-        ],
-
-        'NCA__nca_params': [{'random_state':42, 'n_components':5 }, {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }],
-
-        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
-        ],
-    }
-
-grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan, scoring='neg_mean_squared_error')
-grid_search.fit(df_encoded, labels)
-
-
-# In[80]:
-
-
-grid_search.best_estimator_
-
-
-# In[82]:
-
-
-df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
-
-
-# In[92]:
-
-
-df_grid_search_results
-
+# df_grid_search_results
 
 # ## Recherche de paramètres NCA (5, 150, 200) + KNN, métrique similarité
 
-# In[79]:
+# #from sklearn.model_selection import RandomizedSearchCV
+# from sklearn.model_selection import GridSearchCV
+# 
+# recommendation_pipeline_NCA_KNN = Pipeline([
+#     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#     ('standardscaler', preprocessing.StandardScaler()),
+#     ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+#     ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+# ])
+# 
+# # Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+# 
+# param_grid = {
+#         'features_droper__features_todrop':  [#None,
+#                                               ['imdb_score'],
+#                                     
+#         ],
+# 
+#         'NCA__nca_params': [{'random_state':42, 'n_components':5 }, {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }],
+# 
+#         'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+#         ],
+#     }
+# 
+# grid_search_sim = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
+# grid_search_sim.fit(df_encoded, labels)
 
+# grid_search_sim.best_estimator_
 
-#from sklearn.model_selection import RandomizedSearchCV
-from sklearn.model_selection import GridSearchCV
+# df_grid_search_sim_results = pd.concat([pd.DataFrame(grid_search_sim.cv_results_["params"]),pd.DataFrame(grid_search_sim.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
 
-recommendation_pipeline_NCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-])
-
-# Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
-
-param_grid = {
-        'features_droper__features_todrop':  [#None,
-                                              ['imdb_score'],
-                                    
-        ],
-
-        'NCA__nca_params': [{'random_state':42, 'n_components':5 }, {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }],
-
-        'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
-        ],
-    }
-
-grid_search_sim = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
-grid_search_sim.fit(df_encoded, labels)
-
-
-# In[81]:
-
-
-grid_search_sim.best_estimator_
-
-
-# In[86]:
-
-
-df_grid_search_sim_results = pd.concat([pd.DataFrame(grid_search_sim.cv_results_["params"]),pd.DataFrame(grid_search_sim.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
-
-
-# In[93]:
-
-
-df_grid_search_sim_results
-
+# df_grid_search_sim_results
 
 # ## Affichage de recommendations pour NCA_KNN avec n_components 5 (le pire modèle trouvé jusqu'à présent) : 
 
-# In[79]:
+# recommendation_pipeline_NCA_KNN = Pipeline([
+#     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#     ('standardscaler', preprocessing.StandardScaler()),
+#     ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':5 })),
+#     ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+#     #('pipeline_final', PipelineFinal()),
+# ])
+# 
+# distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.fit_transform(df_encoded, labels)
 
-
-recommendation_pipeline_NCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':5 })),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
-
-distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.fit_transform(df_encoded, labels)
-
-
-# In[80]:
-
-
-afficher_recos_films(reco_matrix, df_encoded)
-
+# afficher_recos_films(reco_matrix, df_encoded)
 
 # ### => Les résultats sont clairement moins bons avec NCA components à 5  suivi de KNN : les imdb scores sont meilleurs mais les catégories sont moins bien capturées
 # ### => Pourtant, l'erreur de prédiction de l'imdb score n'est que de 0.33 avec NBCA components = 5,  soit beaucoup moins qu'avec components = 200  :  cela montre que la métrique de prédiction de l'imdb score n'est pas parfaite:  avec cette métrique, il ne faut pas que l'erreur soit trop faible (sinon, on ne capture plus que l'imdb score, et pas grand chose d'autre) ni trop élevée (sinon le modèle n'est plus pertinent)
 
-# In[81]:
-
-
-afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
-
+# afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 
 # ## Affichage de recommendations avec NCA KNN , n_components à 150
 
-# In[107]:
+# recommendation_pipeline_NCA_KNN = Pipeline([
+#     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#     ('standardscaler', preprocessing.StandardScaler()),
+#     ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':150 })),
+#     ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+#     #('pipeline_final', PipelineFinal()),
+# ])
 
+# distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.fit_transform(df_encoded, labels)
 
-recommendation_pipeline_NCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':150 })),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
-
-
-# In[109]:
-
-
-distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.fit_transform(df_encoded, labels)
-
-
-# In[110]:
-
-
-afficher_recos_films(reco_matrix, df_encoded)
-
+# afficher_recos_films(reco_matrix, df_encoded)
 
 # ### => Malgré un meilleur score de prediction de ce modèle par rapport à celui à 200 composants, je suis moins convaincu par ce modèle. Par exemple : pour Matrix, il ne parvient pas à capturer un autre film de la trilogie.   Pour le 6ème sens, les recommendations sont moins dans le thème du film.
 
-# In[112]:
-
-
-afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
-
+# afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 
 # ## Affichage de recommandations avec PCA (5 components) + KNN
 
-# In[89]:
+# recommendation_pipeline_PCA_KNN = Pipeline([
+#     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#     ('standardscaler', preprocessing.StandardScaler()),
+#     ('pca', decomposition.PCA(n_components=5)),
+#     ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+#     #('pipeline_final', PipelineFinal()),
+# ])
+# 
+# distances_matrix, reco_matrix = recommendation_pipeline_PCA_KNN.fit_transform(df_encoded, labels)
 
+# afficher_recos_films(reco_matrix, df_encoded)
 
-recommendation_pipeline_PCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=5)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
-
-distances_matrix, reco_matrix = recommendation_pipeline_PCA_KNN.fit_transform(df_encoded, labels)
-
-
-# In[90]:
-
-
-afficher_recos_films(reco_matrix, df_encoded)
-
-
-# In[91]:
-
-
-afficher_recos_films(reco_matrix, df_imputed, with_similarity_display=True)
-
+# afficher_recos_films(reco_matrix, df_imputed, with_similarity_display=True)
 
 # ## Affichage de recommandations avec PCA (200 components) + KNN
 
-# In[94]:
+# recommendation_pipeline_PCA_KNN = Pipeline([
+#     ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#     ('standardscaler', preprocessing.StandardScaler()),
+#     ('pca', decomposition.PCA(n_components=200)),
+#     ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+#     #('pipeline_final', PipelineFinal()),
+# ])
+# 
+# distances_matrix, reco_matrix = recommendation_pipeline_PCA_KNN.fit_transform(df_encoded, labels)
 
-
-recommendation_pipeline_PCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=200)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
-
-distances_matrix, reco_matrix = recommendation_pipeline_PCA_KNN.fit_transform(df_encoded, labels)
-
-
-# In[95]:
-
-
-afficher_recos_films(reco_matrix, df_encoded)
-
+# afficher_recos_films(reco_matrix, df_encoded)
 
 # 
 # ## Recherche de différents paramètres avec NCA + KNN
 
-# In[103]:
-
-
-'''
-if (RECOMPUTE_GRIDSEARCH == True):
-    #from sklearn.model_selection import RandomizedSearchCV
-    from sklearn.model_selection import GridSearchCV
-
-    recommendation_pipeline_NCA_KNN = Pipeline([
-        ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-        ('standardscaler', preprocessing.StandardScaler()),
-        ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
-        ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-        #('pipeline_final', PipelineFinal()),
-    ])
-
-
-    # Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
-
-    param_grid = {
-            'features_droper__features_todrop':  [#None,
-                                                  ['imdb_score'],
-                                                  ['imdb_score', 'actor_1_facebook_likes','actor_2_facebook_likes', 'actor_3_facebook_likes', 'num_user_for_reviews', 'num_critic_for_reviews', 'num_voted_users']                                              
-            ],
-
-            'NCA__nca_params': [{'random_state':42, 'n_components':50 }, {'random_state':42, 'n_components':100 }, 
-                                {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }
-            ],
-
-            'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'manhattan'},
-                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'}, 
-                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
-                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'euclidean'}, 
-                                {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'jaccard'}, 
-                                #{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'mahalanobis'}, 
-                                {'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'minkowski'},
-                                {'n_neighbors':6, 'algorithm':'brute', 'metric':'minkowski'},
-            ],
-        }
-
-    grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid,scoring='neg_mean_squared_error', cv=2, verbose=2, error_score=np.nan)
-    grid_search.fit(df_encoded, labels)
-'''
-
+# '''
+# if (RECOMPUTE_GRIDSEARCH == True):
+#     #from sklearn.model_selection import RandomizedSearchCV
+#     from sklearn.model_selection import GridSearchCV
+# 
+#     recommendation_pipeline_NCA_KNN = Pipeline([
+#         ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+#         ('standardscaler', preprocessing.StandardScaler()),
+#         ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
+#         ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+#         #('pipeline_final', PipelineFinal()),
+#     ])
+# 
+# 
+#     # Erreur avec la distance mahalanobis : ValueError: Must provide either V or VI for Mahalanobis distance
+# 
+#     param_grid = {
+#             'features_droper__features_todrop':  [#None,
+#                                                   ['imdb_score'],
+#                                                   ['imdb_score', 'actor_1_facebook_likes','actor_2_facebook_likes', 'actor_3_facebook_likes', 'num_user_for_reviews', 'num_critic_for_reviews', 'num_voted_users']                                              
+#             ],
+# 
+#             'NCA__nca_params': [{'random_state':42, 'n_components':50 }, {'random_state':42, 'n_components':100 }, 
+#                                 {'random_state':42, 'n_components':150 }, {'random_state':42, 'n_components':200 }
+#             ],
+# 
+#             'KNN__knn_params': [{'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'manhattan'},
+#                                 {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'}, 
+#                                 {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'}, 
+#                                 {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'euclidean'}, 
+#                                 {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'jaccard'}, 
+#                                 #{'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'mahalanobis'}, 
+#                                 {'n_neighbors':6, 'algorithm':'kd_tree', 'metric':'minkowski'},
+#                                 {'n_neighbors':6, 'algorithm':'brute', 'metric':'minkowski'},
+#             ],
+#         }
+# 
+#     grid_search = GridSearchCV(recommendation_pipeline_NCA_KNN, param_grid,scoring='neg_mean_squared_error', cv=2, verbose=2, error_score=np.nan)
+#     grid_search.fit(df_encoded, labels)
+# '''
 
 # ### Sauvegarde et restauration des résultats
 
-# In[104]:
+# '''
+# if (SAVE_GRID_RESULTS == True):
+#     df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+#     df_grid_search_results.to_csv(GRIDSEARCH_CSV_FILE)
+#     
+#     with open(GRIDSEARCH_PICKLE_FILE, 'wb') as f:
+#         pickle.dump(grid_search.cv_results_, f, pickle.HIGHEST_PROTOCOL)
+#         
+# if (LOAD_GRID_RESULTS == True):
+#     if ((SAVE_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
+#         print('Error : if want to load grid results, you should not have saved them or recomputed them before, or you will loose all your training data')
+#         
+#     else:
+#         with open(GRIDSEARCH_PICKLE_FILE, 'rb') as f:
+#             grid_search_cv_results = pickle.load(f)
+#            
+#         df_grid_search_results = pd.concat([pd.DataFrame(grid_search_cv_results["params"]),pd.DataFrame(grid_search_cv_results["mean_test_score"], columns=["Accuracy"])],axis=1)
+#         
+# ''''''
 
-
-'''
-if (SAVE_GRID_RESULTS == True):
-    df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
-    df_grid_search_results.to_csv(GRIDSEARCH_CSV_FILE)
-    
-    with open(GRIDSEARCH_PICKLE_FILE, 'wb') as f:
-        pickle.dump(grid_search.cv_results_, f, pickle.HIGHEST_PROTOCOL)
-        
-if (LOAD_GRID_RESULTS == True):
-    if ((SAVE_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
-        print('Error : if want to load grid results, you should not have saved them or recomputed them before, or you will loose all your training data')
-        
-    else:
-        with open(GRIDSEARCH_PICKLE_FILE, 'rb') as f:
-            grid_search_cv_results = pickle.load(f)
-           
-        df_grid_search_results = pd.concat([pd.DataFrame(grid_search_cv_results["params"]),pd.DataFrame(grid_search_cv_results["mean_test_score"], columns=["Accuracy"])],axis=1)
-        
-''''''
-
-
-# In[105]:
-
-
-'''
-if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
-    grid_search_cv_results
-'''
-
+# '''
+# if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
+#     grid_search_cv_results
+# '''
 
 # ### Comme meilleur estimateur, avec la métrique prédiction on a donc : NCA avec 150 composants,  KNN avec algorithme kd_tree et distance manhattan
 
-# In[106]:
-
-
-'''
-if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
-    qgrid_show(df_grid_search_results)
-''''''
-
+# '''
+# if ((LOAD_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
+#     qgrid_show(df_grid_search_results)
+# ''''''
 
 # ### Les paramètres qui sortent du lot sont la dimension 150, la métrique de minkowski, en ne dropant pas d'autre feature que l'imdb_score
 
 # # Annexe 3 : Vérification du ratio de variance expliquée :
 
-# In[39]:
+# recommendation_pipeline_PCA_KNN['pca'].explained_variance_ratio_.sum()
 
+# # Centrage et Réduction
+# std_scale = preprocessing.StandardScaler().fit(df_encoded)
+# X_scaled = std_scale.transform(df_encoded)
+# 
+# 
 
-recommendation_pipeline_PCA_KNN['pca'].explained_variance_ratio_.sum()
+# X_scaled.shape
 
+# range(X_scaled.shape[0])
 
-# In[42]:
+# # Calcul des composantes principales
+# pca = decomposition.PCA(n_components=4998)
+# pca.fit(X_scaled)
+# 
 
+# 
+# pca.explained_variance_ratio_.cumsum()
 
-# Centrage et Réduction
-std_scale = preprocessing.StandardScaler().fit(df_encoded)
-X_scaled = std_scale.transform(df_encoded)
-
-
-# In[55]:
-
-
-X_scaled.shape
-
-
-# In[58]:
-
-
-range(X_scaled.shape[0])
-
-
-# In[51]:
-
-
-# Calcul des composantes principales
-pca = decomposition.PCA(n_components=4998)
-pca.fit(X_scaled)
-
-
-# In[56]:
-
-
-
-pca.explained_variance_ratio_.cumsum()
-
-
-# In[70]:
-
-
-fig = plt.figure()
-fig.suptitle('% de variance expliquée en fonction du nb de dimensions')
-plt.plot(range(X_scaled.shape[0]), pca.explained_variance_ratio_.cumsum())
-plt.ylabel("% explained variance")
-plt.xlabel("Dimensions")
-
+# fig = plt.figure()
+# fig.suptitle('% de variance expliquée en fonction du nb de dimensions')
+# plt.plot(range(X_scaled.shape[0]), pca.explained_variance_ratio_.cumsum())
+# plt.ylabel("% explained variance")
+# plt.xlabel("Dimensions")
