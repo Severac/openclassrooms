@@ -611,7 +611,7 @@ df[['movie_facebook_likes', 'num_voted_users', 'cast_total_facebook_likes', 'imd
 
 # ## Définition des Pipelines et métriques
 
-# In[18]:
+# In[64]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -1052,6 +1052,12 @@ reducer_pipeline = Pipeline([
     ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':200 })),
 ])
 
+reducer_pipeline10 = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':10 })),
+])
+
 '''
 kmeans_transformer_pipeline = Pipeline([
     ('kmeans', KMeans(n_clusters=10)),
@@ -1292,9 +1298,22 @@ df_grid_search_results_new = save_or_load_search_params(grid_search, 'otherfeats
 # reduction_params : {'reduction_type': 'NCA', 'n_components': 100}  
 # 
 
+# Les 10 meilleurs résultats :  
+# KNN__knn_params	features_droper__features_todrop	reduction__reduction_params	mean_test_score  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}	['imdb_score']	{'reduction_type': 'NCA', 'n_components': 100}	8.753227733730485  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	{'reduction_type': 'NCA', 'n_components': 100}	8.737696230476015  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}	['imdb_score']	{'reduction_type': 'NCA', 'n_components': 100}	8.737696230476015  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}		{'reduction_type': 'NCA', 'n_components': 100}	8.715353400873411  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}		{'reduction_type': 'NCA', 'n_components': 100}	8.71263095670615  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}		{'reduction_type': 'NCA', 'n_components': 100}	8.71263095670615  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}		{'reduction_type': 'NCA', 'n_components': 200}	8.712428644640822  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}		{'reduction_type': 'NCA', 'n_components': 200}	8.712428644640822  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}		{'reduction_type': 'NCA', 'n_components': 200}	8.68310075941397  
+# 
+
 # ## Recherche multiple de paramètres avec métrique score IMDB
 
-# In[ ]:
+# In[53]:
 
 
 if (RECOMPUTE_GRIDSEARCH == True):
@@ -1352,19 +1371,27 @@ if (RECOMPUTE_GRIDSEARCH == True):
 
 # ### Sauvegarde et restauration des résultats
 
-# In[ ]:
+# In[55]:
 
 
 df_grid_search_results_new = save_or_load_search_params(grid_search, 'metric_imdb_20200229')
 
 
-# => En combinant les résultats obtenus par les 2 recherches ci-dessus (sauvegardées dans les fichiers grid_search_results.csv et grid_search_results_otherfeats_20200229.csv, que l'on a mergées ensemble dans grid_search_results_similarity_metric.csv), on obtient que le meilleur estimateur pour la métrique similarité des films est :  
-# knn_params : {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}  
-# features_todrop : ['imdb_score']  
-# reduction_params : {'reduction_type': 'NCA', 'n_components': 100}  
+# Les 10 meilleurs résultats :  
+# KNN__knn_params	features_droper__features_todrop	reduction__reduction_params	mean_test_score
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}		{'reduction_type': 'NCA', 'n_components': 10}	-1,01543985594238  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}		{'reduction_type': 'NCA', 'n_components': 10}	-1,01979767907163  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}		{'reduction_type': 'NCA', 'n_components': 10}	-1,01979767907163  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}		{'reduction_type': 'NCA', 'n_components': 100}	-1,0513855942377  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}		{'reduction_type': 'NCA', 'n_components': 100}	-1,05918887555022  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}		{'reduction_type': 'NCA', 'n_components': 100}	-1,05918887555022  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}		{'reduction_type': 'NCA', 'n_components': 200}	-1,06986962785114  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}		{'reduction_type': 'NCA', 'n_components': 200}	-1,0882612244898  
+# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}		{'reduction_type': 'NCA', 'n_components': 200}	-1,0882612244898  
+# 
 # 
 
-# ## Affichage de recommendations avec NCA_KNN n_components 100 (Meilleur modèle trouvé ci-dessus) :
+# ## Affichage de recommendations avec NCA_KNN n_components 100 (Meilleur modèle trouvé avec métrique similarité) :
 
 # In[44]:
 
@@ -1397,15 +1424,42 @@ afficher_recos_films(reco_matrix, df_encoded)
 afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 
 
-# ## Affichage de recommendations avec NCA_KNN n_components 200 (Meilleur modèle trouvé avec examen humain des résultats) :
+# ## Affichage de recommendations avec NCA_KNN n_components 10 (Meilleur modèle trouvé avec métrique imdb) :
 
-# Ce modèle correspond au 7ème meilleur avec la métrique similarité
-
-# In[48]:
+# In[56]:
 
 
 recommendation_pipeline_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('features_droper', FeaturesDroper(features_todrop=None)),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type': 'NCA', 'n_components': 10} )),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'})),
+])
+
+recommendation_pipeline_KNN.fit(df_encoded, labels)
+
+
+# In[57]:
+
+
+distances_matrix, reco_matrix = recommendation_pipeline_KNN.transform(df_encoded)
+
+
+# In[58]:
+
+
+afficher_recos_films(reco_matrix, df_encoded)
+
+
+# ## Affichage de recommendations avec NCA_KNN n_components 200 (Meilleur modèle trouvé avec examen humain des résultats) :
+
+# Ce modèle correspond au 7ème meilleur parmi ceux évalués avec les métriques (que ce soit avec la métrique similarité ou la métrique imdb)
+
+# In[59]:
+
+
+recommendation_pipeline_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=None)),
     ('standardscaler', preprocessing.StandardScaler()),
     ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type': 'NCA', 'n_components': 200} )),
     ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
@@ -1414,142 +1468,42 @@ recommendation_pipeline_KNN = Pipeline([
 recommendation_pipeline_KNN.fit(df_encoded, labels)
 
 
-# In[49]:
+# In[60]:
 
 
 distances_matrix, reco_matrix = recommendation_pipeline_KNN.transform(df_encoded)
 
 
-# In[50]:
+# In[61]:
 
 
 afficher_recos_films(reco_matrix, df_encoded)
 
 
-# ### => Avec un examen humain, les résultats semblent meilleurs avec NCA qu'avec PCA,  et également meilleurs avec NCA 200 qu'avec NCA 100 :
-# ### Par exemple avec le 6ème sens on obtient plus de films avec le thème de la mort et les enfants
+# ### => Avec un examen humain, les résultats semblent meilleurs avec NCA qu'avec PCA, et meilleurs que les précédents
 
 # ### Affichage des similarités des recos
 
-# In[51]:
+# In[62]:
 
 
 afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
 
 
-# ## Affichage de recommendations pour NCA_KNN avec n_components 5 (le pire modèle trouvé jusqu'à présent) : 
+# # Sauvegarde du modèle retenu pour l'API
 
-# In[79]:
-
-
-recommendation_pipeline_NCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':5 })),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
-
-distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.fit_transform(df_encoded, labels)
+# In[63]:
 
 
-# In[80]:
-
-
-afficher_recos_films(reco_matrix, df_encoded)
-
-
-# ### => Les résultats sont clairement moins bons avec NCA components à 5  suivi de KNN : les imdb scores sont meilleurs mais les catégories sont moins bien capturées
-# ### => Pourtant, l'erreur de prédiction de l'imdb score n'est que de 0.33 avec NBCA components = 5,  soit beaucoup moins qu'avec components = 200  :  cela montre que la métrique de prédiction de l'imdb score n'est pas parfaite:  avec cette métrique, il ne faut pas que l'erreur soit trop faible (sinon, on ne capture plus que l'imdb score, et pas grand chose d'autre) ni trop élevée (sinon le modèle n'est plus pertinent)
-
-# In[81]:
-
-
-afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
-
-
-# ## Affichage de recommendations avec NCA KNN , n_components à 150
-
-# In[107]:
-
-
-recommendation_pipeline_NCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':150 })),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
-
-
-# In[109]:
-
-
-distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.fit_transform(df_encoded, labels)
-
-
-# In[110]:
-
-
-afficher_recos_films(reco_matrix, df_encoded)
-
-
-# ### => Malgré un meilleur score de prediction de ce modèle par rapport à celui à 200 composants, je suis moins convaincu par ce modèle. Par exemple : pour Matrix, il ne parvient pas à capturer un autre film de la trilogie.   Pour le 6ème sens, les recommendations sont moins dans le thème du film.
-
-# In[112]:
-
-
-afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
-
-
-# ## Affichage de recommandations avec PCA (5 components) + KNN
-
-# In[89]:
-
-
-recommendation_pipeline_PCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=5)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
-
-distances_matrix, reco_matrix = recommendation_pipeline_PCA_KNN.fit_transform(df_encoded, labels)
-
-
-# In[90]:
-
-
-afficher_recos_films(reco_matrix, df_encoded)
-
-
-# In[91]:
-
-
-afficher_recos_films(reco_matrix, df_imputed, with_similarity_display=True)
-
-
-# ## Affichage de recommandations avec PCA (200 components) + KNN
-
-# In[94]:
-
-
-recommendation_pipeline_PCA_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-    ('standardscaler', preprocessing.StandardScaler()),
-    ('pca', decomposition.PCA(n_components=200)),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-    #('pipeline_final', PipelineFinal()),
-])
-
-distances_matrix, reco_matrix = recommendation_pipeline_PCA_KNN.fit_transform(df_encoded, labels)
-
-
-# In[95]:
-
-
-afficher_recos_films(reco_matrix, df_encoded)
+if (SAVE_API_MODEL == True):
+    # Normalement les doublons ont déjà été droppés, mais on refait ce code au cas où :
+    df.drop_duplicates(inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    
+    API_model = {'reco_matrix' : reco_matrix, 'movie_names' : df['movie_title'].tolist()}
+    
+    with open(API_MODEL_PICKLE_FILE, 'wb') as f:
+        pickle.dump(API_model, f, pickle.HIGHEST_PROTOCOL)    
 
 
 # # Visualisation des films avec KMeans
@@ -1625,6 +1579,42 @@ silhouette_scores = [silhouette_score(df_reduced, model.labels_)
 
 
 # In[110]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), silhouette_scores, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Silhouette score", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# => Résultat : instable
+
+# ## Tentative de KMeans sur données réduites à 10 dimensions avec NCA
+
+# In[65]:
+
+
+df_reduced = reducer_pipeline10.fit_transform(df_encoded, labels)
+
+
+# In[66]:
+
+
+kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_reduced)
+                for k in range(1, 50)]
+
+
+# In[ ]:
+
+
+silhouette_scores = [silhouette_score(df_reduced, model.labels_)
+                     for model in kmeans_per_k[1:]]
+
+
+# In[ ]:
 
 
 plt.figure(figsize=(8, 3))
@@ -1948,22 +1938,6 @@ fig = go.Figure(data = [trace_1], layout = layout)
 py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
 
 py.offline.plot(fig, filename='clusters_plot_imdb.html') 
-
-
-# # Sauvegarde du modèle retenu pour l'API
-
-# In[52]:
-
-
-if (SAVE_API_MODEL == True):
-    # Normalement les doublons ont déjà été droppés, mais on refait ce code au cas où :
-    df.drop_duplicates(inplace=True)
-    df.reset_index(drop=True, inplace=True)
-    
-    API_model = {'reco_matrix' : reco_matrix, 'movie_names' : df['movie_title'].tolist()}
-    
-    with open(API_MODEL_PICKLE_FILE, 'wb') as f:
-        pickle.dump(API_model, f, pickle.HIGHEST_PROTOCOL)    
 
 
 # ## Tentative de KNN avec cosine distance
@@ -2409,6 +2383,121 @@ df_grid_search_sim_results = pd.concat([pd.DataFrame(grid_search_sim.cv_results_
 
 
 df_grid_search_sim_results
+
+
+# ## Affichage de recommendations pour NCA_KNN avec n_components 5 (le pire modèle trouvé jusqu'à présent) : 
+
+# In[79]:
+
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':5 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.fit_transform(df_encoded, labels)
+
+
+# In[80]:
+
+
+afficher_recos_films(reco_matrix, df_encoded)
+
+
+# ### => Les résultats sont clairement moins bons avec NCA components à 5  suivi de KNN : les imdb scores sont meilleurs mais les catégories sont moins bien capturées
+# ### => Pourtant, l'erreur de prédiction de l'imdb score n'est que de 0.33 avec NBCA components = 5,  soit beaucoup moins qu'avec components = 200  :  cela montre que la métrique de prédiction de l'imdb score n'est pas parfaite:  avec cette métrique, il ne faut pas que l'erreur soit trop faible (sinon, on ne capture plus que l'imdb score, et pas grand chose d'autre) ni trop élevée (sinon le modèle n'est plus pertinent)
+
+# In[81]:
+
+
+afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
+
+
+# ## Affichage de recommendations avec NCA KNN , n_components à 150
+
+# In[107]:
+
+
+recommendation_pipeline_NCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('NCA', NCATransform(nca_params =  {'random_state':42, 'n_components':150 })),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+
+# In[109]:
+
+
+distances_matrix, reco_matrix = recommendation_pipeline_NCA_KNN.fit_transform(df_encoded, labels)
+
+
+# In[110]:
+
+
+afficher_recos_films(reco_matrix, df_encoded)
+
+
+# ### => Malgré un meilleur score de prediction de ce modèle par rapport à celui à 200 composants, je suis moins convaincu par ce modèle. Par exemple : pour Matrix, il ne parvient pas à capturer un autre film de la trilogie.   Pour le 6ème sens, les recommendations sont moins dans le thème du film.
+
+# In[112]:
+
+
+afficher_recos_films(reco_matrix, df_encoded, with_similarity_display=True)
+
+
+# ## Affichage de recommandations avec PCA (5 components) + KNN
+
+# In[89]:
+
+
+recommendation_pipeline_PCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=5)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+distances_matrix, reco_matrix = recommendation_pipeline_PCA_KNN.fit_transform(df_encoded, labels)
+
+
+# In[90]:
+
+
+afficher_recos_films(reco_matrix, df_encoded)
+
+
+# In[91]:
+
+
+afficher_recos_films(reco_matrix, df_imputed, with_similarity_display=True)
+
+
+# ## Affichage de recommandations avec PCA (200 components) + KNN
+
+# In[94]:
+
+
+recommendation_pipeline_PCA_KNN = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('pca', decomposition.PCA(n_components=200)),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+    #('pipeline_final', PipelineFinal()),
+])
+
+distances_matrix, reco_matrix = recommendation_pipeline_PCA_KNN.fit_transform(df_encoded, labels)
+
+
+# In[95]:
+
+
+afficher_recos_films(reco_matrix, df_encoded)
 
 
 # 
