@@ -1398,16 +1398,16 @@ df_grid_search_results_new = save_or_load_search_params(grid_search, 'metric_imd
 # 
 # 
 
-# ## Affichage de recommendations avec NCA_KNN n_components 100 (Meilleur modèle trouvé avec métrique similarité) :
+# ## Affichage de recommendations avec NCA_KNN n_components 200 (Meilleur modèle trouvé avec métrique similarité) :
 
 # In[65]:
 
 
 recommendation_pipeline_KNN = Pipeline([
-    ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
+    ('features_droper', FeaturesDroper(features_todrop=['title_year', 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'actor_3_facebook_likes', 'movie_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'num_user_for_reviews', 'num_voted_users', 'duration'])),
     ('standardscaler', preprocessing.StandardScaler()),
-    ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type': 'NCA', 'n_components': 100} )),
-    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'manhattan'})),
+    ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type': 'NCA', 'n_components': 200} )),
+    ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
 ])
 
 recommendation_pipeline_KNN.fit(df_encoded, labels)
@@ -1417,6 +1417,7 @@ recommendation_pipeline_KNN.fit(df_encoded, labels)
 
 
 distances_matrix, reco_matrix = recommendation_pipeline_KNN.transform(df_encoded)
+reco_matrix_final = reco_matrix
 
 
 # In[67]:
@@ -1458,9 +1459,9 @@ distances_matrix, reco_matrix = recommendation_pipeline_KNN.transform(df_encoded
 afficher_recos_films(reco_matrix, df_encoded)
 
 
-# ## Affichage de recommendations avec NCA_KNN n_components 200 (Meilleur modèle trouvé avec examen humain des résultats) :
+# ## Affichage de recommendations avec NCA_KNN n_components 200 (Meilleur modèle trouvé avec examen humain des résultats, avant d'avoir lancé le grid search) :
 
-# Ce modèle correspond au 7ème meilleur parmi ceux évalués avec les métriques (que ce soit avec la métrique similarité ou la métrique imdb)
+# Ce modèle correspond au 8ème meilleur parmi ceux évalués avec la métrique de scoring imdb
 
 # In[72]:
 
@@ -1487,7 +1488,49 @@ distances_matrix, reco_matrix = recommendation_pipeline_KNN.transform(df_encoded
 afficher_recos_films(reco_matrix, df_encoded)
 
 
-# ### => Avec un examen humain, les résultats semblent meilleurs avec NCA qu'avec PCA, et meilleurs que les précédents
+# ### => Avec un examen humain, les résultats semblent meilleurs avec NCA qu'avec PCA
+# ### => Mais ils ne sont pas aussi bons que le meilleur modèle obtenu via la métrique de similarité
+# ### Ci-dessous la comparaison humaine entre le meilleur modèle obtenu via métrique de similarité, et le modèle obtenu via évaluation humaine avant de lancer le gridsearch :
+
+# Meilleur modèle obtenu via métrique de similarité: 5 points
+# Modèle obtenu via évaluation humaine avant d'avoir lancé les gridsearch : 3 points
+# 
+# > Film choisi : Mulholland Drive  - imdb score : 8.0 - http://www.imdb.com/title/tt0166924/?ref_=fn_tt_tt_1
+# 
+# => Meilleur = métrique similarité  (pour Windsor Drive)
+# 
+# > Film choisi : Avatar  - imdb score : 7.9 - http://www.imdb.com/title/tt0499549/?ref_=fn_tt_tt_1
+# 
+# => Meilleur = métrique similarité (un peu moins tourné super héro uniquement)
+# 
+# > Film choisi : The Dark Knight Rises  - imdb score : 8.5 - http://www.imdb.com/title/tt1345836/?ref_=fn_tt_tt_1
+# 
+# => Meilleur = humain   (plus orienté super héro)
+# 
+# 
+# > Film choisi : Cube  - imdb score : 7.3 - http://www.imdb.com/title/tt0123755/?ref_=fn_tt_tt_1
+# 
+# => Meilleur = humain  (pour Saw II)
+# 
+# > Film choisi : The Matrix  - imdb score : 8.7 - http://www.imdb.com/title/tt0133093/?ref_=fn_tt_tt_1
+# 
+# => Meilleur = égalité
+# 
+# > Film choisi : The Matrix Revolutions  - imdb score : 6.7 - http://www.imdb.com/title/tt0242653/?ref_=fn_tt_tt_1
+# 
+# => Meilleur = métrique similarité (pour max max)
+# 
+# > Film choisi : Interview with the Vampire: The Vampire Chronicles  - imdb score : 7.6 - http://www.imdb.com/title/tt0110148/?ref_=fn_tt_tt_1
+# 
+# => Meilleur = humain : + de films de vampire
+# 
+# > Film choisi : The Sixth Sense  - imdb score : 8.1 - http://www.imdb.com/title/tt0167404/?ref_=fn_tt_tt_1
+# 
+# => Meilleur = métrique similarité : pour The Amityville Horror
+# 
+# > Film choisi : Requiem for a Dream  - imdb score : 8.4 - http://www.imdb.com/title/tt0180093/?ref_=fn_tt_tt_1
+# 
+# => Meilleur = métrique similarité: pour Animals (addiction theme)
 
 # ### Affichage des similarités des recos
 
@@ -1507,22 +1550,348 @@ if (SAVE_API_MODEL == True):
     df.drop_duplicates(inplace=True)
     df.reset_index(drop=True, inplace=True)
     
-    API_model = {'reco_matrix' : reco_matrix, 'movie_names' : df['movie_title'].tolist()}
+    API_model = {'reco_matrix' : reco_matrix_final, 'movie_names' : df['movie_title'].tolist()}
     
     with open(API_MODEL_PICKLE_FILE, 'wb') as f:
         pickle.dump(API_model, f, pickle.HIGHEST_PROTOCOL)    
 
 
-# # Annexe : visualisation des films avec KMeans
+# # Annexe : Visualisation avec réduction dimensionnelle à partir du DataFrame d'origine (features numériques seulement)
 
 # In[77]:
+
+
+X_numerical = df_numerical_features_imputed.values
+
+# Centrage et Réduction
+std_scale = preprocessing.StandardScaler().fit(X_numerical)
+X_numerical_scaled = std_scale.transform(X_numerical)
+
+# Calcul des composantes principales
+pca = decomposition.PCA(n_components=2)
+X_numerical_reduced = pca.fit_transform(X_numerical_scaled)
+
+
+# In[78]:
+
+
+nca = NCATransform(nca_params =  {'random_state':42, 'n_components':2 })
+X_numerical_reduced_nca = nca.fit_transform(X_numerical_scaled, labels)
+
+
+# In[79]:
+
+
+imdb_score_cat = pd.cut(df_numerical_features_imputed['imdb_score'], bins=[-np.inf,0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], labels=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+
+# In[80]:
+
+
+pca.explained_variance_ratio_
+
+
+# In[81]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = X_numerical_reduced[:, 0], y = X_numerical_reduced[:, 1],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=imdb_score_cat),
+                    text = df['movie_title'],
+                    )
+
+
+layout = go.Layout(title = 'Réduction dimensionelle des features numériques avec PCA, coloration par IMDb score',
+                   hovermode = 'closest',
+)
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb_PCA.html') 
+
+
+# In[82]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = X_numerical_reduced_nca[:, 0], y = X_numerical_reduced_nca[:, 1],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=imdb_score_cat),
+                    text = df['movie_title'],
+                    )
+
+
+layout = go.Layout(title = 'Réduction dimensionelle des features numériques avec NCA, coloration par IMDb score',
+                   hovermode = 'closest',
+)
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb_pca.html') 
+
+
+# # Annexe : projection du Dataframe encodé (~ 22000 dimensions) après réduction PCA,  et NCA
+
+# In[83]:
+
+
+reducer_pipeline_PCA2 = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=None)),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type' : 'PCA', 'n_components' : 2 })),
+])
+
+df_pca_reduced2 = reducer_pipeline_PCA2.fit_transform(df_encoded)
+
+
+# In[84]:
+
+
+reducer_pipeline_NCA2 = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=None)),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type' : 'NCA', 'n_components' : 2 })),
+])
+
+df_nca_reduced2 = reducer_pipeline_NCA2.fit_transform(df_encoded, labels)
+
+
+# In[85]:
+
+
+reducer_pipeline_NCA3 = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=None)),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type' : 'NCA', 'n_components' : 3 })),
+])
+
+df_nca_reduced3 = reducer_pipeline_NCA3.fit_transform(df_encoded, labels)
+
+
+# In[86]:
+
+
+reducer_pipeline_PCA3 = Pipeline([
+    ('features_droper', FeaturesDroper(features_todrop=None)),
+    ('standardscaler', preprocessing.StandardScaler()),
+    ('reduction', DimensionalityReduction_Transform(reduction_params = {'reduction_type' : 'PCA', 'n_components' : 3 })),
+])
+
+df_pca_reduced3 = reducer_pipeline_PCA3.fit_transform(df_encoded, labels)
+
+
+# In[87]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = df_pca_reduced2[:, 0], y = df_pca_reduced2[:, 1],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=imdb_score_cat),
+                    text = df['movie_title'],
+                    )
+
+
+layout = go.Layout(title = 'Réduction dimensionelle des features encodées (22000 dimensions) avec PCA,<BR> coloration par IMDb score',
+                   hovermode = 'closest',
+)
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb_encoded_reduced_2_PCA.html') 
+
+
+# In[88]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = df_nca_reduced2[:, 0], y = df_nca_reduced2[:, 1],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=imdb_score_cat),
+                    text = df['movie_title'],
+                    )
+
+
+layout = go.Layout(title = 'Réduction dimensionelle des features encodées (22000 dimensions) avec NCA,<BR> coloration par IMDb score',
+                   hovermode = 'closest',
+)
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb_encoded_reduced_2_NCA.html') 
+
+
+# In[89]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter3d(x = df_nca_reduced3[:, 0], y = df_nca_reduced3[:, 1], z = df_nca_reduced3[:, 2],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=imdb_score_cat),
+                    text = df['movie_title']
+                    )
+
+layout = go.Layout(title = 'Réduction dimensionelle des features encodées (22000 dimensions) avec NCA (dim 3/3),<BR> coloration par IMDb score',
+                   hovermode = 'closest')
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb_encoded_reduced_3of3_NCA.html') 
+
+
+# In[90]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter3d(x = df_pca_reduced3[:, 0], y = df_pca_reduced3[:, 1], z = df_pca_reduced3[:, 2],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=imdb_score_cat),
+                    text = df['movie_title']
+                    )
+
+layout = go.Layout(title = 'Réduction dimensionelle des features encodées (22000 dimensions) avec PCA (dim 3/3),<BR> coloration par IMDb score',
+                   hovermode = 'closest')
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb_encoded_reduced_3of3_PCA.html') 
+
+
+# # Annexe : visualisation des films avec KMeans
+
+# ## Réduction de 22000 à 3 dimensions avec NCA, et représentation en 3 dimensions colorée par un clustering KMeans (effectué sur la base d'une réduction à 10 dimensions puis d'un clustering à 10 dimensions)
+
+# In[91]:
+
+
+from sklearn.cluster import KMeans
+
+df_reduced = reducer_pipeline10.fit_transform(df_encoded, labels)
+
+kmeans_clusterer = KMeans(n_clusters=10, random_state=42)
+clusters = kmeans_clusterer.fit_transform(df_reduced)
+
+
+# In[92]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter3d(x = df_nca_reduced3[:, 0], y = df_nca_reduced3[:, 1], z = df_nca_reduced3[:, 2],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=kmeans_clusterer.labels_),
+                    text = df['movie_title']
+                    )
+
+layout = go.Layout(title = "## Réduction de 22000 à 3 dimensions avec NCA,<BR> et représentation en 3 dimensions colorée par un clustering KMeans (effectué sur la base d'une réduction à 10 dimensions puis d'un clustering à 10 dimensions)",
+                   hovermode = 'closest')
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb_encoded_reduced_3of3_NCA_clustered_colors.html') 
+
+
+# ## Réduction de 22000 à 3 dimensions avec NCA, et représentation en 2 dimensions colorée par un clustering KMeans (effectué sur la base d'une réduction à 10 dimensions puis d'un clustering à 10 dimensions)
+
+# In[93]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = df_nca_reduced2[:, 0], y = df_nca_reduced2[:, 1],
+                    name = 'Films',
+                    mode = 'markers',
+                    marker=dict(color=kmeans_clusterer.labels_),
+                    text = df['movie_title'],
+                    )
+
+
+layout = go.Layout(title = "Réduction de 22000 à 3 dimensions avec NCA,<BR> et représentation en 2 dimensions colorée par un clustering KMeans (effectué sur la base d'une réduction à 10 dimensions puis d'un clustering à 10 dimensions)",
+                   hovermode = 'closest',
+)
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb_encoded_reduced_2_NCA_clustered_colors.html') 
+
+
+# In[94]:
 
 
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
 
 
-# In[78]:
+# In[95]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1531,7 +1900,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # ## Tentative de KMeans sur les données non réduites (22000 dimensions)
 
-# In[79]:
+# In[96]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1546,7 +1915,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # Affichage des coefs. de silhouette pour différentes valeurs de k :
 
-# In[80]:
+# In[97]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1558,7 +1927,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     #inertias = [model.inertia_ for model in kmeans_per_k]
 
 
-# In[81]:
+# In[98]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1566,7 +1935,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
                          for model in kmeans_per_k[1:]]
 
 
-# In[82]:
+# In[99]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1583,7 +1952,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # ## Tentative de KMeans sur données réduites à 200 dimensions avec NCA
 
-# In[83]:
+# In[100]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1591,7 +1960,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
                     for k in range(1, 50)]
 
 
-# In[84]:
+# In[101]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1599,7 +1968,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
                          for model in kmeans_per_k[1:]]
 
 
-# In[85]:
+# In[102]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1616,13 +1985,13 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # ## Tentative de KMeans sur données réduites à 10 dimensions avec NCA
 
-# In[86]:
+# In[103]:
 
 
 df_reduced = reducer_pipeline10.fit_transform(df_encoded, labels)
 
 
-# In[87]:
+# In[104]:
 
 
 from sklearn.cluster import KMeans
@@ -1630,14 +1999,14 @@ kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_reduced)
                 for k in range(1, 50)]
 
 
-# In[88]:
+# In[105]:
 
 
 silhouette_scores = [silhouette_score(df_reduced, model.labels_)
                      for model in kmeans_per_k[1:]]
 
 
-# In[89]:
+# In[106]:
 
 
 plt.figure(figsize=(8, 3))
@@ -1653,7 +2022,7 @@ plt.show()
 
 # ## Tentative de KMeans distance cosine, k=10
 
-# In[90]:
+# In[107]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1669,7 +2038,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # CPU times: user 4h 39min 33s, sys: 31.5 s, total: 4h 40min 5s  
 # Wall time: 1h 10min 54s  
 
-# In[91]:
+# In[108]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1683,7 +2052,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # CPU times: user 29.1 s, sys: 4.44 s, total: 33.5 s  
 # Wall time: 8.71 s  
 
-# In[92]:
+# In[109]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1693,7 +2062,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # Résultat:  
 # 0.000757044627637612
 
-# In[93]:
+# In[110]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1724,7 +2093,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # ## Lancement d'un clustering, et visualisation
 
-# In[94]:
+# In[111]:
 
 
 from sklearn.cluster import KMeans
@@ -1736,7 +2105,7 @@ clusters = kmeans_clusterer.fit_transform(df_reduced)
 
 # ## Réduction de dimensionalité à 2 et 3 pour la visualisation
 
-# In[95]:
+# In[112]:
 
 
 X = df_encoded.values
@@ -1756,19 +2125,19 @@ pca = decomposition.PCA(n_components=3)
 X_reduced_n3 = pca.fit_transform(X_scaled)
 
 
-# In[96]:
+# In[113]:
 
 
 X_reduced_n2[:, 1].shape
 
 
-# In[97]:
+# In[114]:
 
 
 clusters.shape
 
 
-# In[98]:
+# In[115]:
 
 
 import plotly as py
@@ -1796,7 +2165,7 @@ py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but
 py.offline.plot(fig, filename='clusters_plot.html') 
 
 
-# In[99]:
+# In[116]:
 
 
 import plotly as py
@@ -1831,151 +2200,9 @@ py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but
 py.offline.plot(fig, filename='clusters_plot.html') 
 
 
-# # Annexe : Visualisation avec réduction dimensionnelle à partir du DataFrame d'origine (features numériques seulement)
-
-# In[100]:
-
-
-X_numerical = df_numerical_features_imputed.values
-
-# Centrage et Réduction
-std_scale = preprocessing.StandardScaler().fit(X_numerical)
-X_numerical_scaled = std_scale.transform(X_numerical)
-
-# Calcul des composantes principales
-pca = decomposition.PCA(n_components=2)
-X_numerical_reduced = pca.fit_transform(X_numerical_scaled)
-
-
-# In[101]:
-
-
-imdb_score_cat = pd.cut(df_numerical_features_imputed['imdb_score'], bins=[-np.inf,0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], labels=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-
-
-# In[102]:
-
-
-pca.explained_variance_ratio_
-
-
-# In[103]:
-
-
-import plotly as py
-import plotly.graph_objects as go
-import ipywidgets as widgets
-
-py.offline.init_notebook_mode(connected=True)
-
-
-trace_1 = go.Scatter(x = X_numerical_reduced[:, 0], y = X_numerical_reduced[:, 1],
-                    name = 'Films',
-                    mode = 'markers',
-                    marker=dict(color=imdb_score_cat), #kmeans_clusterer.labels_
-                    text = df['movie_title'],
-                    )
-
-
-layout = go.Layout(title = 'Films clustered',
-                   hovermode = 'closest')
-
-fig = go.Figure(data = [trace_1], layout = layout)
-
-py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
-
-py.offline.plot(fig, filename='clusters_plot_imdb.html') 
-
-
-# In[104]:
-
-
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    plt.figure(figsize=(8, 3))
-    plt.plot(range(2, 10), silhouette_scores, "bo-")
-    plt.xlabel("$k$", fontsize=14)
-    plt.ylabel("Silhouette score", fontsize=14)
-    #plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
-    #save_fig("silhouette_score_vs_k_plot")
-    plt.show()
-
-
-# In[105]:
-
-
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    import plotly as py
-    import plotly.graph_objects as go
-    import ipywidgets as widgets
-
-    py.offline.init_notebook_mode(connected=True)
-
-
-    trace_1 = go.Scatter(x = X_numerical_reduced[:, 0], y = X_numerical_reduced[:, 1],
-                        name = 'Films',
-                        mode = 'markers',
-                        marker=dict(color=cluster_labels),
-                        text = df['movie_title']
-                        )
-
-
-    layout = go.Layout(title = 'Films clustered',
-                       hovermode = 'closest')
-
-    fig = go.Figure(data = [trace_1], layout = layout)
-
-    py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
-
-    py.offline.plot(fig, filename='clusters_plot_imdb.html') 
-
-
-# ## Tentative de KNN avec cosine distance
-
-# In[106]:
-
-
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    recommendation_pipeline = Pipeline([
-        ('features_droper', FeaturesDroper(features_todrop=['imdb_score'])),
-        ('standardscaler', preprocessing.StandardScaler()),
-        ('pca', decomposition.PCA(n_components=200)),
-        ('KNN', KNNTransform(knn_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'cosine'})),
-        #('pipeline_final', PipelineFinal()),
-    ])
-
-    recommendation_pipeline.fit(df_encoded, labels)
-    predictions = recommendation_pipeline.predict(df_encoded)
-
-
-# In[107]:
-
-
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    from sklearn import neighbors
-
-    sorted(neighbors.VALID_METRICS['brute'])
-
-
-# In[108]:
-
-
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    recommendation_pipeline_NMF.fit(df_encoded, labels)
-
-
-# In[109]:
-
-
-'''
-model = NMF(n_components=2, init='random', random_state=0)
-W = model.fit_transform(X)
-H = model.components_
-'''
-
-
 # # Annexe : inutile, à effacer plus tard
 
-# In[110]:
+# In[117]:
 
 
 '''
@@ -2004,7 +2231,7 @@ for feature_totransform in categorical_features_tosplit_andtransform:
 '''
 
 
-# In[111]:
+# In[118]:
 
 
 '''
@@ -2060,6 +2287,47 @@ for feature_totransform in categorical_features_tosplit_andtransform:
 #     predictions = KNN.predict(X_reduced)
 #     print('Avec n_components = ' + str(hparam))
 #     print_rmse(labels, predictions)
+
+# ## Code plotly pour ajouter progressivement des graphiques , ne fonctionne pas (n'affiche rien sauf si on affiche que le premier graphique de la boucle)
+
+# In[119]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+import matplotlib.cm as cm
+
+py.offline.init_notebook_mode(connected=True)
+
+layout = go.Layout(title = 'Films clustered',
+                   hovermode = 'closest')
+
+fig = go.Figure(layout = layout)
+
+x = np.arange(10)
+ys = [i+x+(i*x)**2 for i in range(10)]
+colors = iter(cm.rainbow(np.linspace(0, 1, len(ys))))
+
+all_imdb_bins = np.unique(imdb_score_cat)
+
+for imdb_score_unique in [all_imdb_bins]:
+    color_display = next(colors)
+    
+    fig.add_trace(go.Scatter(x = df_reduced[imdb_score_cat == imdb_score_unique, 0], y = df_reduced[imdb_score_cat == imdb_score_unique, 1],
+                        name = 'Films ' + str(imdb_score_unique),
+                        mode = 'markers',
+                        marker = dict(color = imdb_score_cat[imdb_score_cat == imdb_score_unique]),
+                        #marker=dict(color=imdb_score_cat), #kmeans_clusterer.labels_
+                        text = df[imdb_score_cat == imdb_score_unique]['movie_title'],
+                        )
+    )
+
+py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_imdb.html') 
+
 
 # # Annexe 2 : ancien code de pipelines
 

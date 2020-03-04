@@ -7,3 +7,16 @@ L'API necessite le fichier API_model_PJ3.pickle qui est exporté à partir du no
 Appel de l'url :
 curl --proxy "http://login:pass@ncproxy:8080" -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 1 }" https://francoisboyer.pythonanywhere.com/recommend
 curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 1 }" https://francoisboyer.pythonanywhere.com/recommend
+
+Test de l'API avec les films examinés dans le notebook :
+
+
+curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 2703 }" https://francoisboyer.pythonanywhere.com/recommend
+curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 0 }" https://francoisboyer.pythonanywhere.com/recommend
+curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 3 }" https://francoisboyer.pythonanywhere.com/recommend
+curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 4820 }" https://francoisboyer.pythonanywhere.com/recommend
+curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 647 }" https://francoisboyer.pythonanywhere.com/recommend
+curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 124 }" https://francoisboyer.pythonanywhere.com/recommend
+curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 931 }" https://francoisboyer.pythonanywhere.com/recommend
+curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 1172 }" https://francoisboyer.pythonanywhere.com/recommend
+curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 3820 }" https://francoisboyer.pythonanywhere.com/recommend
