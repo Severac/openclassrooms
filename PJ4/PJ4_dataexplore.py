@@ -411,10 +411,38 @@ plt.plot(X_tails, Y_tails)
 
 # ## Mean delay by carrier
 
-# In[102]:
+# In[110]:
 
 
-df[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().plot.bar(figsize=(16,10), title='Mean delay by carrier')
+fig, ax = plt.subplots()
+df[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().plot.bar(figsize=(16,10), title='Mean delay by carrier', ax=ax)
+ax.legend(["Mean delay in minutes"])
+
+
+# ## Mean delay by day of week
+
+# In[117]:
+
+
+df['DAY_OF_WEEK'] = df['DAY_OF_WEEK'].astype(str)
+
+
+# In[121]:
+
+
+fig, ax = plt.subplots()
+df[['ARR_DELAY', 'DAY_OF_WEEK']].groupby('DAY_OF_WEEK').mean().plot.bar(figsize=(16,10), title='Mean delay by day of week', ax=ax)
+ax.legend(["Mean delay in minutes"])
+
+
+# ## Mean delay by month
+
+# In[123]:
+
+
+fig, ax = plt.subplots()
+df[['ARR_DELAY', 'MONTH']].groupby('MONTH').mean().plot.bar(figsize=(16,10), title='Mean delay by month', ax=ax)
+ax.legend(["Mean delay in minutes"])
 
 
 # # Feature engineering
