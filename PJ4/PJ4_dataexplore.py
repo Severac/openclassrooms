@@ -54,7 +54,7 @@ def qgrid_show(df):
     display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
 
 
-# # Téléchargement et décompression des données
+# # Download and decompression of data
 
 # In[3]:
 
@@ -89,7 +89,7 @@ if (DOWNLOAD_DATA == True):
     fetch_dataset()
 
 
-# # Import du fichier CSV
+# # Import of CSV file
 
 # ## Inspection de quelques lignes du fichier pour avoir un aperçu visuel du texte brut :
 
@@ -120,7 +120,7 @@ read_raw_file(1)
 read_raw_file(2)
 
 
-# ## Chargement des données
+# ## Data load
 
 # In[7]:
 
@@ -235,7 +235,7 @@ df[df.duplicated()]
 #df.drop_duplicates(inplace=True)
 
 
-# # Analyse de la qualité de données et premières suppressions de données inutiles
+# # Quality of data analysis and first removals of useless data
 
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
