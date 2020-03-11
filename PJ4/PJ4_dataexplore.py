@@ -125,7 +125,7 @@ read_raw_file(2)
 
 # ## Data load
 
-# In[21]:
+# In[8]:
 
 
 import pandas as pd
@@ -152,24 +152,16 @@ def load_data(data_path=DATA_PATH):
         )
 
         
-        '''
-        df_list.append(pd.read_csv(f, sep=',', header=0, encoding='utf-8', error_bad_lines=False, low_memory=False,
-                                   parse_dates=feats_hhmm,  date_parser=lambda x: pd.to_datetime(x, format='%H%M').time()
-                        
-                                   
-        ))
-        '''
-        
     return pd.concat(df_list)
 
 
-# In[10]:
+# In[9]:
 
 
 df = load_data()
 
 
-# In[11]:
+# In[10]:
 
 
 df.reset_index(drop=True, inplace=True)
@@ -260,7 +252,7 @@ df.describe()
 
 # # Flight lifecycle information
 
-# In[ ]:
+# In[21]:
 
 
 df_lifecycle = pd.read_csv('Flight_lifecycle.csv')
@@ -268,15 +260,15 @@ df_lifecycle = pd.read_csv('Flight_lifecycle.csv')
 
 # ![image](Flight_lifecycle.png)
 
-# In[25]:
+# In[22]:
 
 
 df_lifecycle
 
 
-# 
+# ACTUAL_ELAPSED_TIME = TAXI_OUT + AIR_TIME + TAXI_IN
 
-# In[22]:
+# In[23]:
 
 
 df[time_feats].head(15)
@@ -284,19 +276,19 @@ df[time_feats].head(15)
 
 # # Quality of data analysis and first removals of useless data
 
-# ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
+# ## Display column names with their percentage of filled values (non NA)
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
 
-# In[21]:
+# In[24]:
 
 
 pd.set_option('display.max_rows', 100)
 (df.count()/df.shape[0]).sort_values(axis=0, ascending=False)
 
 
-# ## Affichage des différentes valeurs possibles pour les features qualitatives
+# ## Display of different possible values for qualitative features
 
-# In[22]:
+# In[25]:
 
 
 def print_column_information(df, column_name):
@@ -308,31 +300,20 @@ def print_column_information(df, column_name):
     print(df[column_name].unique())    
     print('\n')
 
-'''
-def print_column_information_quantitative(df, column_name):
-    print(f'Column {column_name} (quantitative)')
-    print('--------------------------')
-
-    print(df[[column_name]].groupby(column_name).size().sort_values(ascending=False))
-    print(df[column_name].unique())    
-    print('\n')    
-    
-'''
     
 for column_name in df.select_dtypes(include=['object']).columns:
-    #print(df[column_name].value_counts)
     print_column_information(df, column_name)
 
 
 # ## Identifier of air company : columns analysis and determine which feature to keep
 
-# In[23]:
+# In[26]:
 
 
 df[['AIRLINE_ID']].groupby('AIRLINE_ID').size().sort_values(ascending=False)
 
 
-# In[24]:
+# In[27]:
 
 
 df[['UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').size().sort_values(ascending=False)
@@ -340,13 +321,13 @@ df[['UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').size().sort_values(ascending=Fa
 
 # => Les deux champs sont équivalents. On conservera UNIQUE_CARRIER, et on enlèvera la ligne qui contient la valeur 10397 (outlier)
 
-# In[25]:
+# In[28]:
 
 
 df.drop(index=df[df['UNIQUE_CARRIER'] == '10397'].index, axis=0, inplace=True)
 
 
-# In[26]:
+# In[29]:
 
 
 df[df['UNIQUE_CARRIER'] == '10397']
@@ -354,20 +335,20 @@ df[df['UNIQUE_CARRIER'] == '10397']
 
 # ## Identifier of airport : columns analysis and determine which feature to keep
 
-# In[135]:
+# In[30]:
 
 
 df['DEST_AIRPORT_ID'] = df['DEST_AIRPORT_ID'].astype('str')  # Data clean (we have a mixed type of int and str on original data)
 df['DEST'] = df['DEST'].astype('str')  # Data clean (we have a mixed type of int and str on original data)
 
 
-# In[137]:
+# In[31]:
 
 
 df[['DEST_AIRPORT_ID']].groupby('DEST_AIRPORT_ID').size().sort_values(ascending=False).head(5)
 
 
-# In[138]:
+# In[32]:
 
 
 df[['DEST']].groupby('DEST').size().sort_values(ascending=False).head(5)
@@ -381,7 +362,7 @@ df[['DEST']].groupby('DEST').size().sort_values(ascending=False).head(5)
 # ## We see that MONTH and DAY_OF_MONTH are equivalent to FL_DATE (without the year)
 # We can keep MONTH and DAY_OF_MONTH instead of FL_DATE
 
-# In[27]:
+# In[33]:
 
 
 df[['FL_DATE', 'MONTH', 'DAY_OF_MONTH']].sample(10)
@@ -389,55 +370,55 @@ df[['FL_DATE', 'MONTH', 'DAY_OF_MONTH']].sample(10)
 
 # ## Analysis of DELAY_NEW to see what this variable means and if we need it
 
-# In[28]:
+# In[34]:
 
 
 df['DEP_DELAY_NEW'].unique()
 
 
-# In[29]:
+# In[35]:
 
 
 df['DEP_DELAY_NEW'].hist(bins=50)
 
 
-# In[30]:
+# In[36]:
 
 
 df[df['DEP_DELAY_NEW'] < 100]['DEP_DELAY_NEW'].hist(bins=50)
 
 
-# In[31]:
+# In[37]:
 
 
 df[df['DEP_DELAY_NEW'] == 0]['DEP_DELAY_NEW'].count()
 
 
-# In[32]:
+# In[38]:
 
 
 df[df['DEP_DELAY_NEW'] > 0][['DEP_DELAY_NEW', 'DEP_DELAY']].sample(10)
 
 
-# In[33]:
+# In[39]:
 
 
 df[['DEP_DELAY_NEW', 'DEP_DELAY']].sample(10)
 
 
-# In[34]:
+# In[40]:
 
 
 (df[df['DEP_DELAY'] > 0]['DEP_DELAY'] - df[df['DEP_DELAY'] > 0]['DEP_DELAY_NEW']).unique()
 
 
-# In[35]:
+# In[41]:
 
 
 s_delay = (df[df['DEP_DELAY'] > 0]['DEP_DELAY'] - df[df['DEP_DELAY'] > 0]['DEP_DELAY_NEW']) != 0
 
 
-# In[36]:
+# In[42]:
 
 
 s_delay[s_delay == True]
@@ -445,7 +426,7 @@ s_delay[s_delay == True]
 
 # => Only one row has different value for DEP_DELAY and DEP_DELAY_NEW when DEP_DELAY > 0
 
-# In[37]:
+# In[43]:
 
 
 df[df['DEP_DELAY'] > 0].loc[[3376972]]
@@ -454,7 +435,7 @@ df[df['DEP_DELAY'] > 0].loc[[3376972]]
 # => We see that DEP_DELAY_NEW is the same as DEP_DELAY when DEP_DELAY >=0,  and that DEP_DELAY_NEW is 0 when DEP_DELAY is < 0
 # => We'll not keep DEP_DELAY_NEW since we're not interested in predicting negative delays  (= planes that arrive before schedule)
 
-# In[38]:
+# In[44]:
 
 
 df[df['ARR_DEL15'] == 1][['ARR_DEL15','TAIL_NUM']].groupby(['ARR_DEL15','TAIL_NUM']).size().sort_values(ascending=False).hist(bins=50)
@@ -462,13 +443,13 @@ df[df['ARR_DEL15'] == 1][['ARR_DEL15','TAIL_NUM']].groupby(['ARR_DEL15','TAIL_NU
 
 # ## Analysis of FLIGHTS variable 
 
-# In[39]:
+# In[45]:
 
 
 df['FLIGHTS'].unique()
 
 
-# In[40]:
+# In[46]:
 
 
 df[df['FLIGHTS'].notnull() == False]
@@ -480,7 +461,7 @@ df[df['FLIGHTS'].notnull() == False]
 
 # ## Display of delays grouped by tail number (plane identifier)
 
-# In[41]:
+# In[47]:
 
 
 pd.set_option('display.max_rows', 50)
@@ -488,20 +469,20 @@ df_delays_groupby_tails = df[df['ARR_DEL15'] == 1][['ARR_DEL15','TAIL_NUM']].gro
 df_delays_groupby_tails
 
 
-# In[42]:
+# In[48]:
 
 
 X_tails = range(df_delays_groupby_tails.shape[0])
 Y_tails = df_delays_groupby_tails.to_numpy()
 
 
-# In[43]:
+# In[49]:
 
 
 X_tails
 
 
-# In[44]:
+# In[50]:
 
 
 plt.title('Plane delays')
@@ -512,7 +493,7 @@ plt.plot(X_tails, Y_tails)
 
 # ## Mean delay by carrier
 
-# In[45]:
+# In[51]:
 
 
 fig, ax = plt.subplots()
@@ -522,13 +503,13 @@ ax.legend(["Mean delay in minutes"])
 
 # ## Mean delay by day of week
 
-# In[46]:
+# In[52]:
 
 
 df['DAY_OF_WEEK'] = df['DAY_OF_WEEK'].astype(str)
 
 
-# In[47]:
+# In[53]:
 
 
 fig, ax = plt.subplots()
@@ -538,12 +519,18 @@ ax.legend(["Mean delay in minutes"])
 
 # ## Mean delay by month
 
-# In[48]:
+# In[54]:
 
 
 fig, ax = plt.subplots()
 df[['ARR_DELAY', 'MONTH']].groupby('MONTH').mean().plot.bar(figsize=(16,10), title='Mean delay by month', ax=ax)
 ax.legend(["Mean delay in minutes"])
+
+
+# In[98]:
+
+
+#pd.to_datetime(df['CRS_DEP_TIME'], format="%I%M")
 
 
 # # Feature engineering
@@ -553,7 +540,7 @@ ax.legend(["Mean delay in minutes"])
 # We will keep following features :  
 #   
 # ORIGIN                   1.000000 => Origin airport  
-# CRS_DEP_TIME             1.000000 => we'll keep only the hour.  Maybe cut it into bins.  
+# CRS_DEP_TIME             1.000000 => we'll keep only the hour.  Maybe cut it into bins.  (compare result with and without binning)
 # MONTH                    1.000000  
 # DAY_OF_MONTH             1.000000  
 # DAY_OF_WEEK              1.000000    
@@ -563,7 +550,7 @@ ax.legend(["Mean delay in minutes"])
 # CRS_ARR_TIME             0.999999  
 # DIVERTED                 0.999999 => use this to construct delay label, for later
 # DISTANCE                 0.999999   
-# CRS_ELAPSED_TIME         0.999998 => carrier scheduled elapsed time  
+# CRS_ELAPSED_TIME         0.999998 => carrier scheduled elapsed time  => redundant
 # ARR_DELAY                0.985844  
 # 
 # 
@@ -685,7 +672,7 @@ ax.legend(["Mean delay in minutes"])
 # 
 # QUARTER                  1.000000 => redundant with MONTH
 
-# In[49]:
+# In[55]:
 
 
 df[['ARR_DEL15','TAIL_NUM']].groupby(['ARR_DEL15','TAIL_NUM'])
@@ -693,13 +680,13 @@ df[['ARR_DEL15','TAIL_NUM']].groupby(['ARR_DEL15','TAIL_NUM'])
 
 # ## Identification of quantitative and qualitative features
 
-# In[50]:
+# In[56]:
 
 
 df.columns[1]
 
 
-# In[139]:
+# In[57]:
 
 
 # Below are feature from dataset that we decided to keep: 
@@ -730,13 +717,13 @@ print(f'Features to drop : {features_todrop} \n')
 
 # ### Quality of data
 
-# In[52]:
+# In[58]:
 
 
 (df[all_features].count()/df[all_features].shape[0]).sort_values(axis=0, ascending=False)
 
 
-# In[155]:
+# In[59]:
 
 
 df[df['DEP_TIME'].notnull() == False].sample(20)
@@ -745,7 +732,7 @@ df[df['DEP_TIME'].notnull() == False].sample(20)
 # => We see that when flight is cancelled (value 1), we don't have actual delay values which is normal  
 # => We may want to keep these values later, to be able to predict cancellations.  But for now, our model will not consider cancellations as delay.
 
-# In[54]:
+# In[60]:
 
 
 df[df['CANCELLED'] == 1].shape
@@ -756,19 +743,19 @@ df[df['CANCELLED'] == 1].shape
 
 # We also have nan values that correspond to DIVERTED flights :
 
-# In[55]:
+# In[61]:
 
 
 df[df['DEP_TIME'].notnull() == False].shape
 
 
-# In[56]:
+# In[62]:
 
 
 df[df['DIVERTED'] == 1].shape
 
 
-# In[57]:
+# In[63]:
 
 
 df[df['DIVERTED'] == 1]
@@ -776,13 +763,13 @@ df[df['DIVERTED'] == 1]
 
 # Let's check flights that have arrival delay null, but not cancelled  (cancelled flights do have null arrival delay : in that case it's normal)
 
-# In[58]:
+# In[64]:
 
 
 df[(df['ARR_DELAY'].notnull() == False) & (df['CANCELLED'] == 0)].shape
 
 
-# In[59]:
+# In[65]:
 
 
 df[(df['ARR_DELAY'].notnull() == False) & (df['CANCELLED'] == 0)][all_features].sample(10)
@@ -792,7 +779,7 @@ df[(df['ARR_DELAY'].notnull() == False) & (df['CANCELLED'] == 0)][all_features].
 
 # ### Display of qualitative features values :
 
-# In[140]:
+# In[66]:
 
 
 for feature_name in qualitative_features:
@@ -801,7 +788,7 @@ for feature_name in qualitative_features:
 
 # ### Display of quantiative features values :
 
-# In[154]:
+# In[67]:
 
 
 pd.set_option('display.max_rows', 10000)
@@ -812,7 +799,7 @@ for column_name in quantitative_features:
 
 # ### Conversion of qualitative features into clean str format
 
-# In[141]:
+# In[68]:
 
 
 for feature_name in qualitative_features:
@@ -821,7 +808,7 @@ for feature_name in qualitative_features:
 
 # ### Display qualitative features again
 
-# In[146]:
+# In[69]:
 
 
 pd.set_option('display.max_rows', 1000)
@@ -860,19 +847,19 @@ for feature_name in qualitative_features:
 
 # Creating new dataframe with only the features we keep, to gain memory :
 
-# In[66]:
+# In[70]:
 
 
 df_new = df[all_features].copy(deep = True)
 
 
-# In[67]:
+# In[71]:
 
 
 del df
 
 
-# In[68]:
+# In[72]:
 
 
 df = df_new
@@ -880,7 +867,7 @@ df = df_new
 
 # #### Clean ORIGIN
 
-# In[143]:
+# In[73]:
 
 
 df.drop(index=df[df['ORIGIN'].isin(['SPN', 'BFF', 'MHK', 'ENV', 'EFD', '4.00'])].index, axis=0, inplace=True)
@@ -888,7 +875,7 @@ df.drop(index=df[df['ORIGIN'].isin(['SPN', 'BFF', 'MHK', 'ENV', 'EFD', '4.00'])]
 
 # #### Clean DEST
 
-# In[149]:
+# In[74]:
 
 
 df.drop(index=df[df['DEST'].isin(['MHK', 'SPN', '1800-1859'])].index, axis=0, inplace=True)
@@ -896,7 +883,7 @@ df.drop(index=df[df['DEST'].isin(['MHK', 'SPN', '1800-1859'])].index, axis=0, in
 
 # ### Display quantitative features distributions
 
-# In[152]:
+# In[75]:
 
 
 df.hist(bins=50, figsize=(20,15), log=True)
@@ -904,19 +891,19 @@ df.hist(bins=50, figsize=(20,15), log=True)
 
 # ## Correlation matrix of quantitative features
 
-# In[74]:
+# In[76]:
 
 
 corr_matrix = df.corr()
 
 
-# In[75]:
+# In[77]:
 
 
 corr_matrix[quantitative_features].loc[quantitative_features]
 
 
-# In[76]:
+# In[78]:
 
 
 plt.figure(figsize=(16, 10))
@@ -928,7 +915,7 @@ sns.heatmap(corr_matrix[quantitative_features].loc[quantitative_features],
 
 # # Cercle des corrélations et première réduction de dimensionalité des variables numériques
 
-# In[77]:
+# In[79]:
 
 
 #common_functions.display_projections(df.sample(10000), quantitative_features)
