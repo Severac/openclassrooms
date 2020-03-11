@@ -540,7 +540,7 @@ ax.legend(["Mean delay in minutes"])
 # We will keep following features :  
 #   
 # ORIGIN                   1.000000 => Origin airport  
-# CRS_DEP_TIME             1.000000 => we'll keep only the hour.  Maybe cut it into bins.  (compare result with and without binning)
+# CRS_DEP_TIME             1.000000 => we may only keep only the hour.  Maybe cut it into bins.  (compare result with and without binning)
 # MONTH                    1.000000  
 # DAY_OF_MONTH             1.000000  
 # DAY_OF_WEEK              1.000000    
@@ -553,7 +553,17 @@ ax.legend(["Mean delay in minutes"])
 # CRS_ELAPSED_TIME         0.999998 => carrier scheduled elapsed time  => redundant
 # ARR_DELAY                0.985844  
 # 
+# DEP_DELAY                0.988726  => we may also try to predict DEP_DELAY
+# TAXI_OUT                 0.988374  
+# For departing flights: the Actual taXi-Out Time is  
+# the period between the Actual Off-Block Time and the Actual Take Off Time .  
+# => Will be needed for second approach : prediction of arrival delay when we know of departure delay
 # 
+# 
+# TAIL_NUM                 0.997738 => aircraft ID number printed on the tail  
+#     => This feature would be very interesting.  Unfortunately, as a customer we do not know it until the last moment.  
+#     => and as a carrier company, I guess it may be defined pretty late. So, including this information would be data leak.  
+#     => However, we will keep this feature to predict arrival delays after plane take off
 # 
 # 
 # Columns that we will not use :  
@@ -606,10 +616,6 @@ ax.legend(["Mean delay in minutes"])
 # DISTANCE_GROUP           0.999999  
 # => redundante with DISTANCE  
 # 
-# TAIL_NUM                 0.997738 => aircraft ID number printed on the tail  
-#     => This feature would be very interesting.  Unfortunately, as a customer we do not know it until the last moment.  
-#     => and as a carrier company, I guess it may be defined pretty late. So, including this information would be data leak.  
-#     => But it would be interesting to know if certain planes have more delays than others  
 #       
 # TAXI_IN                  0.987938  
 # For arriving flights: the Actual taXi-In Time  is the  
@@ -617,10 +623,7 @@ ax.legend(["Mean delay in minutes"])
 #   
 # => Not included (data leak / we don't know the information until the last moment)  
 # 
-# TAXI_OUT                 0.988374  
-# For departing flights: the Actual taXi-Out Time is  
-# the period between the Actual Off-Block Time and the Actual Take Off Time .  
-# => Not included (data leak / we don't know the information until the last moment)  
+# 
 # 
 # WHEELS_OFF               0.988374    
 # Wheels Off Time (local time: hhmm)  
@@ -657,9 +660,9 @@ ax.legend(["Mean delay in minutes"])
 #  All values are 1 except three of them  => useless feature
 #  
 #  
-#  DEP_DELAY                0.988726  => we'll only predict arrival delays and not departure delays
-# DEP_DEL15                0.988726  => we'll only predict arrival delays and not departure delays
-# DEP_DELAY_GROUP          0.988726  => we'll only predict arrival delays and not departure delays
+#  
+# DEP_DEL15                0.988726  => redundant with DEP_DELAY
+# DEP_DELAY_GROUP          0.988726  => redundant with DEP_DELAY
 # 
 # ARR_DELAY_GROUP          0.985844  => redundant with ARR_DELAY
 # ARR_DEL15                0.985844  => redundant with ARR_DELAY
@@ -690,7 +693,7 @@ df.columns[1]
 
 
 # Below are feature from dataset that we decided to keep: 
-all_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CANCELLED','CRS_ARR_TIME','DIVERTED','DISTANCE','CRS_ELAPSED_TIME','ARR_DELAY']
+all_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CANCELLED','CRS_ARR_TIME','DIVERTED','DISTANCE','CRS_ELAPSED_TIME','ARR_DELAY','DEP_DELAY', 'TAXI_OUT', 'TAIL_NUM']
 
 quantitative_features = []
 qualitative_features = []
@@ -816,6 +819,14 @@ for feature_name in qualitative_features:
     print_column_information(df, feature_name)
 
 
+# ### Remove delays caused by a delay from a previous flight 
+
+# In[14]:
+
+
+df.drop(index=df[df['LATE_AIRCRAFT_DELAY'] == 1].index, axis=0, inplace=True)
+
+
 # ### Cleaning outliers on qualitative features
 
 # => What we can see from above :  
@@ -845,7 +856,7 @@ for feature_name in qualitative_features:
 # SPN               1  
 # 1800-1859         1  
 
-# Creating new dataframe with only the features we keep, to gain memory :
+# #### Creating new dataframe with only the features we keep, to gain memory :
 
 # In[70]:
 
@@ -881,6 +892,26 @@ df.drop(index=df[df['ORIGIN'].isin(['SPN', 'BFF', 'MHK', 'ENV', 'EFD', '4.00'])]
 df.drop(index=df[df['DEST'].isin(['MHK', 'SPN', '1800-1859'])].index, axis=0, inplace=True)
 
 
+# ### Remove cancellations, divertions
+
+# In[121]:
+
+
+df.drop(index=df[ (df['CANCELLED'] == 1) | (df['DIVERTED'] == 1)].index, axis=0, inplace=True)
+
+
+# In[125]:
+
+
+df.drop(labels=['CANCELLED', 'DIVERTED'], axis=1, inplace=True)
+
+
+# In[ ]:
+
+
+df.reset_index(drop=True, inplace=True)
+
+
 # ### Display quantitative features distributions
 
 # In[75]:
@@ -888,6 +919,20 @@ df.drop(index=df[df['DEST'].isin(['MHK', 'SPN', '1800-1859'])].index, axis=0, in
 
 df.hist(bins=50, figsize=(20,15), log=True)
 
+
+# In[113]:
+
+
+df['ARR_DELAY'].hist(bins=[-100, -50, -10, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, +100], figsize=(20,15))
+
+
+# In[117]:
+
+
+df[df['ARR_DELAY'] < 0].count()
+
+
+# => A huge amount of flights arrive before schedule
 
 # ## Correlation matrix of quantitative features
 

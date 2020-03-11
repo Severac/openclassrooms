@@ -19058,7 +19058,7 @@ Length: 5022, dtype: int64</pre>
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>We will keep following features :</p>
 <p>ORIGIN                   1.000000 =&gt; Origin airport<br>
-CRS_DEP_TIME             1.000000 =&gt; we'll keep only the hour.  Maybe cut it into bins.  (compare result with and without binning)
+CRS_DEP_TIME             1.000000 =&gt; we may only keep only the hour.  Maybe cut it into bins.  (compare result with and without binning)
 MONTH                    1.000000<br>
 DAY_OF_MONTH             1.000000<br>
 DAY_OF_WEEK              1.000000<br>
@@ -19070,6 +19070,15 @@ DIVERTED                 0.999999 =&gt; use this to construct delay label, for l
 DISTANCE                 0.999999<br>
 CRS_ELAPSED_TIME         0.999998 =&gt; carrier scheduled elapsed time  =&gt; redundant
 ARR_DELAY                0.985844</p>
+<p>DEP_DELAY                0.988726  =&gt; we may also try to predict DEP_DELAY
+TAXI_OUT                 0.988374<br>
+For departing flights: the Actual taXi-Out Time is<br>
+the period between the Actual Off-Block Time and the Actual Take Off Time .<br>
+=&gt; Will be needed for second approach : prediction of arrival delay when we know of departure delay</p>
+<p>TAIL_NUM                 0.997738 =&gt; aircraft ID number printed on the tail<br>
+    =&gt; This feature would be very interesting.  Unfortunately, as a customer we do not know it until the last moment.<br>
+    =&gt; and as a carrier company, I guess it may be defined pretty late. So, including this information would be data leak.<br>
+    =&gt; However, we will keep this feature to predict arrival delays after plane take off</p>
 <p>Columns that we will not use :<br>
 ORIGIN_CITY_MARKET_ID    1.000000</p>
 <p>Too close from origin airport :<br>
@@ -19104,18 +19113,10 @@ AIRLINE_ID               1.000000<br>
 =&gt; flight number. Identifier, not useful</p>
 <p>DISTANCE_GROUP           0.999999<br>
 =&gt; redundante with DISTANCE</p>
-<p>TAIL_NUM                 0.997738 =&gt; aircraft ID number printed on the tail<br>
-    =&gt; This feature would be very interesting.  Unfortunately, as a customer we do not know it until the last moment.<br>
-    =&gt; and as a carrier company, I guess it may be defined pretty late. So, including this information would be data leak.<br>
-    =&gt; But it would be interesting to know if certain planes have more delays than others</p>
 <p>TAXI_IN                  0.987938<br>
 For arriving flights: the Actual taXi-In Time  is the<br>
 period between the Actual Landing Time and the Actual In-Block Time (</p>
 <p>=&gt; Not included (data leak / we don't know the information until the last moment)</p>
-<p>TAXI_OUT                 0.988374<br>
-For departing flights: the Actual taXi-Out Time is<br>
-the period between the Actual Off-Block Time and the Actual Take Off Time .<br>
-=&gt; Not included (data leak / we don't know the information until the last moment)</p>
 <p>WHEELS_OFF               0.988374<br>
 Wheels Off Time (local time: hhmm)<br>
 =&gt; Not included (data leak / we don't know the information until the last moment)</p>
@@ -19140,9 +19141,8 @@ LONGEST_ADD_GTIME        0.006127</p>
  DEP_DELAY_NEW is the same as DEP_DELAY when DEP_DELAY &gt;=0,  and that DEP_DELAY_NEW is 0 when DEP_DELAY is &lt; 0</p>
 <p>FLIGHTS                  0.999999 =&gt; Number of flights 
  All values are 1 except three of them  =&gt; useless feature</p>
-<p>DEP_DELAY                0.988726  =&gt; we'll only predict arrival delays and not departure delays
-DEP_DEL15                0.988726  =&gt; we'll only predict arrival delays and not departure delays
-DEP_DELAY_GROUP          0.988726  =&gt; we'll only predict arrival delays and not departure delays</p>
+<p>DEP_DEL15                0.988726  =&gt; redundant with DEP_DELAY
+DEP_DELAY_GROUP          0.988726  =&gt; redundant with DEP_DELAY</p>
 <p>ARR_DELAY_GROUP          0.985844  =&gt; redundant with ARR_DELAY
 ARR_DEL15                0.985844  =&gt; redundant with ARR_DELAY
 ARR_DELAY_NEW            0.985844  =&gt; redundant with ARR_DELAY</p>
@@ -19234,7 +19234,7 @@ DEP_TIME                 0.988726 =&gt; Not kept : actual information, know only
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Below are feature from dataset that we decided to keep: </span>
-<span class="n">all_features</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ORIGIN&#39;</span><span class="p">,</span><span class="s1">&#39;CRS_DEP_TIME&#39;</span><span class="p">,</span><span class="s1">&#39;MONTH&#39;</span><span class="p">,</span><span class="s1">&#39;DAY_OF_MONTH&#39;</span><span class="p">,</span><span class="s1">&#39;DAY_OF_WEEK&#39;</span><span class="p">,</span><span class="s1">&#39;UNIQUE_CARRIER&#39;</span><span class="p">,</span><span class="s1">&#39;DEST&#39;</span><span class="p">,</span><span class="s1">&#39;CANCELLED&#39;</span><span class="p">,</span><span class="s1">&#39;CRS_ARR_TIME&#39;</span><span class="p">,</span><span class="s1">&#39;DIVERTED&#39;</span><span class="p">,</span><span class="s1">&#39;DISTANCE&#39;</span><span class="p">,</span><span class="s1">&#39;CRS_ELAPSED_TIME&#39;</span><span class="p">,</span><span class="s1">&#39;ARR_DELAY&#39;</span><span class="p">]</span>
+<span class="n">all_features</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ORIGIN&#39;</span><span class="p">,</span><span class="s1">&#39;CRS_DEP_TIME&#39;</span><span class="p">,</span><span class="s1">&#39;MONTH&#39;</span><span class="p">,</span><span class="s1">&#39;DAY_OF_MONTH&#39;</span><span class="p">,</span><span class="s1">&#39;DAY_OF_WEEK&#39;</span><span class="p">,</span><span class="s1">&#39;UNIQUE_CARRIER&#39;</span><span class="p">,</span><span class="s1">&#39;DEST&#39;</span><span class="p">,</span><span class="s1">&#39;CANCELLED&#39;</span><span class="p">,</span><span class="s1">&#39;CRS_ARR_TIME&#39;</span><span class="p">,</span><span class="s1">&#39;DIVERTED&#39;</span><span class="p">,</span><span class="s1">&#39;DISTANCE&#39;</span><span class="p">,</span><span class="s1">&#39;CRS_ELAPSED_TIME&#39;</span><span class="p">,</span><span class="s1">&#39;ARR_DELAY&#39;</span><span class="p">,</span><span class="s1">&#39;DEP_DELAY&#39;</span><span class="p">,</span> <span class="s1">&#39;TAXI_OUT&#39;</span><span class="p">,</span> <span class="s1">&#39;TAIL_NUM&#39;</span><span class="p">]</span>
 
 <span class="n">quantitative_features</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="n">qualitative_features</span> <span class="o">=</span> <span class="p">[]</span>
@@ -26628,6 +26628,26 @@ Length: 1440, dtype: int64
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Remove-delays-caused-by-a-delay-from-a-previous-flight">Remove delays caused by a delay from a previous flight<a class="anchor-link" href="#Remove-delays-caused-by-a-delay-from-a-previous-flight">&#182;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;LATE_AIRCRAFT_DELAY&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
 <h3 id="Cleaning-outliers-on-qualitative-features">Cleaning outliers on qualitative features<a class="anchor-link" href="#Cleaning-outliers-on-qualitative-features">&#182;</a></h3>
 </div>
 </div>
@@ -26661,8 +26681,7 @@ SPN               1<br>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Creating new dataframe with only the features we keep, to gain memory :</p>
-
+<h4 id="Creating-new-dataframe-with-only-the-features-we-keep,-to-gain-memory-:">Creating new dataframe with only the features we keep, to gain memory :<a class="anchor-link" href="#Creating-new-dataframe-with-only-the-features-we-keep,-to-gain-memory-:">&#182;</a></h4>
 </div>
 </div>
 </div>
@@ -26748,6 +26767,52 @@ SPN               1<br>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Remove-cancellations,-divertions">Remove cancellations, divertions<a class="anchor-link" href="#Remove-cancellations,-divertions">&#182;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[121]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="p">[</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;CANCELLED&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;DIVERTED&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[125]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;CANCELLED&#39;</span><span class="p">,</span> <span class="s1">&#39;DIVERTED&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
 <h3 id="Display-quantitative-features-distributions">Display quantitative features distributions<a class="anchor-link" href="#Display-quantitative-features-distributions">&#182;</a></h3>
 </div>
 </div>
@@ -26805,6 +26870,108 @@ SPN               1<br>
 </div>
 </div>
 
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[113]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;ARR_DELAY&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">bins</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="o">-</span><span class="mi">50</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">35</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="o">+</span><span class="mi">100</span><span class="p">],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span><span class="mi">15</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[113]:</div>
+
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7fb4f1f65ad0&gt;</pre>
+</div>
+
+</div>
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+
+
+<div class="output_png output_subarea ">
+<img src="data:image/png;base64,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
+"
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[117]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;ARR_DELAY&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[117]:</div>
+
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>ORIGIN              3549694
+CRS_DEP_TIME        3549694
+MONTH               3549694
+DAY_OF_MONTH        3549694
+DAY_OF_WEEK         3549694
+UNIQUE_CARRIER      3549694
+DEST                3549694
+CANCELLED           3549694
+CRS_ARR_TIME        3549694
+DIVERTED            3549693
+DISTANCE            3549693
+CRS_ELAPSED_TIME    3549693
+ARR_DELAY           3549694
+dtype: int64</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>=&gt; A huge amount of flights arrive before schedule</p>
+
+</div>
+</div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
