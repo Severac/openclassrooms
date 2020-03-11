@@ -125,12 +125,19 @@ read_raw_file(2)
 
 # ## Data load
 
-# In[8]:
+# In[21]:
 
 
 import pandas as pd
 
 pd.set_option('display.max_columns', None)
+
+# Time features by chronological order :
+time_feats = ['CRS_DEP_TIME','DEP_DELAY','DEP_TIME', 'TAXI_OUT', 'WHEELS_OFF', 'AIR_TIME', 'CRS_ARR_TIME', 'WHEELS_ON','TAXI_IN','ARR_DELAY','ARR_TIME', 'CRS_ELAPSED_TIME', 'ACTUAL_ELAPSED_TIME', 'DEP_TIME_BLK', 'ARR_TIME_BLK']
+
+# hhmm timed features formatted
+feats_hhmm = ['CRS_DEP_TIME', 'DEP_TIME', 'WHEELS_OFF', 'WHEELS_ON' , 'CRS_ARR_TIME', 'ARR_TIME']
+
 
 def load_data(data_path=DATA_PATH):
     csv_path = DATA_PATH_FILE
@@ -138,18 +145,31 @@ def load_data(data_path=DATA_PATH):
     
     for f in ALL_FILES_LIST:
         print(f'Loading file {f}')
-        df_list.append(pd.read_csv(f, sep=',', header=0, encoding='utf-8', error_bad_lines=False, low_memory=False))
-    
+        #df_list.append(pd.read_csv(f, sep=',', header=0, encoding='utf-8', error_bad_lines=False, low_memory=False))
+        
+        df_list.append(pd.read_csv(f, sep=',', header=0, encoding='utf-8', error_bad_lines=False, low_memory=False,
+                                   parse_dates=feats_hhmm)
+        )
+
+        
+        '''
+        df_list.append(pd.read_csv(f, sep=',', header=0, encoding='utf-8', error_bad_lines=False, low_memory=False,
+                                   parse_dates=feats_hhmm,  date_parser=lambda x: pd.to_datetime(x, format='%H%M').time()
+                        
+                                   
+        ))
+        '''
+        
     return pd.concat(df_list)
 
 
-# In[9]:
+# In[10]:
 
 
 df = load_data()
 
 
-# In[10]:
+# In[11]:
 
 
 df.reset_index(drop=True, inplace=True)
@@ -186,7 +206,7 @@ df.head(10)
 df['Unnamed: 64'].value_counts()
 
 
-# => Aucune valeur pour la dernière colonne "Unnamed: 64":  on la drop donc
+# => No value for last column "Unnamed: 64":  we drop it
 
 # In[14]:
 
@@ -205,7 +225,7 @@ df['YEAR'].value_counts()
 # In[16]:
 
 
-df.drop(labels='YEAR', axis=1, inplace=True)
+#df.drop(labels='YEAR', axis=1, inplace=True) # Drop will be done later in the notebook
 
 
 # ### Liste des colonnes
@@ -238,6 +258,30 @@ df.describe()
 #df.drop_duplicates(inplace=True) # Code commented out because we have already executed it, and we know there are not duplicates
 
 
+# # Flight lifecycle information
+
+# In[ ]:
+
+
+df_lifecycle = pd.read_csv('Flight_lifecycle.csv')
+
+
+# ![image](Flight_lifecycle.png)
+
+# In[25]:
+
+
+df_lifecycle
+
+
+# 
+
+# In[22]:
+
+
+df[time_feats].head(15)
+
+
 # # Quality of data analysis and first removals of useless data
 
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
@@ -256,7 +300,8 @@ pd.set_option('display.max_rows', 100)
 
 
 def print_column_information(df, column_name):
-    print(f'Column {column_name} (qualitative)')
+    column_type = df.dtypes[column_name]
+    print(f'Column {column_name}, type {column_type}\n')
     print('--------------------------')
 
     print(df[[column_name]].groupby(column_name).size().sort_values(ascending=False))
@@ -279,7 +324,7 @@ for column_name in df.select_dtypes(include=['object']).columns:
     print_column_information(df, column_name)
 
 
-# ## Identifiant de la compagnie : examen des champs et voir quel champ conserver
+# ## Identifier of air company : columns analysis and determine which feature to keep
 
 # In[23]:
 
@@ -306,6 +351,32 @@ df.drop(index=df[df['UNIQUE_CARRIER'] == '10397'].index, axis=0, inplace=True)
 
 df[df['UNIQUE_CARRIER'] == '10397']
 
+
+# ## Identifier of airport : columns analysis and determine which feature to keep
+
+# In[135]:
+
+
+df['DEST_AIRPORT_ID'] = df['DEST_AIRPORT_ID'].astype('str')  # Data clean (we have a mixed type of int and str on original data)
+df['DEST'] = df['DEST'].astype('str')  # Data clean (we have a mixed type of int and str on original data)
+
+
+# In[137]:
+
+
+df[['DEST_AIRPORT_ID']].groupby('DEST_AIRPORT_ID').size().sort_values(ascending=False).head(5)
+
+
+# In[138]:
+
+
+df[['DEST']].groupby('DEST').size().sort_values(ascending=False).head(5)
+
+
+# => We see that DEST is equivalent to DEST_AIRPORT_ID
+# => ORIGIN will also be equivalent to ORIGIN_AIRPORT_ID
+# 
+# => We'll keep ORIGIN and DEST features
 
 # ## We see that MONTH and DAY_OF_MONTH are equivalent to FL_DATE (without the year)
 # We can keep MONTH and DAY_OF_MONTH instead of FL_DATE
@@ -391,13 +462,13 @@ df[df['ARR_DEL15'] == 1][['ARR_DEL15','TAIL_NUM']].groupby(['ARR_DEL15','TAIL_NU
 
 # ## Analysis of FLIGHTS variable 
 
-# In[96]:
+# In[39]:
 
 
 df['FLIGHTS'].unique()
 
 
-# In[99]:
+# In[40]:
 
 
 df[df['FLIGHTS'].notnull() == False]
@@ -409,7 +480,7 @@ df[df['FLIGHTS'].notnull() == False]
 
 # ## Display of delays grouped by tail number (plane identifier)
 
-# In[39]:
+# In[41]:
 
 
 pd.set_option('display.max_rows', 50)
@@ -417,20 +488,20 @@ df_delays_groupby_tails = df[df['ARR_DEL15'] == 1][['ARR_DEL15','TAIL_NUM']].gro
 df_delays_groupby_tails
 
 
-# In[40]:
+# In[42]:
 
 
 X_tails = range(df_delays_groupby_tails.shape[0])
 Y_tails = df_delays_groupby_tails.to_numpy()
 
 
-# In[41]:
+# In[43]:
 
 
 X_tails
 
 
-# In[42]:
+# In[44]:
 
 
 plt.title('Plane delays')
@@ -441,7 +512,7 @@ plt.plot(X_tails, Y_tails)
 
 # ## Mean delay by carrier
 
-# In[43]:
+# In[45]:
 
 
 fig, ax = plt.subplots()
@@ -451,13 +522,13 @@ ax.legend(["Mean delay in minutes"])
 
 # ## Mean delay by day of week
 
-# In[44]:
+# In[46]:
 
 
 df['DAY_OF_WEEK'] = df['DAY_OF_WEEK'].astype(str)
 
 
-# In[45]:
+# In[47]:
 
 
 fig, ax = plt.subplots()
@@ -467,7 +538,7 @@ ax.legend(["Mean delay in minutes"])
 
 # ## Mean delay by month
 
-# In[46]:
+# In[48]:
 
 
 fig, ax = plt.subplots()
@@ -482,14 +553,13 @@ ax.legend(["Mean delay in minutes"])
 # We will keep following features :  
 #   
 # ORIGIN                   1.000000 => Origin airport  
-# DEST_AIRPORT_ID          1.000000  
 # CRS_DEP_TIME             1.000000 => we'll keep only the hour.  Maybe cut it into bins.  
 # MONTH                    1.000000  
 # DAY_OF_MONTH             1.000000  
 # DAY_OF_WEEK              1.000000    
-# UNIQUE_CARRIER           1.000000 => Flight company 
+# UNIQUE_CARRIER           1.000000 => Flight company   
 # DEST                     1.000000 => Destination airport  
-# CANCELLED                0.999999 => to keep to construct a delay label , for later
+# CANCELLED                0.999999 => to keep to construct a delay label , for later  
 # CRS_ARR_TIME             0.999999  
 # DIVERTED                 0.999999 => use this to construct delay label, for later
 # DISTANCE                 0.999999   
@@ -523,6 +593,7 @@ ax.legend(["Mean delay in minutes"])
 # ORIGIN_AIRPORT_ID        1.000000 => Origin airport ID  
 # => Redundant with ORIGIN, and better formatted field  
 #   
+# DEST_AIRPORT_ID          1.000000    
 # DEST_AIRPORT_SEQ_ID      1.000000  
 # => Redundant with DEST_AIRPORT_ID and DEST  
 # 
@@ -614,7 +685,7 @@ ax.legend(["Mean delay in minutes"])
 # 
 # QUARTER                  1.000000 => redundant with MONTH
 
-# In[47]:
+# In[49]:
 
 
 df[['ARR_DEL15','TAIL_NUM']].groupby(['ARR_DEL15','TAIL_NUM'])
@@ -622,17 +693,17 @@ df[['ARR_DEL15','TAIL_NUM']].groupby(['ARR_DEL15','TAIL_NUM'])
 
 # ## Identification of quantitative and qualitative features
 
-# In[48]:
+# In[50]:
 
 
 df.columns[1]
 
 
-# In[105]:
+# In[139]:
 
 
 # Below are feature from dataset that we decided to keep: 
-all_features = ['ORIGIN','DEST_AIRPORT_ID','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CANCELLED','CRS_ARR_TIME','DIVERTED','DISTANCE','CRS_ELAPSED_TIME','ARR_DELAY']
+all_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CANCELLED','CRS_ARR_TIME','DIVERTED','DISTANCE','CRS_ELAPSED_TIME','ARR_DELAY']
 
 quantitative_features = []
 qualitative_features = []
@@ -659,13 +730,13 @@ print(f'Features to drop : {features_todrop} \n')
 
 # ### Quality of data
 
-# In[64]:
+# In[52]:
 
 
 (df[all_features].count()/df[all_features].shape[0]).sort_values(axis=0, ascending=False)
 
 
-# In[65]:
+# In[155]:
 
 
 df[df['DEP_TIME'].notnull() == False].sample(20)
@@ -674,7 +745,7 @@ df[df['DEP_TIME'].notnull() == False].sample(20)
 # => We see that when flight is cancelled (value 1), we don't have actual delay values which is normal  
 # => We may want to keep these values later, to be able to predict cancellations.  But for now, our model will not consider cancellations as delay.
 
-# In[72]:
+# In[54]:
 
 
 df[df['CANCELLED'] == 1].shape
@@ -685,19 +756,19 @@ df[df['CANCELLED'] == 1].shape
 
 # We also have nan values that correspond to DIVERTED flights :
 
-# In[70]:
+# In[55]:
 
 
 df[df['DEP_TIME'].notnull() == False].shape
 
 
-# In[74]:
+# In[56]:
 
 
 df[df['DIVERTED'] == 1].shape
 
 
-# In[75]:
+# In[57]:
 
 
 df[df['DIVERTED'] == 1]
@@ -705,30 +776,35 @@ df[df['DIVERTED'] == 1]
 
 # Let's check flights that have arrival delay null, but not cancelled  (cancelled flights do have null arrival delay : in that case it's normal)
 
-# In[103]:
+# In[58]:
 
 
 df[(df['ARR_DELAY'].notnull() == False) & (df['CANCELLED'] == 0)].shape
 
 
-# In[106]:
+# In[59]:
 
 
 df[(df['ARR_DELAY'].notnull() == False) & (df['CANCELLED'] == 0)][all_features].sample(10)
 
 
-# => Those may require data cleaning because we don't have delay information on them
+# => We see that DIVERTED == 1 for those lines : that's why we don't have delay information
 
-# In[50]:
+# ### Display of qualitative features values :
+
+# In[140]:
 
 
 for feature_name in qualitative_features:
     print_column_information(df, feature_name)
 
 
-# In[83]:
+# ### Display of quantiative features values :
+
+# In[154]:
 
 
+pd.set_option('display.max_rows', 10000)
 for column_name in quantitative_features:
     #print(df[column_name].value_counts)
     print_column_information(df, column_name)
@@ -736,71 +812,111 @@ for column_name in quantitative_features:
 
 # ### Conversion of qualitative features into clean str format
 
-# In[93]:
-
-
-df_qualitative = pd.DataFrame()
-
-
-# In[94]:
+# In[141]:
 
 
 for feature_name in qualitative_features:
-    df_qualitative[feature_name] = df[feature_name].astype(str)
+    df[feature_name] = df[feature_name].astype(str)
 
 
-# In[95]:
+# ### Display qualitative features again
+
+# In[146]:
 
 
-df_qualitative.head(5)
-
-
-# In[63]:
-
-
+pd.set_option('display.max_rows', 1000)
 for feature_name in qualitative_features:
-    print_column_information(df_qualitative, feature_name)
+    print_column_information(df, feature_name)
 
 
-# In[51]:
+# ### Cleaning outliers on qualitative features
+
+# => What we can see from above :  
+# Origin : 5 airports appear only 1 time: too few informations to make predictions   
+# 
+# SPN          1  
+# BFF          1  
+# MHK          1  
+# ENV          1  
+# EFD          1  
+# 4.00
+# 
+# DEST_AIRPORT_ID :  
+# 
+# 4 outilers :  
+# 
+# 7.00          1  
+# 13290         1  
+# 14955         1  
+# -1            1  
+# 
+# DEST :   
+# 
+# 4 outliers :  
+# 
+# MHK               1  
+# SPN               1  
+# 1800-1859         1  
+
+# Creating new dataframe with only the features we keep, to gain memory :
+
+# In[66]:
 
 
-df['QUARTER'].astype(str).unique()
+df_new = df[all_features].copy(deep = True)
 
 
-# In[52]:
+# In[67]:
 
 
-df['QUARTER'].unique()
+del df
 
 
-# In[53]:
+# In[68]:
 
 
-df[quantitative_features].head(5)
+df = df_new
 
 
-# In[54]:
+# #### Clean ORIGIN
+
+# In[143]:
 
 
-df.hist(bins=50, figsize=(20,15))
+df.drop(index=df[df['ORIGIN'].isin(['SPN', 'BFF', 'MHK', 'ENV', 'EFD', '4.00'])].index, axis=0, inplace=True)
+
+
+# #### Clean DEST
+
+# In[149]:
+
+
+df.drop(index=df[df['DEST'].isin(['MHK', 'SPN', '1800-1859'])].index, axis=0, inplace=True)
+
+
+# ### Display quantitative features distributions
+
+# In[152]:
+
+
+df.hist(bins=50, figsize=(20,15), log=True)
 
 
 # ## Correlation matrix of quantitative features
 
-# In[55]:
+# In[74]:
 
 
 corr_matrix = df.corr()
 
 
-# In[56]:
+# In[75]:
 
 
 corr_matrix[quantitative_features].loc[quantitative_features]
 
 
-# In[57]:
+# In[76]:
 
 
 plt.figure(figsize=(16, 10))
@@ -812,8 +928,16 @@ sns.heatmap(corr_matrix[quantitative_features].loc[quantitative_features],
 
 # # Cercle des corrélations et première réduction de dimensionalité des variables numériques
 
-# In[92]:
+# In[77]:
 
 
 #common_functions.display_projections(df.sample(10000), quantitative_features)
 
+
+# # Annexe : ancien code inutile
+
+# #### Clean DEST_AIRPORT_ID
+
+# df[df['DEST_AIRPORT_ID'].isin(['7.00', '13290', '14955', '-1'])]
+
+# df.drop(index=df[df['DEST_AIRPORT_ID'].isin(['7.00', '13290', '14955', '-1'])].index, axis=0, inplace=True)

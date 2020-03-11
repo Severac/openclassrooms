@@ -1,0 +1,12 @@
+Description,Feature name,Feature type
+CRS departure time , CRS_DEP_TIME,Date (hhmm)
+Departure delay,DEP_DELAY,Duration (minutes)
+Actual departure time, DEP_TIME,Date (hhmm)
+Taxi-out,TAXI_OUT,Duration (minutes)
+Wheels off,WHEELS_OFF,Date (hhmm)
+Air time,AIR_TIME,Duration (minutes)
+Wheels on,WHEELS_ON,Date (hhmm)
+Taxi-in,TAXI_IN,Duration (minutes)
+Actual arrival time,ARR_TIME,Date (hhmm)
+CRS arrival time,CRS_ARR_TIME,Date (hhmm)
+Arrival delay,ARR_DELAY,Duration (minutes)
