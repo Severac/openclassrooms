@@ -65,6 +65,27 @@ def display_percent_complete(df):
     display(not_na_df)
 
 
+# In[19]:
+
+
+def identify_features(df, all_features):
+    quantitative_features = []
+    qualitative_features = []
+    features_todrop = []
+
+    for feature_name in all_features:
+        if (df[feature_name].dtype == 'object'):
+            qualitative_features.append(feature_name)
+
+        else:
+            quantitative_features.append(feature_name)
+
+    print(f'Quantitative features : {quantitative_features} \n')
+    print(f'Qualitative features : {qualitative_features} \n')  
+    
+    return quantitative_features, qualitative_features
+
+
 # # Data load
 
 # In[5]:
@@ -159,16 +180,24 @@ df_CRS_ARR_TIME = pd.concat([df['CRS_ARR_TIME'].str.slice(start=0,stop=2, step=1
 df['CRS_ARR_TIME'] = (df_CRS_ARR_TIME.iloc[:, [0]] * 60 + df_CRS_ARR_TIME.iloc[:, [1]])['CRS_ARR_TIME']
 
 
-# In[14]:
+# In[15]:
+
+
+# Same conversion for CRS_DEP_TIME
+df_CRS_DEP_TIME = pd.concat([df['CRS_DEP_TIME'].str.slice(start=0,stop=2, step=1),df['CRS_DEP_TIME'].str.slice(start=2,stop=4, step=1)], axis=1).astype(int)
+df['CRS_DEP_TIME'] = (df_CRS_DEP_TIME.iloc[:, [0]] * 60 + df_CRS_DEP_TIME.iloc[:, [1]])['CRS_DEP_TIME']
+
+
+# In[16]:
 
 
 df
 
 
-# In[ ]:
+# In[20]:
 
 
-
+quantitative_features, qualitative_features = identify_features(df, all_features)
 
 
 # In[ ]:
