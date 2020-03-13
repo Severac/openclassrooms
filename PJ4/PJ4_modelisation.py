@@ -152,7 +152,7 @@ print(f'Qualitative features : {qualitative_features} \n')
 
 # # Split train set, test set
 
-# In[185]:
+# In[197]:
 
 
 from sklearn.model_selection import train_test_split
@@ -160,13 +160,13 @@ from sklearn.model_selection import train_test_split
 df_train, df_test = train_test_split(df, test_size=0.2, random_state=42)
 
 
-# In[186]:
+# In[198]:
 
 
 df_train = df_train.sample(1000).copy(deep=True)
 
 
-# In[187]:
+# In[199]:
 
 
 df_train
@@ -174,7 +174,7 @@ df_train
 
 # # Features encoding
 
-# In[188]:
+# In[200]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -275,37 +275,37 @@ ColumnTransformer([
 '''
 
 
-# In[189]:
+# In[201]:
 
 
 df_transformed = preparation_pipeline.fit_transform(df_train)
 
 
-# In[190]:
+# In[202]:
 
 
 df_transformed.shape
 
 
-# In[191]:
+# In[203]:
 
 
 type(df_transformed)
 
 
-# In[192]:
+# In[204]:
 
 
 df_transformed = prediction_pipeline.fit_transform(df_transformed)
 
 
-# In[193]:
+# In[205]:
 
 
 df_transformed.shape
 
 
-# In[194]:
+# In[206]:
 
 
 df_transformed
