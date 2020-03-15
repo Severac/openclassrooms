@@ -22,6 +22,8 @@ import glob
 
 from pandas.plotting import scatter_matrix
 
+SAMPLED_DATA = False  # If True : data is sampled (1000 instances only) for faster testing purposes
+
 DATA_PATH = os.path.join("datasets", "transats")
 DATA_PATH = os.path.join(DATA_PATH, "out")
 
@@ -152,7 +154,7 @@ print(f'Qualitative features : {qualitative_features} \n')
 
 # # Split train set, test set
 
-# In[197]:
+# In[11]:
 
 
 from sklearn.model_selection import train_test_split
@@ -160,21 +162,29 @@ from sklearn.model_selection import train_test_split
 df_train, df_test = train_test_split(df, test_size=0.2, random_state=42)
 
 
-# In[198]:
+# In[12]:
 
 
-df_train = df_train.sample(1000).copy(deep=True)
+if (SAMPLED_DATA == True):
+    df_train = df_train.sample(1000).copy(deep=True)
+    df = df.loc[df_train.index]
 
 
-# In[199]:
+# In[13]:
 
 
 df_train
 
 
+# In[14]:
+
+
+#df = df.loc[df_train.index]
+
+
 # # Features encoding
 
-# In[200]:
+# In[15]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -204,7 +214,8 @@ def add_categorical_features_1hot(df, categorical_features_totransform):
         print(f'Adding 1hot Feature : {feature_totransform}')
         
         df_transformed = df[feature_totransform].str.get_dummies().add_prefix(feature_totransform +'_')   
-        df.drop(labels=feature_totransform, axis=1, inplace=True)
+        #df.drop(labels=feature_totransform, axis=1, inplace=True)
+        del df[feature_totransform]
         
         df = pd.concat([df, df_transformed], axis=1)
         
@@ -275,52 +286,96 @@ ColumnTransformer([
 '''
 
 
-# In[201]:
+# In[16]:
 
 
 df_transformed = preparation_pipeline.fit_transform(df_train)
 
 
-# In[202]:
+# In[ ]:
 
 
 df_transformed.shape
 
 
-# In[203]:
+# In[ ]:
 
 
 type(df_transformed)
 
 
-# In[204]:
+# In[ ]:
 
 
 df_transformed = prediction_pipeline.fit_transform(df_transformed)
 
 
-# In[205]:
+# In[ ]:
 
 
 df_transformed.shape
 
 
-# In[206]:
+# In[ ]:
 
 
 df_transformed
 
 
-# In[195]:
+# In[ ]:
 
 
 pd.set_option('display.max_columns', 400)
 
 
-# In[196]:
+# In[ ]:
 
 
 quantitative_features, qualitative_features = identify_features(df, all_features)
 
 
-# 
+# # Basic linear regression
+
+# In[ ]:
+
+
+df_transformed.shape
+
+
+# In[ ]:
+
+
+df.shape
+
+
+# In[ ]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+lin_reg.fit(df_transformed, df[model1_label])
+
+
+# In[ ]:
+
+
+from sklearn.metrics import mean_squared_error
+
+df_predictions = lin_reg.predict(df_transformed)
+lin_mse = mean_squared_error(df[model1_label], df_predictions)
+lin_rmse = np.sqrt(lin_mse)
+lin_rmse
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
