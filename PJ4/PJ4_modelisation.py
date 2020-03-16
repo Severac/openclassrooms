@@ -114,8 +114,11 @@ display_percent_complete(df)
 # In[9]:
 
 
+'''
 for column_name in df.columns:
     print_column_information(df, column_name)
+    
+'''
 
 
 # # Identification of features
@@ -160,6 +163,8 @@ print(f'Qualitative features : {qualitative_features} \n')
 from sklearn.model_selection import train_test_split
 
 df_train, df_test = train_test_split(df, test_size=0.2, random_state=42)
+df_train = df_train.copy()
+df_test = df_test.copy()
 
 
 # In[12]:
@@ -232,8 +237,27 @@ class HHMM_to_Minutes(BaseEstimator, TransformerMixin):
     
     def transform(self, df):       
         for feature_toconvert in self.features_toconvert:
-            df_concat = pd.concat([df[feature_toconvert].str.slice(start=0,stop=2, step=1),df[feature_toconvert].str.slice(start=2,stop=4, step=1)], axis=1).astype(int)
+            print(f'feature {feature_toconvert} :\n')
+            print('1\n')
+            df_concat = pd.concat([df[feature_toconvert].str.slice(start=0,stop=2, step=1),df[feature_toconvert].str.slice(start=2,stop=4, step=1)], axis=1).astype(int).copy(deep=True)
+            
+            
+            #df_concat = pd.concat([df.loc[:, feature_toconvert].str.slice(start=0,stop=2, step=1),df.loc[:, feature_toconvert].str.slice(start=2,stop=4, step=1)], axis=1).astype(int).copy(deep=True)
+            
+            
+            print('2\n')
             df[feature_toconvert] = (df_concat.iloc[:, [0]] * 60 + df_concat.iloc[:, [1]])[feature_toconvert]
+            #df.at[:, feature_toconvert] = (df_concat.iloc[:, [0]] * 60 + df_concat.iloc[:, [1]])[feature_toconvert].copy(deep=True)
+            
+            
+            #df.at[:, feature_toconvert] = 1
+            
+            #df.at[2, feature_toconvert] = 1 # No warning anymore
+            
+            #df.loc[feature_toconvert] = 1
+            
+            
+            print('3\n')
         
         return(df)
 
@@ -262,7 +286,13 @@ class FeaturesSelector(BaseEstimator, TransformerMixin):
 
         else:
             return(df)
-    
+  
+conversion_pipeline = Pipeline([
+    ('data_converter', HHMM_to_Minutes()),
+    #('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
+    #('standardscaler', preprocessing.StandardScaler()),
+])
+
 preparation_pipeline = Pipeline([
     ('data_converter', HHMM_to_Minutes()),
     ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
@@ -286,7 +316,7 @@ ColumnTransformer([
 '''
 
 
-# In[16]:
+# In[ ]:
 
 
 df_transformed = preparation_pipeline.fit_transform(df_train)
