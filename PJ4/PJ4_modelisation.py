@@ -270,6 +270,7 @@ class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
     def transform(self, df):
         df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=True)  # Sparse allows to gain memory. But then, standardscale must be with_mean=False
         #df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=False)
+        print('type of df : ' + str(type(df_encoded)))
         return(df_encoded)
 
 class FeaturesSelector(BaseEstimator, TransformerMixin):
@@ -384,16 +385,22 @@ df_transformed.info()
 df_transformed = prediction_pipeline.fit_transform(df_transformed)
 
 
-# In[ ]:
+# In[21]:
 
 
 df_transformed.shape
 
 
-# In[ ]:
+# In[22]:
 
 
 df_transformed
+
+
+# In[23]:
+
+
+df_transformed.info()
 
 
 # In[ ]:
