@@ -201,27 +201,38 @@ from sklearn import preprocessing
 from sklearn.preprocessing import StandardScaler
 
 from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
 
 import statistics
 
 
 '''
 Cette fonction fait un 1 hot encoding des features qui sont des catégories
-Elle fonctionne pour les 2 cas de figure suivant :
-- Les valeurs possibles de la colonne sont une chaîne de caractère (ex : cat1)
-- Les valeurs possibles de la colonne sont des chaînes de caractère avec des séparateurs (ex:  cat1|cat2|cat3)
+Old function not used anymore
 '''
     
 def add_categorical_features_1hot(df, categorical_features_totransform):
     #df.drop(labels=categorical_features_totransform, axis=1, inplace=True)
     
+    
+    #df_encoded = pd.get_dummies(df, columns=categorical_features_totransform, sparse=True)
+    
     for feature_totransform in categorical_features_totransform:
         print(f'Adding 1hot Feature : {feature_totransform}')
         
+        print('First')
         df_transformed = df[feature_totransform].str.get_dummies().add_prefix(feature_totransform +'_')   
+        
+        #df_new = pd.get_dummies(df, columns=['ORIGIN'])
+        
+        
+        
+        
         #df.drop(labels=feature_totransform, axis=1, inplace=True)
+        print('Second')
         del df[feature_totransform]
         
+        print('Third')
         df = pd.concat([df, df_transformed], axis=1)
         
     return(df)
@@ -237,27 +248,14 @@ class HHMM_to_Minutes(BaseEstimator, TransformerMixin):
     
     def transform(self, df):       
         for feature_toconvert in self.features_toconvert:
-            print(f'feature {feature_toconvert} :\n')
-            print('1\n')
+            print(f'Converting feature {feature_toconvert}\n')
+            #print('1\n')
             df_concat = pd.concat([df[feature_toconvert].str.slice(start=0,stop=2, step=1),df[feature_toconvert].str.slice(start=2,stop=4, step=1)], axis=1).astype(int).copy(deep=True)
-            
-            
-            #df_concat = pd.concat([df.loc[:, feature_toconvert].str.slice(start=0,stop=2, step=1),df.loc[:, feature_toconvert].str.slice(start=2,stop=4, step=1)], axis=1).astype(int).copy(deep=True)
-            
-            
-            print('2\n')
+                    
+            #print('2\n')
             df[feature_toconvert] = (df_concat.iloc[:, [0]] * 60 + df_concat.iloc[:, [1]])[feature_toconvert]
-            #df.at[:, feature_toconvert] = (df_concat.iloc[:, [0]] * 60 + df_concat.iloc[:, [1]])[feature_toconvert].copy(deep=True)
             
-            
-            #df.at[:, feature_toconvert] = 1
-            
-            #df.at[2, feature_toconvert] = 1 # No warning anymore
-            
-            #df.loc[feature_toconvert] = 1
-            
-            
-            print('3\n')
+            #print('3\n')
         
         return(df)
 
@@ -269,8 +267,10 @@ class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
     def fit(self, df, labels=None):      
         return self
     
-    def transform(self, df):       
-        return(add_categorical_features_1hot(df, self.categorical_features_totransform))
+    def transform(self, df):
+        df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=True)  # Sparse allows to gain memory. But then, standardscale must be with_mean=False
+        #df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=False)
+        return(df_encoded)
 
 class FeaturesSelector(BaseEstimator, TransformerMixin):
     def __init__(self, features_toselect = None):  # If None : every column is kept, nothing is done
@@ -299,12 +299,20 @@ preparation_pipeline = Pipeline([
     #('standardscaler', preprocessing.StandardScaler()),
 ])
 
+preparation_pipeline2 = Pipeline([
+    ('data_converter', HHMM_to_Minutes()),
+    ('multiple_encoder', ColumnTransformer([
+        ('categoricalfeatures_1hotencoder', OneHotEncoder(), ['ORIGIN', 'UNIQUE_CARRIER', 'DEST'])
+    ], remainder='passthrough')),
+    #('standardscaler', preprocessing.StandardScaler()),
+])
 
+# If matrix is sparse, with_mean=False must be passed to StandardScaler
 prediction_pipeline = Pipeline([
     ('features_selector', FeaturesSelector(features_toselect=['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME'])),
-    ('standardscaler', ColumnTransformer([
-        ('standardscaler_specific', StandardScaler(), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])
-    ], remainder='passthrough')),
+    #('standardscaler', ColumnTransformer([
+    #    ('standardscaler_specific', StandardScaler(), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])
+    #], remainder='passthrough')),
     #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
 ])
 
@@ -316,25 +324,61 @@ ColumnTransformer([
 '''
 
 
-# In[ ]:
+# # For later : select qualitative airport features that represent 90% of data
+
+# In[37]:
+
+
+((((df[['ORIGIN']].groupby('ORIGIN').size() / len(df)).sort_values(ascending=False)) * 100).cumsum() < 95)
+
+
+# In[57]:
+
+
+# Get ORIGIN values that represent 90% of data
+ORIGIN_high_percentile = ((((df[['ORIGIN']].groupby('ORIGIN').size() / len(df)).sort_values(ascending=False)) * 100).cumsum() < 90).where(lambda x : x == True).dropna().index.values.tolist()
+ORIGIN_low_percentile = ((((df[['ORIGIN']].groupby('ORIGIN').size() / len(df)).sort_values(ascending=False)) * 100).cumsum() >= 90).where(lambda x : x == True).dropna().index.values.tolist()
+
+
+# In[66]:
+
+
+ORIGIN_total = len(df['ORIGIN'].unique())
+ORIGIN_high_percentile_sum = len(ORIGIN_high_percentile)
+ORIGIN_low_percentile_sum = len(ORIGIN_low_percentile)
+high_low_sum = ORIGIN_high_percentile_sum + ORIGIN_low_percentile_sum
+
+print(f'Total number of ORIGIN values : {ORIGIN_total}')
+print(f'Number of ORIGIN high percentile values : {ORIGIN_high_percentile_sum}')
+print(f'Number of ORIGIN low percentile values : {ORIGIN_low_percentile_sum}')
+print(f'Sum of high percentile + low percentile values : {high_low_sum}')
+
+
+# In[16]:
 
 
 df_transformed = preparation_pipeline.fit_transform(df_train)
 
 
-# In[ ]:
+# In[17]:
 
 
 df_transformed.shape
 
 
-# In[ ]:
+# In[18]:
 
 
 type(df_transformed)
 
 
-# In[ ]:
+# In[19]:
+
+
+df_transformed.info()
+
+
+# In[20]:
 
 
 df_transformed = prediction_pipeline.fit_transform(df_transformed)
@@ -366,25 +410,46 @@ quantitative_features, qualitative_features = identify_features(df, all_features
 
 # # Basic linear regression
 
-# In[ ]:
+# In[22]:
 
 
 df_transformed.shape
 
 
-# In[ ]:
+# In[25]:
+
+
+df_train[model1_label].shape
+
+
+# In[23]:
 
 
 df.shape
 
 
-# In[ ]:
+# In[26]:
 
 
 from sklearn.linear_model import LinearRegression
 
 lin_reg = LinearRegression()
-lin_reg.fit(df_transformed, df[model1_label])
+lin_reg.fit(df_transformed, df_train[model1_label])
+
+
+# In[29]:
+
+
+df_transformed
+
+
+# In[27]:
+
+
+from sklearn import linear_model
+
+regressor = linear_model.SGDRegressor(max_iter=1000, tol=1e-3)
+regressor.fit(df_transformed, df_train[model1_label])
 
 
 # In[ ]:
