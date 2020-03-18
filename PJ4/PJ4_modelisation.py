@@ -205,6 +205,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 import statistics
 
+from scipy import sparse
 
 '''
 Cette fonction fait un 1 hot encoding des features qui sont des catégories
@@ -374,6 +375,20 @@ class Filter_High_Percentile(BaseEstimator, TransformerMixin):
         else:
             return(df)
         
+
+    
+class DenseToSparseConverter(BaseEstimator, TransformerMixin):
+    def __init__(self):  # If None : every column is kept, nothing is done
+        return None
+    
+    def fit(self, matrix, labels=None):      
+        return self
+    
+    def transform(self, matrix):   
+        return(sparse.csr_matrix(matrix))
+
+        
+        
 '''
 conversion_pipeline = Pipeline([
     ('data_converter', HHMM_to_Minutes()),
@@ -396,6 +411,8 @@ prediction_pipeline = Pipeline([
     ('standardscaler', ColumnTransformer([
         ('standardscaler_specific', StandardScaler(), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])
     ], remainder='passthrough', sparse_threshold=1)),
+    
+    ('dense_to_sparse_converter', DenseToSparseConverter()),
     #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
 ])
 #copy=False passed to StandardScaler() allows to gain memory
@@ -433,28 +450,22 @@ df_train_transformed.shape
 # In[18]:
 
 
-type(df_train_transformed)
+df_train_transformed.info()
 
 
 # In[19]:
 
 
-df_train_transformed.info()
+df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
 
 
 # In[20]:
 
 
-df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
-
-
-# In[21]:
-
-
 df_train_transformed.shape
 
 
-# In[26]:
+# In[21]:
 
 
 from scipy import sparse
@@ -496,76 +507,31 @@ df_train[model1_label].shape
 # In[27]:
 
 
-from scipy import sparse
-df_train_transformed_sparse = sparse.csr_matrix(df_train_transformed)
-
-
-# In[28]:
-
-
-df_train_transformed_sparse
-
-
-# In[29]:
-
-
-from sklearn.linear_model import LinearRegression
-
-lin_reg = LinearRegression()
-lin_reg.fit(df_train_transformed_sparse, df_train[model1_label])
-
-
-# In[35]:
-
-
-df.shape
-
-
-# In[36]:
-
-
 from sklearn.linear_model import LinearRegression
 
 lin_reg = LinearRegression()
 lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[30]:
+# In[28]:
 
 
 df_test_transformed = preparation_pipeline.transform(df_test)
 
 
-# In[31]:
+# In[29]:
 
 
 df_test_transformed = prediction_pipeline.transform(df_test_transformed)
 
 
-# In[32]:
-
-
-df_test_transformed_sparse = sparse.csr_matrix(df_test_transformed)
-
-
-# In[33]:
-
-
-from sklearn.metrics import mean_squared_error
-
-df_test_predictions = lin_reg.predict(df_test_transformed_sparse)
-lin_mse = mean_squared_error(df_test[model1_label], df_test_predictions)
-lin_rmse = np.sqrt(lin_mse)
-lin_rmse
-
-
-# In[ ]:
+# In[30]:
 
 
 df_test_transformed.shape
 
 
-# In[ ]:
+# In[31]:
 
 
 from sklearn.metrics import mean_squared_error
@@ -576,11 +542,89 @@ lin_rmse = np.sqrt(lin_mse)
 lin_rmse
 
 
+# In[67]:
+
+
+fig = plt.figure()
+fig.suptitle('Comparison actual values / predict values')
+plt.ylabel("Predicted")
+plt.xlabel("Actual")
+plt.scatter(df_test[model1_label], df_test_predictions, color='coral')
+
+
+# ## Naive approach
+
+# ### Random value between min and max
+
+# In[50]:
+
+
+y_pred_random = np.random.randint(df['ARR_DELAY'].min(), df['ARR_DELAY'].max(), df_test['ARR_DELAY'].shape)
+naive_mse = mean_squared_error(df_test[model1_label], y_pred_random)
+naive_rmse = np.sqrt(naive_mse)
+naive_rmse
+
+
+# ### Always mean naive approach
+
+# In[60]:
+
+
+from sklearn import dummy
+
+dum = dummy.DummyRegressor(strategy='mean')
+
+# Entraînement
+dum.fit(df_train_transformed, df_train[model1_label])
+
+# Prédiction sur le jeu de test
+y_pred_dum = dum.predict(df_test_transformed)
+
+# Evaluate
+print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
+
+
+# In[65]:
+
+
+plt.scatter(df_test[model1_label], y_pred_dum, color='coral')
+
+
+# In[55]:
+
+
+df_test[model1_label]
+
+
+# In[ ]:
+
+
+
+
+
+# In[54]:
+
+
+y_pred_dum
+
+
+# In[43]:
+
+
+df['ARR_DELAY'].abs().mean()
+
+
+# In[ ]:
+
+
+
+
+
 # => With all samples and 70% most represented features, without StandardScale :  on test set : lin_rmse = 42.17  
 # => With all samples and 80% most represented features, without StandardScale :  on test set : lin_rmse = 42.16  
 # => With all samples and 80% most represented features, with StandardScale :  on test set : lin_rmse = 42.16
 
-# In[ ]:
+# In[32]:
 
 
 '''from sklearn import linear_model
@@ -590,10 +634,26 @@ regressor.fit(df_transformed, df_train[model1_label])
 '''
 
 
-# In[ ]:
+# In[33]:
 
 
+'''
+from sklearn.svm import SVR
 
+svm_reg = SVR(kernel="linear")
+svm_reg.fit(df_train_transformed, df_train[model1_label])
+'''
+
+
+# In[34]:
+
+
+'''
+df_test_predictions = svm_reg.predict(df_test_transformed)
+svm_mse = mean_squared_error(df_test[model1_label], df_test_predictions)
+svm_rmse = np.sqrt(svm_mse)
+svm_rmse
+'''
 
 
 # In[ ]:
