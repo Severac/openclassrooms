@@ -162,7 +162,7 @@ print(f'Qualitative features : {qualitative_features} \n')
 
 from sklearn.model_selection import train_test_split
 
-df_train, df_test = train_test_split(df, test_size=0.2, random_state=42)
+df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
 df_train = df_train.copy()
 df_test = df_test.copy()
 
@@ -171,7 +171,7 @@ df_test = df_test.copy()
 
 
 if (SAMPLED_DATA == True):
-    df_train = df_train.sample(1000).copy(deep=True)
+    df_train = df_train.sample(1200000).copy(deep=True)
     df = df.loc[df_train.index]
 
 
@@ -259,8 +259,9 @@ class HHMM_to_Minutes(BaseEstimator, TransformerMixin):
         
         return(df)
 
-        
-class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
+    
+'''
+class CategoricalFeatures1HotEncoder_old(BaseEstimator, TransformerMixin):
     def __init__(self, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):
         self.categorical_features_totransform = categorical_features_totransform
     
@@ -268,11 +269,53 @@ class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, df):
+        # /!\ Array will not have the same shape if we fit an ensemble of samples that have less values than total dataset
         df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=True)  # Sparse allows to gain memory. But then, standardscale must be with_mean=False
         #df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=False)
         print('type of df : ' + str(type(df_encoded)))
         return(df_encoded)
+'''
 
+class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
+    def __init__(self, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):
+        self.categorical_features_totransform = categorical_features_totransform
+        self.fitted = False
+        self.all_feature_values = {}
+        #self.df_encoded = None
+    
+    def fit(self, df, labels=None):      
+        print('Fit data')
+        for feature_name in self.categorical_features_totransform:
+            self.all_feature_values[feature_name] = feature_name + '_' + df[feature_name].unique()
+        
+        self.fitted = True
+        
+        return self
+    
+    def transform(self, df):
+        if (self.fitted == False):
+            self.fit(df)
+        
+        print('Transform data')
+        print('1hot encode categorical features...')
+        df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=True)  # Sparse allows to gain memory. But then, standardscale must be with_mean=False
+        #df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=False)
+        
+        # Get category values that were in fitted data, but that are not in data to transform 
+        for feature_name, feature_values in self.all_feature_values.items():
+            diff_columns = list(set(feature_values) - set(df_encoded.columns.tolist()))
+            print(f'Column values that were in fitted data but not in current data: {diff_columns}')
+        
+            if (len(diff_columns) > 0):
+                print('Adding those column with 0 values to the DataFrme...')
+                # Create columns with 0 for the above categories, in order to preserve same matrix shape between train et test set
+                zeros_dict = dict.fromkeys(diff_columns, 0)
+                df_encoded.assign(**zeros_dict)
+        
+        print('type of df : ' + str(type(df_encoded)))
+        return(df_encoded)
+    
+    
 class FeaturesSelector(BaseEstimator, TransformerMixin):
     def __init__(self, features_toselect = None):  # If None : every column is kept, nothing is done
         self.features_toselect = features_toselect
@@ -287,19 +330,78 @@ class FeaturesSelector(BaseEstimator, TransformerMixin):
 
         else:
             return(df)
-  
+
+'''
+In order have less features globally: we Keep only features_tofilter that represent percent_tokeep% of total values
+Features which values represent less than percent_tokeep% will be set "OTHERS" value instead of their real value
+'''
+
+class Filter_High_Percentile(BaseEstimator, TransformerMixin):
+    def __init__(self, features_tofilter = ['ORIGIN', 'DEST'], percent_tokeep = 80):
+        self.features_tofilter = features_tofilter
+        self.percent_tokeep = percent_tokeep
+        self.high_percentile = None
+        self.low_percentile = None
+    
+    def fit(self, df, labels=None): 
+        print('Fit high percentile filter...')
+        for feature_tofilter in self.features_tofilter:
+            # Get feature_tofilter values that represent 80% of data
+            self.high_percentile = ((((df[[feature_tofilter]].groupby(feature_tofilter).size() / len(df)).sort_values(ascending=False)) * 100).cumsum() < self.percent_tokeep).where(lambda x : x == True).dropna().index.values.tolist()
+            self.low_percentile = ((((df[[feature_tofilter]].groupby(feature_tofilter).size() / len(df)).sort_values(ascending=False)) * 100).cumsum() >= self.percent_tokeep).where(lambda x : x == True).dropna().index.values.tolist()
+
+            total = len(df[feature_tofilter].unique())
+            high_percentile_sum = len(self.high_percentile)
+            low_percentile_sum = len(self.low_percentile)
+            high_low_sum = high_percentile_sum + low_percentile_sum
+
+            print(f'Total number of {feature_tofilter} values : {total}')
+            print(f'Number of {feature_tofilter} high percentile (> {self.percent_tokeep}%) values : {high_percentile_sum}')
+            print(f'Number of {feature_tofilter} low percentile values : {low_percentile_sum}')
+            print(f'Sum of high percentile + low percentile values : {high_low_sum}')
+        
+        return self
+    
+    def transform(self, df):       
+        if (self.features_tofilter != None):
+            print('Apply high percentile filter...')
+            
+            for feature_tofilter in self.features_tofilter:
+                df.loc[df[feature_tofilter].isin(self.low_percentile), feature_tofilter] = 'OTHERS'   
+            
+            return(df)    
+
+        else:
+            return(df)
+        
+'''
 conversion_pipeline = Pipeline([
     ('data_converter', HHMM_to_Minutes()),
     #('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
     #('standardscaler', preprocessing.StandardScaler()),
 ])
+'''
 
 preparation_pipeline = Pipeline([
+    ('filter_highpercentile', Filter_High_Percentile()),
     ('data_converter', HHMM_to_Minutes()),
     ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
     #('standardscaler', preprocessing.StandardScaler()),
 ])
 
+
+# If matrix is sparse, with_mean=False must be passed to StandardScaler
+prediction_pipeline = Pipeline([
+    ('features_selector', FeaturesSelector(features_toselect=['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME'])),
+    ('standardscaler', ColumnTransformer([
+        ('standardscaler_specific', StandardScaler(), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])
+    ], remainder='passthrough', sparse_threshold=1)),
+    #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+#copy=False passed to StandardScaler() allows to gain memory
+
+'''
+# Old code that used scikit learn OneHotEncoder (which does not keep DataFrame type) instead of Pandas
 preparation_pipeline2 = Pipeline([
     ('data_converter', HHMM_to_Minutes()),
     ('multiple_encoder', ColumnTransformer([
@@ -307,16 +409,7 @@ preparation_pipeline2 = Pipeline([
     ], remainder='passthrough')),
     #('standardscaler', preprocessing.StandardScaler()),
 ])
-
-# If matrix is sparse, with_mean=False must be passed to StandardScaler
-prediction_pipeline = Pipeline([
-    ('features_selector', FeaturesSelector(features_toselect=['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME'])),
-    #('standardscaler', ColumnTransformer([
-    #    ('standardscaler_specific', StandardScaler(), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])
-    #], remainder='passthrough')),
-    #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
-])
-
+'''
 
 '''
 ColumnTransformer([
@@ -325,138 +418,151 @@ ColumnTransformer([
 '''
 
 
-# # For later : select qualitative airport features that represent 90% of data
-
-# In[37]:
-
-
-((((df[['ORIGIN']].groupby('ORIGIN').size() / len(df)).sort_values(ascending=False)) * 100).cumsum() < 95)
-
-
-# In[57]:
-
-
-# Get ORIGIN values that represent 90% of data
-ORIGIN_high_percentile = ((((df[['ORIGIN']].groupby('ORIGIN').size() / len(df)).sort_values(ascending=False)) * 100).cumsum() < 90).where(lambda x : x == True).dropna().index.values.tolist()
-ORIGIN_low_percentile = ((((df[['ORIGIN']].groupby('ORIGIN').size() / len(df)).sort_values(ascending=False)) * 100).cumsum() >= 90).where(lambda x : x == True).dropna().index.values.tolist()
-
-
-# In[66]:
-
-
-ORIGIN_total = len(df['ORIGIN'].unique())
-ORIGIN_high_percentile_sum = len(ORIGIN_high_percentile)
-ORIGIN_low_percentile_sum = len(ORIGIN_low_percentile)
-high_low_sum = ORIGIN_high_percentile_sum + ORIGIN_low_percentile_sum
-
-print(f'Total number of ORIGIN values : {ORIGIN_total}')
-print(f'Number of ORIGIN high percentile values : {ORIGIN_high_percentile_sum}')
-print(f'Number of ORIGIN low percentile values : {ORIGIN_low_percentile_sum}')
-print(f'Sum of high percentile + low percentile values : {high_low_sum}')
-
-
 # In[16]:
 
 
-df_transformed = preparation_pipeline.fit_transform(df_train)
+df_train_transformed = preparation_pipeline.fit_transform(df_train)
 
 
 # In[17]:
 
 
-df_transformed.shape
+df_train_transformed.shape
 
 
 # In[18]:
 
 
-type(df_transformed)
+type(df_train_transformed)
 
 
 # In[19]:
 
 
-df_transformed.info()
+df_train_transformed.info()
 
 
 # In[20]:
 
 
-df_transformed = prediction_pipeline.fit_transform(df_transformed)
+df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
 
 
 # In[21]:
 
 
-df_transformed.shape
-
-
-# In[22]:
-
-
-df_transformed
-
-
-# In[23]:
-
-
-df_transformed.info()
-
-
-# In[ ]:
-
-
-pd.set_option('display.max_columns', 400)
-
-
-# In[ ]:
-
-
-quantitative_features, qualitative_features = identify_features(df, all_features)
-
-
-# # Basic linear regression
-
-# In[22]:
-
-
-df_transformed.shape
-
-
-# In[25]:
-
-
-df_train[model1_label].shape
-
-
-# In[23]:
-
-
-df.shape
+df_train_transformed.shape
 
 
 # In[26]:
 
 
-from sklearn.linear_model import LinearRegression
-
-lin_reg = LinearRegression()
-lin_reg.fit(df_transformed, df_train[model1_label])
+from scipy import sparse
+sparse.issparse(df_train_transformed)
 
 
-# In[29]:
+# In[22]:
 
 
-df_transformed
+#df_train_transformed.info()
+
+
+# In[23]:
+
+
+pd.set_option('display.max_columns', 400)
+
+
+# In[24]:
+
+
+quantitative_features, qualitative_features = identify_features(df, all_features)
+
+
+# # Linear regression
+
+# In[25]:
+
+
+df_train_transformed.shape
+
+
+# In[26]:
+
+
+df_train[model1_label].shape
 
 
 # In[27]:
 
 
-from sklearn import linear_model
+from scipy import sparse
+df_train_transformed_sparse = sparse.csr_matrix(df_train_transformed)
 
-regressor = linear_model.SGDRegressor(max_iter=1000, tol=1e-3)
-regressor.fit(df_transformed, df_train[model1_label])
+
+# In[28]:
+
+
+df_train_transformed_sparse
+
+
+# In[29]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+lin_reg.fit(df_train_transformed_sparse, df_train[model1_label])
+
+
+# In[35]:
+
+
+df.shape
+
+
+# In[36]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[30]:
+
+
+df_test_transformed = preparation_pipeline.transform(df_test)
+
+
+# In[31]:
+
+
+df_test_transformed = prediction_pipeline.transform(df_test_transformed)
+
+
+# In[32]:
+
+
+df_test_transformed_sparse = sparse.csr_matrix(df_test_transformed)
+
+
+# In[33]:
+
+
+from sklearn.metrics import mean_squared_error
+
+df_test_predictions = lin_reg.predict(df_test_transformed_sparse)
+lin_mse = mean_squared_error(df_test[model1_label], df_test_predictions)
+lin_rmse = np.sqrt(lin_mse)
+lin_rmse
+
+
+# In[ ]:
+
+
+df_test_transformed.shape
 
 
 # In[ ]:
@@ -464,10 +570,24 @@ regressor.fit(df_transformed, df_train[model1_label])
 
 from sklearn.metrics import mean_squared_error
 
-df_predictions = lin_reg.predict(df_transformed)
-lin_mse = mean_squared_error(df[model1_label], df_predictions)
+df_test_predictions = lin_reg.predict(df_test_transformed)
+lin_mse = mean_squared_error(df_test[model1_label], df_test_predictions)
 lin_rmse = np.sqrt(lin_mse)
 lin_rmse
+
+
+# => With all samples and 70% most represented features, without StandardScale :  on test set : lin_rmse = 42.17  
+# => With all samples and 80% most represented features, without StandardScale :  on test set : lin_rmse = 42.16  
+# => With all samples and 80% most represented features, with StandardScale :  on test set : lin_rmse = 42.16
+
+# In[ ]:
+
+
+'''from sklearn import linear_model
+
+regressor = linear_model.SGDRegressor(max_iter=1000, tol=1e-3, penalty=None, eta0=0.1)
+regressor.fit(df_transformed, df_train[model1_label])
+'''
 
 
 # In[ ]:
