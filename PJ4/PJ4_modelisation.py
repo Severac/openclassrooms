@@ -542,7 +542,7 @@ lin_rmse = np.sqrt(lin_mse)
 lin_rmse
 
 
-# In[67]:
+# In[32]:
 
 
 fig = plt.figure()
@@ -552,11 +552,33 @@ plt.xlabel("Actual")
 plt.scatter(df_test[model1_label], df_test_predictions, color='coral')
 
 
+# In[56]:
+
+
+from sklearn.model_selection import cross_validate
+
+scores = cross_validate(lin_reg, df_train_transformed, df_train[model1_label], scoring='neg_root_mean_squared_error', cv=5)
+
+
+# In[58]:
+
+
+scores['test_score'].mean()
+
+
+# In[47]:
+
+
+from sklearn import metrics
+
+metrics.SCORERS.keys()
+
+
 # ## Naive approach
 
 # ### Random value between min and max
 
-# In[50]:
+# In[33]:
 
 
 y_pred_random = np.random.randint(df['ARR_DELAY'].min(), df['ARR_DELAY'].max(), df_test['ARR_DELAY'].shape)
@@ -567,7 +589,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[60]:
+# In[34]:
 
 
 from sklearn import dummy
@@ -584,13 +606,13 @@ y_pred_dum = dum.predict(df_test_transformed)
 print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
 
 
-# In[65]:
+# In[35]:
 
 
 plt.scatter(df_test[model1_label], y_pred_dum, color='coral')
 
 
-# In[55]:
+# In[36]:
 
 
 df_test[model1_label]
@@ -602,13 +624,13 @@ df_test[model1_label]
 
 
 
-# In[54]:
+# In[37]:
 
 
 y_pred_dum
 
 
-# In[43]:
+# In[38]:
 
 
 df['ARR_DELAY'].abs().mean()
@@ -624,7 +646,7 @@ df['ARR_DELAY'].abs().mean()
 # => With all samples and 80% most represented features, without StandardScale :  on test set : lin_rmse = 42.16  
 # => With all samples and 80% most represented features, with StandardScale :  on test set : lin_rmse = 42.16
 
-# In[32]:
+# In[39]:
 
 
 '''from sklearn import linear_model
@@ -634,7 +656,7 @@ regressor.fit(df_transformed, df_train[model1_label])
 '''
 
 
-# In[33]:
+# In[40]:
 
 
 '''
@@ -645,7 +667,7 @@ svm_reg.fit(df_train_transformed, df_train[model1_label])
 '''
 
 
-# In[34]:
+# In[41]:
 
 
 '''
