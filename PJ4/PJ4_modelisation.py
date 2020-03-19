@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ4 : transats dataset : modelisation notebook
 
-# In[1]:
+# In[73]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -35,6 +35,19 @@ import seaborn as sns
 sns.set()
 
 #import common_functions
+
+####### Paramètres pour sauver et restaurer les modèles :
+import pickle
+####### Paramètres à changer par l'utilisateur selon son besoin :
+RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
+SAVE_GRID_RESULTS = False # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
+LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
+
+#GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
+
+GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
+
+EXECUTE_INTERMEDIATE_MODELS = False # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
 
 
 # In[2]:
@@ -88,9 +101,55 @@ def identify_features(df, all_features):
     return quantitative_features, qualitative_features
 
 
+# In[6]:
+
+
+def save_or_load_search_params(grid_search, save_file_suffix):
+    if (SAVE_GRID_RESULTS == True):
+        #df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+        #df_grid_search_results.to_csv(GRIDSEARCH_CSV_FILE)
+
+        df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["mean_test_score"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["std_test_score"], columns=["std_test_score"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_fit_time"], columns=["mean_fit_time"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
+        df_grid_search_results.to_csv(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.csv')
+
+        with open(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.pickle', 'wb') as f:
+            pickle.dump(grid_search, f, pickle.HIGHEST_PROTOCOL)
+            
+        return(grid_search, df_grid_search_results)
+
+    if (LOAD_GRID_RESULTS == True):
+        if ((SAVE_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
+            print('Error : if want to load grid results, you should not have saved them or recomputed them before, or you will loose all your training data')
+
+        else:
+            with open(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.pickle', 'rb') as f:
+                grid_search = pickle.load(f)
+
+            df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["mean_test_score"])],axis=1)
+            df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["std_test_score"], columns=["std_test_score"])],axis=1)
+            df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_fit_time"], columns=["mean_fit_time"])],axis=1)
+            df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
+            
+            return(grid_search, df_grid_search_results)
+
+
+# In[67]:
+
+
+def evaluate_model(model, X_test, Y_test):
+    Y_predict = model.predict(X_test)
+    mse = mean_squared_error(Y_test, Y_predict)
+    rmse = np.sqrt(mse)
+    print(f'RMSE : {rmse}')
+    
+
+
 # # Data load
 
-# In[6]:
+# In[7]:
 
 
 # hhmm timed features formatted
@@ -99,19 +158,19 @@ feats_hhmm = ['CRS_DEP_TIME',  'CRS_ARR_TIME']
 df = pd.read_csv(DATA_PATH_FILE_INPUT, sep=',', header=0, encoding='utf-8', low_memory=False, parse_dates=feats_hhmm)
 
 
-# In[7]:
+# In[8]:
 
 
 df.shape
 
 
-# In[8]:
+# In[9]:
 
 
 display_percent_complete(df)
 
 
-# In[9]:
+# In[10]:
 
 
 '''
@@ -123,7 +182,7 @@ for column_name in df.columns:
 
 # # Identification of features
 
-# In[10]:
+# In[11]:
 
 
 # Below are feature from dataset that we decided to keep: 
@@ -157,7 +216,7 @@ print(f'Qualitative features : {qualitative_features} \n')
 
 # # Split train set, test set
 
-# In[11]:
+# In[12]:
 
 
 from sklearn.model_selection import train_test_split
@@ -167,7 +226,7 @@ df_train = df_train.copy()
 df_test = df_test.copy()
 
 
-# In[12]:
+# In[13]:
 
 
 if (SAMPLED_DATA == True):
@@ -175,13 +234,13 @@ if (SAMPLED_DATA == True):
     df = df.loc[df_train.index]
 
 
-# In[13]:
+# In[14]:
 
 
 df_train
 
 
-# In[14]:
+# In[15]:
 
 
 #df = df.loc[df_train.index]
@@ -189,7 +248,7 @@ df_train
 
 # # Features encoding
 
-# In[15]:
+# In[16]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -435,150 +494,233 @@ ColumnTransformer([
 '''
 
 
-# In[16]:
+# In[17]:
 
 
 df_train_transformed = preparation_pipeline.fit_transform(df_train)
 
 
-# In[17]:
-
-
-df_train_transformed.shape
-
-
 # In[18]:
 
 
-df_train_transformed.info()
+df_train_transformed.shape
 
 
 # In[19]:
 
 
-df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
+df_train_transformed.info()
 
 
 # In[20]:
 
 
-df_train_transformed.shape
+df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
 
 
 # In[21]:
+
+
+df_train_transformed.shape
+
+
+# In[22]:
 
 
 from scipy import sparse
 sparse.issparse(df_train_transformed)
 
 
-# In[22]:
+# In[23]:
 
 
 #df_train_transformed.info()
 
 
-# In[23]:
+# In[24]:
 
 
 pd.set_option('display.max_columns', 400)
 
 
-# In[24]:
+# In[25]:
 
 
 quantitative_features, qualitative_features = identify_features(df, all_features)
 
 
+# # Test set encoding
+
+# In[26]:
+
+
+df_test_transformed = preparation_pipeline.transform(df_test)
+df_test_transformed = prediction_pipeline.transform(df_test_transformed)
+df_test_transformed.shape
+
+
 # # Linear regression
 
-# In[25]:
+# In[27]:
 
 
 df_train_transformed.shape
 
 
-# In[26]:
+# In[28]:
 
 
 df_train[model1_label].shape
 
 
-# In[27]:
+# In[29]:
 
 
 from sklearn.linear_model import LinearRegression
 
-lin_reg = LinearRegression()
-lin_reg.fit(df_train_transformed, df_train[model1_label])
-
-
-# In[28]:
-
-
-df_test_transformed = preparation_pipeline.transform(df_test)
-
-
-# In[29]:
-
-
-df_test_transformed = prediction_pipeline.transform(df_test_transformed)
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    lin_reg = LinearRegression()
+    lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
 # In[30]:
 
 
-df_test_transformed.shape
+from sklearn.metrics import mean_squared_error
 
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_test_predictions = lin_reg.predict(df_test_transformed)
+    lin_mse = mean_squared_error(df_test[model1_label], df_test_predictions)
+    lin_rmse = np.sqrt(lin_mse)
+    lin_rmse
+
+
+# => 42.17  (42.16679389006135)
 
 # In[31]:
 
 
-from sklearn.metrics import mean_squared_error
-
-df_test_predictions = lin_reg.predict(df_test_transformed)
-lin_mse = mean_squared_error(df_test[model1_label], df_test_predictions)
-lin_rmse = np.sqrt(lin_mse)
-lin_rmse
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral')
 
 
 # In[32]:
 
 
-fig = plt.figure()
-fig.suptitle('Comparison actual values / predict values')
-plt.ylabel("Predicted")
-plt.xlabel("Actual")
-plt.scatter(df_test[model1_label], df_test_predictions, color='coral')
-
-
-# In[56]:
-
-
 from sklearn.model_selection import cross_validate
 
-scores = cross_validate(lin_reg, df_train_transformed, df_train[model1_label], scoring='neg_root_mean_squared_error', cv=5)
+#scores = cross_validate(lin_reg, df_train_transformed, df_train[model1_label], scoring='neg_root_mean_squared_error', cv=5)
 
 
-# In[58]:
+# In[33]:
 
 
-scores['test_score'].mean()
+#scores['test_score'].mean()
 
 
-# In[47]:
+# # ElasticNET regression
+
+# In[34]:
 
 
-from sklearn import metrics
+from sklearn.model_selection import ShuffleSplit
 
-metrics.SCORERS.keys()
+
+shuffled_split_train = ShuffleSplit(n_splits=5, test_size=0.2, random_state=42)
+
+
+# In[35]:
+
+
+from sklearn.linear_model import ElasticNet
+
+
+# In[36]:
+
+
+from sklearn.model_selection import GridSearchCV
+
+eNet = ElasticNet()
+
+grid_search = GridSearchCV(eNet, param_grid = {"max_iter": [1, 5, 10],
+                      "alpha": [10, 100],
+                      "l1_ratio": np.arange(0.0, 1.0, 0.4)},cv=shuffled_split_train, scoring='neg_mean_squared_error', error_score=np.nan, verbose=2)
+
+
+# In[37]:
+
+
+'''
+from sklearn.model_selection import GridSearchCV
+
+eNet = ElasticNet()
+
+grid_search = GridSearchCV(eNet, param_grid = {"max_iter": [1, 5, 10],
+                      "alpha": [0.0001, 0.001, 0.01, 0.1, 1, 10, 100],
+                      "l1_ratio": np.arange(0.0, 1.0, 0.1)},cv=shuffled_split_train, scoring='neg_mean_squared_error', error_score=np.nan, verbose=2)
+'''
+
+
+# In[38]:
+
+
+if (RECOMPUTE_GRIDSEARCH == True):
+    grid_search.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[39]:
+
+
+grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'eNet_20200319')
+
+
+# In[40]:
+
+
+df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
+
+
+# In[41]:
+
+
+np.sqrt(1741.47)
+
+
+# => 41.73092378560532
+
+# In[42]:
+
+
+grid_search.best_estimator_
+
+
+# In[43]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    if (RECOMPUTE_GRIDSEARCH == True):
+        df_test_predictions = grid_search.best_estimator_.predict(df_test_transformed)
+        mse = mean_squared_error(df_test[model1_label], df_test_predictions)
+        rmse = np.sqrt(mse)
+        rmse
+
+
+# In[44]:
+
+
+from sklearn import metrics 
+sorted(metrics.SCORERS.keys())
 
 
 # ## Naive approach
 
 # ### Random value between min and max
 
-# In[33]:
+# In[45]:
 
 
 y_pred_random = np.random.randint(df['ARR_DELAY'].min(), df['ARR_DELAY'].max(), df_test['ARR_DELAY'].shape)
@@ -589,7 +731,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[34]:
+# In[46]:
 
 
 from sklearn import dummy
@@ -606,47 +748,147 @@ y_pred_dum = dum.predict(df_test_transformed)
 print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
 
 
-# In[35]:
+# In[47]:
 
 
 plt.scatter(df_test[model1_label], y_pred_dum, color='coral')
 
 
-# In[36]:
+# In[48]:
 
 
 df_test[model1_label]
 
 
-# In[ ]:
-
-
-
-
-
-# In[37]:
+# In[49]:
 
 
 y_pred_dum
 
 
-# In[38]:
+# In[50]:
 
 
 df['ARR_DELAY'].abs().mean()
-
-
-# In[ ]:
-
-
-
 
 
 # => With all samples and 70% most represented features, without StandardScale :  on test set : lin_rmse = 42.17  
 # => With all samples and 80% most represented features, without StandardScale :  on test set : lin_rmse = 42.16  
 # => With all samples and 80% most represented features, with StandardScale :  on test set : lin_rmse = 42.16
 
-# In[39]:
+# # Random forest
+
+# In[51]:
+
+
+from sklearn.ensemble import RandomForestRegressor
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    random_reg = RandomForestRegressor(n_estimators=10, max_depth=2, random_state=42)
+    random_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[52]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_test_predictions = random_reg.predict(df_test_transformed)
+    mse = mean_squared_error(df_test[model1_label], df_test_predictions)
+    rmse = np.sqrt(mse)
+    rmse
+
+
+# => 42.373691516139964
+
+# # SVM
+
+# In[53]:
+
+
+'''
+from sklearn.svm import SVR
+
+svm_reg = SVR(kernel="rbf", verbose=True)
+svm_reg.fit(df_train_transformed, df_train[model1_label])
+'''
+
+
+# In[54]:
+
+
+from sklearn.svm import LinearSVR
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    svm_reg = LinearSVR(random_state=42, tol=1e-5, verbose=True)
+    svm_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[68]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    evaluate_model(svm_reg, df_test_transformed, df_test[model1_label])
+
+
+# => RMSE : 43.45607643335432
+
+# In[71]:
+
+
+grid_search_SVR = GridSearchCV(svm_reg, param_grid = {"epsilon": [0, 0.5],
+                      "C": [1, 5, 10, 100, 1000],
+                      "loss": ['epsilon_insensitive', 'squared_epsilon_insensitive'],},cv=shuffled_split_train, scoring='neg_mean_squared_error', error_score=np.nan, verbose=2)
+
+
+# In[ ]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    if (RECOMPUTE_GRIDSEARCH == True):
+        grid_search_SVR.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[ ]:
+
+
+grid_search_SVR, df_grid_search_results = save_or_load_search_params(grid_search_SVR, 'LinearSVR_20200319')
+
+
+# In[ ]:
+
+
+df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
+
+
+# In[ ]:
+
+
+evaluate_model(grid_search_SVR, df_test_transformed, df_test[model1_label])
+grid_search_SVR.best_estimator_
+
+
+# # Polynomial features + linear regression
+
+# In[ ]:
+
+
+from sklearn.preprocessing import PolynomialFeatures
+
+polynomial_reg = Pipeline([('poly', PolynomialFeatures(degree=3)),
+                          ('linear', LinearRegression(fit_intercept=False))])
+
+polynomial_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[ ]:
+
+
+evaluate_model(polynomial_reg, df_test_transformed, df_test[model1_label])
+
+
+# # Annex : unused code
+
+# In[55]:
 
 
 '''from sklearn import linear_model
@@ -656,7 +898,7 @@ regressor.fit(df_transformed, df_train[model1_label])
 '''
 
 
-# In[40]:
+# In[56]:
 
 
 '''
@@ -667,7 +909,7 @@ svm_reg.fit(df_train_transformed, df_train[model1_label])
 '''
 
 
-# In[41]:
+# In[57]:
 
 
 '''
@@ -675,6 +917,16 @@ df_test_predictions = svm_reg.predict(df_test_transformed)
 svm_mse = mean_squared_error(df_test[model1_label], df_test_predictions)
 svm_rmse = np.sqrt(svm_mse)
 svm_rmse
+'''
+
+
+# In[58]:
+
+
+'''
+from sklearn.model_selection import StratifiedShuffleSplit
+
+stratified_split_train = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=42)
 '''
 
 
