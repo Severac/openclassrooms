@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ4 : transats dataset : modelisation notebook
 
-# In[73]:
+# In[77]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -39,7 +39,7 @@ sns.set()
 ####### Paramètres pour sauver et restaurer les modèles :
 import pickle
 ####### Paramètres à changer par l'utilisateur selon son besoin :
-RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
+RECOMPUTE_GRIDSEARCH = False  # CAUTION : computation is several hours long
 SAVE_GRID_RESULTS = False # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
 LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
 
@@ -840,7 +840,7 @@ grid_search_SVR = GridSearchCV(svm_reg, param_grid = {"epsilon": [0, 0.5],
                       "loss": ['epsilon_insensitive', 'squared_epsilon_insensitive'],},cv=shuffled_split_train, scoring='neg_mean_squared_error', error_score=np.nan, verbose=2)
 
 
-# In[ ]:
+# In[75]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -848,31 +848,85 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
         grid_search_SVR.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[ ]:
+# => Warning at execution : /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/svm/base.py:929: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.
+#   "the number of iterations.", ConvergenceWarning)  
+
+# In[78]:
 
 
 grid_search_SVR, df_grid_search_results = save_or_load_search_params(grid_search_SVR, 'LinearSVR_20200319')
 
 
-# In[ ]:
+# In[79]:
 
 
 df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
 
 
-# In[ ]:
+# In[82]:
 
 
-evaluate_model(grid_search_SVR, df_test_transformed, df_test[model1_label])
+np.sqrt(1709.197402)
+
+
+# In[84]:
+
+
 grid_search_SVR.best_estimator_
 
 
+# In[83]:
+
+
+evaluate_model(grid_search_SVR.best_estimator_, df_test_transformed, df_test[model1_label])
+
+
+# => Best estimator :  inearSVR(C=1, dual=True, epsilon=0, fit_intercept=True, intercept_scaling=1.0,
+#           loss='squared_epsilon_insensitive', max_iter=1000, random_state=0,
+#           tol=1e-05, verbose=True)  
+# 
+# => RMSE : 42.16
+
 # # Polynomial features + linear regression
+
+# In[85]:
+
+
+from sklearn.preprocessing import PolynomialFeatures
+
+
+# In[87]:
+
+
+df_train_transformed
+
+
+# In[86]:
+
+
+poly = ColumnTransformer([
+                                ('poly', PolynomialFeatures(degree=3), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])     
+                                ], remainder='passthrough', sparse_threshold=1)
+
+poly.fit(df_train_transformed, df_train[model1_label])
+
 
 # In[ ]:
 
 
-from sklearn.preprocessing import PolynomialFeatures
+
+polynomial_reg = Pipeline([('poly_columntransformer', ColumnTransformer([
+                                ('poly', PolynomialFeatures(degree=3), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])     
+                                ], remainder='passthrough', sparse_threshold=1)),
+                          ('linear', LinearRegression(fit_intercept=False))])
+
+polynomial_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[ ]:
+
+
+
 
 polynomial_reg = Pipeline([('poly', PolynomialFeatures(degree=3)),
                           ('linear', LinearRegression(fit_intercept=False))])
@@ -884,6 +938,12 @@ polynomial_reg.fit(df_train_transformed, df_train[model1_label])
 
 
 evaluate_model(polynomial_reg, df_test_transformed, df_test[model1_label])
+
+
+# In[ ]:
+
+
+
 
 
 # # Annex : unused code
