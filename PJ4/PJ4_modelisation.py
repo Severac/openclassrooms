@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ4 : transats dataset : modelisation notebook
 
-# In[42]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -512,7 +512,7 @@ df_train_transformed.shape
 df_train_transformed.info()
 
 
-# In[22]:
+# In[21]:
 
 
 '''
@@ -521,50 +521,50 @@ df_train_transformed
 '''
 
 
-# In[21]:
+# In[22]:
 
 
 df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
 
 
-# In[24]:
+# In[23]:
 
 
 df_train_transformed.shape
 
 
-# In[29]:
+# In[24]:
 
 
 #pd.DataFrame(df_train_transformed)
 
 
-# In[22]:
+# In[25]:
 
 
 from scipy import sparse
 sparse.issparse(df_train_transformed)
 
 
-# In[30]:
+# In[26]:
 
 
 #pd.DataFrame.sparse.from_spmatrix(df_train_transformed)
 
 
-# In[23]:
+# In[27]:
 
 
 #df_train_transformed.info()
 
 
-# In[31]:
+# In[28]:
 
 
 pd.set_option('display.max_columns', 400)
 
 
-# In[22]:
+# In[29]:
 
 
 quantitative_features, qualitative_features = identify_features(df, all_features)
@@ -572,7 +572,7 @@ quantitative_features, qualitative_features = identify_features(df, all_features
 
 # # Test set encoding
 
-# In[23]:
+# In[30]:
 
 
 df_test_transformed = preparation_pipeline.transform(df_test)
@@ -911,19 +911,19 @@ evaluate_model(grid_search_SVR.best_estimator_, df_test_transformed, df_test[mod
 
 # # Polynomial features + linear regression
 
-# In[24]:
+# In[31]:
 
 
 from sklearn.preprocessing import PolynomialFeatures
 
 
-# In[25]:
+# In[32]:
 
 
 df_train_transformed
 
 
-# In[31]:
+# In[33]:
 
 
 poly = ColumnTransformer([
@@ -934,14 +934,14 @@ poly = ColumnTransformer([
 #poly.fit(df_train_transformed)
 
 
-# In[32]:
+# In[34]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
     df_train_transformed = poly.fit_transform(df_train_transformed)
 
 
-# In[38]:
+# In[35]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -994,7 +994,26 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # In[ ]:
 
 
+'''
+#Too slow
 
+from sklearn.ensemble import RandomForestRegressor
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    random_reg = RandomForestRegressor(n_estimators=100, max_depth=None, random_state=42)
+    random_reg.fit(df_train_transformed, df_train[model1_label])
+    
+'''
+
+
+# In[ ]:
+
+
+'''
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_test_predictions = random_reg.predict(df_test_transformed)
+    evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+'''
 
 
 # In[78]:

@@ -537,6 +537,49 @@ df[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().plot.bar(fi
 ax.legend(["Mean delay in minutes"])
 
 
+# ## Mean delay by origin airport
+
+# In[64]:
+
+
+df[['ARR_DELAY', 'ORIGIN']].groupby('ORIGIN').mean().std()
+
+
+# In[62]:
+
+
+pd.set_option('display.max_rows', 500)
+df[['ARR_DELAY', 'ORIGIN']].groupby('ORIGIN').mean().sort_values(by='ARR_DELAY', ascending=False)
+
+
+# In[55]:
+
+
+fig, ax = plt.subplots()
+df[['ARR_DELAY', 'ORIGIN']].groupby('ORIGIN').mean().plot.bar(figsize=(16,10), title='Mean delay by origin airport', ax=ax)
+ax.legend(["Mean delay in minutes"])
+
+
+# ## Mean delay by destination airport
+
+# In[65]:
+
+
+df[['ARR_DELAY', 'DEST']].groupby('DEST').mean().std()
+
+
+# In[63]:
+
+
+df[['ARR_DELAY', 'DEST']].groupby('DEST').mean().sort_values(by='ARR_DELAY', ascending=False)
+
+
+# In[ ]:
+
+
+
+
+
 # ## Mean delay by day of week
 
 # In[55]:
