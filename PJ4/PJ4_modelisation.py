@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ4 : transats dataset : modelisation notebook
 
-# In[77]:
+# In[42]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -47,7 +47,7 @@ LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pic
 
 GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
 
-EXECUTE_INTERMEDIATE_MODELS = False # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
+EXECUTE_INTERMEDIATE_MODELS = True # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
 
 
 # In[2]:
@@ -136,7 +136,7 @@ def save_or_load_search_params(grid_search, save_file_suffix):
             return(grid_search, df_grid_search_results)
 
 
-# In[67]:
+# In[7]:
 
 
 def evaluate_model(model, X_test, Y_test):
@@ -149,7 +149,7 @@ def evaluate_model(model, X_test, Y_test):
 
 # # Data load
 
-# In[7]:
+# In[8]:
 
 
 # hhmm timed features formatted
@@ -158,19 +158,19 @@ feats_hhmm = ['CRS_DEP_TIME',  'CRS_ARR_TIME']
 df = pd.read_csv(DATA_PATH_FILE_INPUT, sep=',', header=0, encoding='utf-8', low_memory=False, parse_dates=feats_hhmm)
 
 
-# In[8]:
+# In[9]:
 
 
 df.shape
 
 
-# In[9]:
+# In[10]:
 
 
 display_percent_complete(df)
 
 
-# In[10]:
+# In[11]:
 
 
 '''
@@ -182,7 +182,7 @@ for column_name in df.columns:
 
 # # Identification of features
 
-# In[11]:
+# In[12]:
 
 
 # Below are feature from dataset that we decided to keep: 
@@ -216,7 +216,7 @@ print(f'Qualitative features : {qualitative_features} \n')
 
 # # Split train set, test set
 
-# In[12]:
+# In[13]:
 
 
 from sklearn.model_selection import train_test_split
@@ -226,7 +226,7 @@ df_train = df_train.copy()
 df_test = df_test.copy()
 
 
-# In[13]:
+# In[14]:
 
 
 if (SAMPLED_DATA == True):
@@ -234,13 +234,13 @@ if (SAMPLED_DATA == True):
     df = df.loc[df_train.index]
 
 
-# In[14]:
+# In[15]:
 
 
 df_train
 
 
-# In[15]:
+# In[16]:
 
 
 #df = df.loc[df_train.index]
@@ -248,7 +248,7 @@ df_train
 
 # # Features encoding
 
-# In[16]:
+# In[17]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -494,34 +494,49 @@ ColumnTransformer([
 '''
 
 
-# In[17]:
+# In[18]:
 
 
 df_train_transformed = preparation_pipeline.fit_transform(df_train)
 
 
-# In[18]:
-
-
-df_train_transformed.shape
-
-
 # In[19]:
 
 
-df_train_transformed.info()
+df_train_transformed.shape
 
 
 # In[20]:
 
 
-df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
+df_train_transformed.info()
+
+
+# In[22]:
+
+
+'''
+pd.set_option('display.max_columns', 1000)
+df_train_transformed
+'''
 
 
 # In[21]:
 
 
+df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
+
+
+# In[24]:
+
+
 df_train_transformed.shape
+
+
+# In[29]:
+
+
+#pd.DataFrame(df_train_transformed)
 
 
 # In[22]:
@@ -531,19 +546,25 @@ from scipy import sparse
 sparse.issparse(df_train_transformed)
 
 
+# In[30]:
+
+
+#pd.DataFrame.sparse.from_spmatrix(df_train_transformed)
+
+
 # In[23]:
 
 
 #df_train_transformed.info()
 
 
-# In[24]:
+# In[31]:
 
 
 pd.set_option('display.max_columns', 400)
 
 
-# In[25]:
+# In[22]:
 
 
 quantitative_features, qualitative_features = identify_features(df, all_features)
@@ -551,7 +572,7 @@ quantitative_features, qualitative_features = identify_features(df, all_features
 
 # # Test set encoding
 
-# In[26]:
+# In[23]:
 
 
 df_test_transformed = preparation_pipeline.transform(df_test)
@@ -561,19 +582,19 @@ df_test_transformed.shape
 
 # # Linear regression
 
-# In[27]:
+# In[34]:
 
 
 df_train_transformed.shape
 
 
-# In[28]:
+# In[35]:
 
 
 df_train[model1_label].shape
 
 
-# In[29]:
+# In[35]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -583,7 +604,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[30]:
+# In[40]:
 
 
 from sklearn.metrics import mean_squared_error
@@ -597,7 +618,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # => 42.17  (42.16679389006135)
 
-# In[31]:
+# In[38]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -608,7 +629,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test_predictions, color='coral')
 
 
-# In[32]:
+# In[39]:
 
 
 from sklearn.model_selection import cross_validate
@@ -616,7 +637,7 @@ from sklearn.model_selection import cross_validate
 #scores = cross_validate(lin_reg, df_train_transformed, df_train[model1_label], scoring='neg_root_mean_squared_error', cv=5)
 
 
-# In[33]:
+# In[40]:
 
 
 #scores['test_score'].mean()
@@ -624,7 +645,7 @@ from sklearn.model_selection import cross_validate
 
 # # ElasticNET regression
 
-# In[34]:
+# In[41]:
 
 
 from sklearn.model_selection import ShuffleSplit
@@ -633,13 +654,13 @@ from sklearn.model_selection import ShuffleSplit
 shuffled_split_train = ShuffleSplit(n_splits=5, test_size=0.2, random_state=42)
 
 
-# In[35]:
+# In[42]:
 
 
 from sklearn.linear_model import ElasticNet
 
 
-# In[36]:
+# In[43]:
 
 
 from sklearn.model_selection import GridSearchCV
@@ -651,7 +672,7 @@ grid_search = GridSearchCV(eNet, param_grid = {"max_iter": [1, 5, 10],
                       "l1_ratio": np.arange(0.0, 1.0, 0.4)},cv=shuffled_split_train, scoring='neg_mean_squared_error', error_score=np.nan, verbose=2)
 
 
-# In[37]:
+# In[44]:
 
 
 '''
@@ -665,26 +686,26 @@ grid_search = GridSearchCV(eNet, param_grid = {"max_iter": [1, 5, 10],
 '''
 
 
-# In[38]:
+# In[45]:
 
 
 if (RECOMPUTE_GRIDSEARCH == True):
     grid_search.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[39]:
+# In[46]:
 
 
 grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'eNet_20200319')
 
 
-# In[40]:
+# In[47]:
 
 
 df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
 
 
-# In[41]:
+# In[48]:
 
 
 np.sqrt(1741.47)
@@ -692,13 +713,13 @@ np.sqrt(1741.47)
 
 # => 41.73092378560532
 
-# In[42]:
+# In[49]:
 
 
 grid_search.best_estimator_
 
 
-# In[43]:
+# In[50]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -709,7 +730,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
         rmse
 
 
-# In[44]:
+# In[51]:
 
 
 from sklearn import metrics 
@@ -720,7 +741,7 @@ sorted(metrics.SCORERS.keys())
 
 # ### Random value between min and max
 
-# In[45]:
+# In[52]:
 
 
 y_pred_random = np.random.randint(df['ARR_DELAY'].min(), df['ARR_DELAY'].max(), df_test['ARR_DELAY'].shape)
@@ -731,7 +752,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[46]:
+# In[53]:
 
 
 from sklearn import dummy
@@ -748,25 +769,25 @@ y_pred_dum = dum.predict(df_test_transformed)
 print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
 
 
-# In[47]:
+# In[54]:
 
 
 plt.scatter(df_test[model1_label], y_pred_dum, color='coral')
 
 
-# In[48]:
+# In[55]:
 
 
 df_test[model1_label]
 
 
-# In[49]:
+# In[56]:
 
 
 y_pred_dum
 
 
-# In[50]:
+# In[57]:
 
 
 df['ARR_DELAY'].abs().mean()
@@ -778,7 +799,7 @@ df['ARR_DELAY'].abs().mean()
 
 # # Random forest
 
-# In[51]:
+# In[58]:
 
 
 from sklearn.ensemble import RandomForestRegressor
@@ -788,7 +809,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     random_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[52]:
+# In[59]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -802,7 +823,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # # SVM
 
-# In[53]:
+# In[60]:
 
 
 '''
@@ -813,17 +834,18 @@ svm_reg.fit(df_train_transformed, df_train[model1_label])
 '''
 
 
-# In[54]:
+# In[67]:
 
 
 from sklearn.svm import LinearSVR
 
+svm_reg = LinearSVR(random_state=42, tol=1e-5, verbose=True)
+
 if (EXECUTE_INTERMEDIATE_MODELS == True):
-    svm_reg = LinearSVR(random_state=42, tol=1e-5, verbose=True)
     svm_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[68]:
+# In[62]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -832,15 +854,15 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # => RMSE : 43.45607643335432
 
-# In[71]:
+# In[68]:
 
 
 grid_search_SVR = GridSearchCV(svm_reg, param_grid = {"epsilon": [0, 0.5],
-                      "C": [1, 5, 10, 100, 1000],
-                      "loss": ['epsilon_insensitive', 'squared_epsilon_insensitive'],},cv=shuffled_split_train, scoring='neg_mean_squared_error', error_score=np.nan, verbose=2)
+                              "C": [1, 5, 10, 100, 1000],
+                              "loss": ['epsilon_insensitive', 'squared_epsilon_insensitive'],},cv=shuffled_split_train, scoring='neg_mean_squared_error', error_score=np.nan, verbose=2)
 
 
-# In[75]:
+# In[69]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -851,31 +873,31 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # => Warning at execution : /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/svm/base.py:929: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.
 #   "the number of iterations.", ConvergenceWarning)  
 
-# In[78]:
+# In[70]:
 
 
 grid_search_SVR, df_grid_search_results = save_or_load_search_params(grid_search_SVR, 'LinearSVR_20200319')
 
 
-# In[79]:
+# In[71]:
 
 
 df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
 
 
-# In[82]:
+# In[72]:
 
 
 np.sqrt(1709.197402)
 
 
-# In[84]:
+# In[73]:
 
 
 grid_search_SVR.best_estimator_
 
 
-# In[83]:
+# In[74]:
 
 
 evaluate_model(grid_search_SVR.best_estimator_, df_test_transformed, df_test[model1_label])
@@ -889,23 +911,97 @@ evaluate_model(grid_search_SVR.best_estimator_, df_test_transformed, df_test[mod
 
 # # Polynomial features + linear regression
 
-# In[85]:
+# In[24]:
 
 
 from sklearn.preprocessing import PolynomialFeatures
 
 
-# In[87]:
+# In[25]:
 
 
 df_train_transformed
 
 
-# In[86]:
+# In[31]:
 
 
 poly = ColumnTransformer([
-                                ('poly', PolynomialFeatures(degree=3), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])     
+                                ('poly', PolynomialFeatures(degree=2), [0, 1, 2, 3, 4, 5, 6])     
+                                ], remainder='passthrough', sparse_threshold=1)
+
+#poly.fit(df_train_transformed, df_train[model1_label])
+#poly.fit(df_train_transformed)
+
+
+# In[32]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_train_transformed = poly.fit_transform(df_train_transformed)
+
+
+# In[38]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_test_transformed = poly.transform(df_test_transformed)
+
+
+# In[33]:
+
+
+df_train_transformed.shape
+
+
+# In[36]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    lin_reg = LinearRegression()
+    lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[41]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+
+# => 42.11719088178065
+
+# # Polynomial features + random forest
+
+# In[43]:
+
+
+from sklearn.ensemble import RandomForestRegressor
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    random_reg = RandomForestRegressor(n_estimators=10, max_depth=2, random_state=42)
+    random_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[44]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_test_predictions = random_reg.predict(df_test_transformed)
+    evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+
+
+# In[ ]:
+
+
+
+
+
+# In[78]:
+
+
+poly = ColumnTransformer([
+                                ('poly', PolynomialFeatures(degree=2), [0, 1, 2, 3, 4, 5, 6])     
                                 ], remainder='passthrough', sparse_threshold=1)
 
 poly.fit(df_train_transformed, df_train[model1_label])
