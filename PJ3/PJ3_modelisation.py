@@ -41,7 +41,7 @@ import pickle
 ####### Paramètres à changer par l'utilisateur selon son besoin :
 RECOMPUTE_GRIDSEARCH = False  # CAUTION : computation is several hours long
 SAVE_GRID_RESULTS = False # If True : grid results object will be saved to GRIDSEARCH_PICKLE_FILE, and accuracy results to SEARCH_CSV_FILE
-LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from GRIDSEARCH_PICKLE_FILE
+LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from GRIDSEARCH_PICKLE_FILE and GRIDSEARCH_FILE_PREFIX*csv files
 
 GRIDSEARCH_PICKLE_FILE = 'grid_search_results.pickle'
 GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
@@ -163,16 +163,6 @@ df.reset_index(drop=True, inplace=True)
 
 df.info()
 
-
-# Imputation des variables manquantes :
-#     https://scikit-learn.org/stable/modules/generated/sklearn.impute.SimpleImputer.html
-# https://scikit-learn.org/stable/modules/impute.html  => à lire en premier
-# 
-# ACP et 1 hot encoding :  y a-t-il une autre possibilité ?
-# 
-# Valeurs de variables très peu représentées :   => à voir dans un second temps
-# https://machinelearningmastery.com/tactics-to-combat-imbalanced-classes-in-your-machine-learning-dataset/
-# 
 
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
@@ -1300,22 +1290,23 @@ df_grid_search_results_new = save_or_load_search_params(grid_search, 'otherfeats
 
 
 # => En combinant les résultats obtenus par les 2 recherches ci-dessus (sauvegardées dans les fichiers grid_search_results.csv et grid_search_results_otherfeats_20200229.csv, que l'on a mergées ensemble dans grid_search_results_similarity_metric.csv), on obtient que le meilleur estimateur pour la métrique similarité des films est :  
-# knn_params : {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}  
-# features_todrop : ['imdb_score']  
-# reduction_params : {'reduction_type': 'NCA', 'n_components': 100}  
+# knn_params : {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}
+# features_todrop : ['title_year', 'actor_1_facebook_likes', 'actor_2_facebook_likes', 'actor_3_facebook_likes', 'movie_facebook_likes', 'num_critic_for_reviews', 'director_facebook_likes', 'num_user_for_reviews', 'num_voted_users', 'duration']
+# reduction_params : {'reduction_type': 'NCA', 'n_components': 200}
 # 
 
-# Les 10 meilleurs résultats :  
-# KNN__knn_params	features_droper__features_todrop	reduction__reduction_params	mean_test_score  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}	['imdb_score']	{'reduction_type': 'NCA', 'n_components': 100}	8.753227733730485  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}	['imdb_score']	{'reduction_type': 'NCA', 'n_components': 100}	8.737696230476015  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}	['imdb_score']	{'reduction_type': 'NCA', 'n_components': 100}	8.737696230476015  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}		{'reduction_type': 'NCA', 'n_components': 100}	8.715353400873411  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}		{'reduction_type': 'NCA', 'n_components': 100}	8.71263095670615  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}		{'reduction_type': 'NCA', 'n_components': 100}	8.71263095670615  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}		{'reduction_type': 'NCA', 'n_components': 200}	8.712428644640822  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}		{'reduction_type': 'NCA', 'n_components': 200}	8.712428644640822  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}		{'reduction_type': 'NCA', 'n_components': 200}	8.68310075941397  
+# Les 10 meilleurs résultats :    
+# NCA or PCA	Dimensions	KNN algo	KNN distance	Score  
+# NCA	200	ball_tree	Minkowski	8,76823688515185  
+# NCA	200	ball_tree	Euclidean	8,76823688515185  
+# NCA	100	ball_tree	Manhattan	8,75322773373049  
+# NCA	100	ball_tree	Minkowski	8,75002189327464  
+# NCA	100	ball_tree	Euclidean	8,75002189327464  
+# NCA	100	ball_tree	Minkowski	8,73769623047602  
+# NCA	100	ball_tree	Euclidean	8,73769623047602  
+# NCA	200	ball_tree	Manhattan	8,73236615540209  
+# NCA	100	ball_tree	Manhattan	8,72416397895471  
+# NCA	100	ball_tree	Minkowski	8,72113699206967  
 # 
 
 # ## Recherche multiple de paramètres avec métrique score IMDB
@@ -1385,17 +1376,17 @@ df_grid_search_results_new = save_or_load_search_params(grid_search, 'metric_imd
 
 
 # Les 10 meilleurs résultats :  
-# KNN__knn_params	features_droper__features_todrop	reduction__reduction_params	mean_test_score
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}		{'reduction_type': 'NCA', 'n_components': 10}	-1,01543985594238  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}		{'reduction_type': 'NCA', 'n_components': 10}	-1,01979767907163  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}		{'reduction_type': 'NCA', 'n_components': 10}	-1,01979767907163  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}		{'reduction_type': 'NCA', 'n_components': 100}	-1,0513855942377  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}		{'reduction_type': 'NCA', 'n_components': 100}	-1,05918887555022  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}		{'reduction_type': 'NCA', 'n_components': 100}	-1,05918887555022  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'manhattan'}		{'reduction_type': 'NCA', 'n_components': 200}	-1,06986962785114  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'minkowski'}		{'reduction_type': 'NCA', 'n_components': 200}	-1,0882612244898  
-# {'n_neighbors': 6, 'algorithm': 'ball_tree', 'metric': 'euclidean'}		{'reduction_type': 'NCA', 'n_components': 200}	-1,0882612244898  
-# 
+# NCA or PCA	Dimensions	KNN algo	KNN distance	Score  
+# NCA	10	ball_tree	Manhattan	-1,01543985594238  
+# NCA	10	ball_tree	Minkowski	-1,01979767907163  
+# NCA	10	ball_tree	Euclidean	-1,01979767907163  
+# NCA	100	ball_tree	Manhattan	-1,0513855942377  
+# NCA	100	ball_tree	Minkowski	-1,05918887555022  
+# NCA	100	ball_tree	Euclidean	-1,05918887555022  
+# NCA	200	ball_tree	Manhattan	-1,06986962785114  
+# NCA	200	ball_tree	Minkowski	-1,0882612244898  
+# NCA	200	ball_tree	Euclidean	-1,0882612244898  
+# PCA	100	ball_tree	Manhattan	-1,12390004001601  
 # 
 
 # ## Affichage de recommendations avec NCA_KNN n_components 200 (Meilleur modèle trouvé avec métrique similarité) :
@@ -2105,7 +2096,7 @@ clusters = kmeans_clusterer.fit_transform(df_reduced)
 
 # ## Réduction de dimensionalité à 2 et 3 pour la visualisation
 
-# In[112]:
+# In[ ]:
 
 
 X = df_encoded.values
@@ -2125,19 +2116,19 @@ pca = decomposition.PCA(n_components=3)
 X_reduced_n3 = pca.fit_transform(X_scaled)
 
 
-# In[113]:
+# In[ ]:
 
 
 X_reduced_n2[:, 1].shape
 
 
-# In[114]:
+# In[ ]:
 
 
 clusters.shape
 
 
-# In[115]:
+# In[ ]:
 
 
 import plotly as py
@@ -2165,7 +2156,7 @@ py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but
 py.offline.plot(fig, filename='clusters_plot.html') 
 
 
-# In[116]:
+# In[ ]:
 
 
 import plotly as py
@@ -2202,7 +2193,7 @@ py.offline.plot(fig, filename='clusters_plot.html')
 
 # # Annexe : inutile, à effacer plus tard
 
-# In[117]:
+# In[ ]:
 
 
 '''
@@ -2231,7 +2222,7 @@ for feature_totransform in categorical_features_tosplit_andtransform:
 '''
 
 
-# In[118]:
+# In[ ]:
 
 
 '''
@@ -2290,7 +2281,7 @@ for feature_totransform in categorical_features_tosplit_andtransform:
 
 # ## Code plotly pour ajouter progressivement des graphiques , ne fonctionne pas (n'affiche rien sauf si on affiche que le premier graphique de la boucle)
 
-# In[119]:
+# In[ ]:
 
 
 import plotly as py

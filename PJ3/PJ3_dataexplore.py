@@ -192,16 +192,6 @@ df.drop_duplicates(inplace=True)
 df.info()
 
 
-# Imputation des variables manquantes :
-#     https://scikit-learn.org/stable/modules/generated/sklearn.impute.SimpleImputer.html
-# https://scikit-learn.org/stable/modules/impute.html  => à lire en premier
-# 
-# ACP et 1 hot encoding :  y a-t-il une autre possibilité ?
-# 
-# Valeurs de variables très peu représentées :   => à voir dans un second temps
-# https://machinelearningmastery.com/tactics-to-combat-imbalanced-classes-in-your-machine-learning-dataset/
-# 
-
 # ## Affichage des champs renseignés (non NA) avec leur pourcentage de complétude
 # L'objectif est de voir quelles sont les features qui seront les plus fiables en terme de qualité de donnée, et quelles sont celles pour lesquelles on devra faire des choix
 

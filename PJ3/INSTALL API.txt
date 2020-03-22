@@ -4,11 +4,16 @@
 
 L'API necessite le fichier API_model_PJ3.pickle qui est exporté à partir du notebook de modelisation du PJ3
 
+Tous ces fichiers sont présents sur le Github : https://github.com/Severac/openclassrooms/tree/master/PJ3
+
 Appel de l'url :
+> En passant par un proxy :
 curl --proxy "http://login:pass@ncproxy:8080" -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 1 }" https://francoisboyer.pythonanywhere.com/recommend
+
+> Sans passer par un proxy :
 curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 1 }" https://francoisboyer.pythonanywhere.com/recommend
 
-Test de l'API avec les films examinés dans le notebook :
+Commandes de test de l'API avec les films examinés dans le notebook :
 
 
 curl -X POST -H "Content-Type: application/json" -d "{ \"id_film\": 2703 }" https://francoisboyer.pythonanywhere.com/recommend
