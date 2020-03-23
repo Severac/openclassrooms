@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ4 : transats dataset : modelisation notebook
 
-# In[1]:
+# In[34]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -50,6 +50,14 @@ GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
 EXECUTE_INTERMEDIATE_MODELS = True # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
 
 
+# Necessary for predictors used in the notebook :
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
+
+from sklearn.preprocessing import PolynomialFeatures
+
+
 # In[2]:
 
 
@@ -58,6 +66,35 @@ def qgrid_show(df):
 
 
 # In[3]:
+
+
+def load_data():
+    # hhmm timed features formatted
+    feats_hhmm = ['CRS_DEP_TIME',  'CRS_ARR_TIME']
+
+    df = pd.read_csv(DATA_PATH_FILE_INPUT, sep=',', header=0, encoding='utf-8', low_memory=False, parse_dates=feats_hhmm)    
+    
+    return(df)
+
+
+# In[4]:
+
+
+def custom_train_test_split_sample(df):
+    from sklearn.model_selection import train_test_split
+
+    df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
+    df_train = df_train.copy()
+    df_test = df_test.copy()
+
+    if (SAMPLED_DATA == True):
+        df_train = df_train.sample(1200000).copy(deep=True)
+        df = df.loc[df_train.index]
+        
+    return df, df_train, df_test
+
+
+# In[5]:
 
 
 def print_column_information(df, column_name):
@@ -70,7 +107,7 @@ def print_column_information(df, column_name):
     print('\n')
 
 
-# In[4]:
+# In[6]:
 
 
 def display_percent_complete(df):
@@ -80,10 +117,15 @@ def display_percent_complete(df):
     display(not_na_df)
 
 
-# In[5]:
+# In[7]:
 
 
-def identify_features(df, all_features):
+def identify_features(df):
+    all_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME','ARR_DELAY','DEP_DELAY', 'TAXI_OUT', 'TAIL_NUM']
+
+    model1_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME']
+    model1_label = 'ARR_DELAY'
+    
     quantitative_features = []
     qualitative_features = []
     features_todrop = []
@@ -98,10 +140,10 @@ def identify_features(df, all_features):
     print(f'Quantitative features : {quantitative_features} \n')
     print(f'Qualitative features : {qualitative_features} \n')  
     
-    return quantitative_features, qualitative_features
+    return all_features, model1_features, model1_label, quantitative_features, qualitative_features
 
 
-# In[6]:
+# In[8]:
 
 
 def save_or_load_search_params(grid_search, save_file_suffix):
@@ -136,7 +178,7 @@ def save_or_load_search_params(grid_search, save_file_suffix):
             return(grid_search, df_grid_search_results)
 
 
-# In[7]:
+# In[9]:
 
 
 def evaluate_model(model, X_test, Y_test):
@@ -147,30 +189,37 @@ def evaluate_model(model, X_test, Y_test):
     
 
 
+# In[32]:
+
+
+def evaluate_model_MAE(model, X_test, Y_test):
+    Y_predict = model.predict(X_test)
+    mae = mean_absolute_error(Y_test, Y_predict)
+    print(f'MAE : {mae}')
+    
+
+
 # # Data load
 
-# In[8]:
+# In[10]:
 
 
-# hhmm timed features formatted
-feats_hhmm = ['CRS_DEP_TIME',  'CRS_ARR_TIME']
-
-df = pd.read_csv(DATA_PATH_FILE_INPUT, sep=',', header=0, encoding='utf-8', low_memory=False, parse_dates=feats_hhmm)
+df = load_data()
 
 
-# In[9]:
+# In[11]:
 
 
 df.shape
 
 
-# In[10]:
+# In[12]:
 
 
 display_percent_complete(df)
 
 
-# In[11]:
+# In[13]:
 
 
 '''
@@ -182,41 +231,23 @@ for column_name in df.columns:
 
 # # Identification of features
 
-# In[12]:
+# In[14]:
 
 
 # Below are feature from dataset that we decided to keep: 
+'''
 all_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME','ARR_DELAY','DEP_DELAY', 'TAXI_OUT', 'TAIL_NUM']
 
 model1_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME']
 model1_label = 'ARR_DELAY'
+'''
 
-quantitative_features = []
-qualitative_features = []
-features_todrop = []
-
-for feature_name in all_features:
-    if (df[feature_name].dtype == 'object'):
-        qualitative_features.append(feature_name)
-        
-    else:
-        quantitative_features.append(feature_name)
-
-print(f'Quantitative features : {quantitative_features} \n')
-print(f'Qualitative features : {qualitative_features} \n')        
-        
-
-#Commented out : no drop of features
-#for df_column in df.columns:
-#    if df_column not in all_features:
-#        features_todrop.append(df_column)
-#        
-#print(f'Features to drop : {features_todrop} \n')
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
 # # Split train set, test set
 
-# In[13]:
+# In[16]:
 
 
 from sklearn.model_selection import train_test_split
@@ -225,13 +256,15 @@ df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
 df_train = df_train.copy()
 df_test = df_test.copy()
 
-
-# In[14]:
-
-
 if (SAMPLED_DATA == True):
     df_train = df_train.sample(1200000).copy(deep=True)
     df = df.loc[df_train.index]
+
+
+# In[17]:
+
+
+get_ipython().run_line_magic('macro', '-q __split_train_test 16')
 
 
 # In[15]:
@@ -243,12 +276,102 @@ df_train
 # In[16]:
 
 
+df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True)
+
+
+# In[17]:
+
+
+df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True).plot()
+
+
+# In[46]:
+
+
+list_carriers_mean_ordered = df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True).index.tolist()
+
+
+# In[47]:
+
+
+list_carriers_mean_ordered_dict = {list_carriers_mean_ordered[i] : i for i in range(len(list_carriers_mean_ordered))  }
+
+
+# In[48]:
+
+
+list_carriers_mean_ordered_mapper = lambda k : list_carriers_mean_ordered_dict[k]
+
+
+# In[49]:
+
+
+list_carriers_mean_ordered_mapper('UA')
+
+
+# In[50]:
+
+
+list_carriers_mean_ordered_dict
+
+
+# In[51]:
+
+
+df_train[['UNIQUE_CARRIER']]
+
+
+# In[52]:
+
+
+df_train['UNIQUE_CARRIER'].apply(list_carriers_mean_ordered_mapper)
+
+
+# In[85]:
+
+
+df_train['UNIQUE_CARRIER'].dtype
+
+
+# In[79]:
+
+
+df_train['UNIQUE_CARRIER'] = df_train.loc[:, 'UNIQUE_CARRIER'].apply(list_carriers_mean_ordered_mapper)
+
+
+# In[81]:
+
+
+df_train['UNIQUE_CARRIER'].astype()
+
+
+# In[37]:
+
+
+list_carriers_mean_ordered
+
+
+# In[26]:
+
+
+list_carriers_mean_ordered
+
+
+# In[ ]:
+
+
+list_carriers_mean_ordered[]
+
+
+# In[16]:
+
+
 #df = df.loc[df_train.index]
 
 
 # # Features encoding
 
-# In[17]:
+# In[52]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -375,6 +498,55 @@ class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
         print('type of df : ' + str(type(df_encoded)))
         return(df_encoded)
     
+
+class Aggregate_then_GroupByMean_then_Sort_numericalEncoder(BaseEstimator, TransformerMixin):
+    def __init__(self, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):
+        self.categorical_features_totransform = categorical_features_totransform
+        self.fitted = False
+        self.all_feature_values = {}
+    
+    def fit(self, df, labels=None):      
+        print('Fit data')
+        
+        self.feature_maps = {}
+        
+        for feature_name in self.categorical_features_totransform:
+            print(f'Fitting feature {feature_name}')
+            # List all feature values ordered by mean delay
+            list_feature_mean_ordered = df[['ARR_DELAY', feature_name]].groupby(feature_name).mean().sort_values(by='ARR_DELAY', ascending=True).index.tolist()
+            
+            # Generate a dictionary of feature values as keys and index as values
+            self.feature_maps[feature_name] = {}
+            self.feature_maps[feature_name]['list_feature_mean_ordered_dict'] = {list_feature_mean_ordered[i] : i for i in range(len(list_feature_mean_ordered))  }
+            
+            #print('Dictionnary : ' + str(self.feature_maps[feature_name]['list_feature_mean_ordered_dict']))
+            
+            # BUG : we had to do that line of code in transform instead, not in fit (result is the same, no difference)
+            #self.feature_maps[feature_name]['list_feature_mean_ordered_mapper'] = lambda k : self.feature_maps[feature_name]['list_feature_mean_ordered_dict'][k]
+                  
+        self.fitted = True
+        
+        return self
+    
+    def transform(self, df):
+        if (self.fitted == False):
+            print('Launching fit first (if you see this message : ensure that you have passed training set as input, not test set)')
+            self.fit(df)
+        
+        print('Encode categorical features...')
+        
+        for feature_name in self.categorical_features_totransform:
+            print(f'Encoding feature {feature_name} ...')
+            #print('Dictionnary : ' + str(self.feature_maps[feature_name]['list_feature_mean_ordered_dict']))
+            
+            # Replace each feature value by its index (the lowest the index, the lowest the mean delay is for this feature)
+            list_feature_mean_ordered_mapper = lambda k : self.feature_maps[feature_name]['list_feature_mean_ordered_dict'][k]
+                            
+            #df[feature_name] = df.loc[:, feature_name].apply(self.feature_maps[feature_name]['list_feature_mean_ordered_mapper'])  # BUG (we had to use line below instead)
+            df[feature_name] = df.loc[:, feature_name].apply(list_feature_mean_ordered_mapper)
+
+        return(df)
+    
     
 class FeaturesSelector(BaseEstimator, TransformerMixin):
     def __init__(self, features_toselect = None):  # If None : every column is kept, nothing is done
@@ -386,6 +558,9 @@ class FeaturesSelector(BaseEstimator, TransformerMixin):
     def transform(self, df):       
         if (self.features_toselect != None):
             filter_cols = [col for col in df if (col.startswith(tuple(self.features_toselect)))]
+            
+            print("Features selected (in order): " + str(df[filter_cols].columns))
+            
             return(df[filter_cols])    
 
         else:
@@ -464,6 +639,14 @@ preparation_pipeline = Pipeline([
 ])
 
 
+preparation_pipeline_meansort = Pipeline([
+    #('filter_highpercentile', Filter_High_Percentile()),
+    ('data_converter', HHMM_to_Minutes()),
+    ('numericalEncoder', Aggregate_then_GroupByMean_then_Sort_numericalEncoder()),
+    #('standardscaler', preprocessing.StandardScaler()),
+])
+
+
 # If matrix is sparse, with_mean=False must be passed to StandardScaler
 prediction_pipeline = Pipeline([
     ('features_selector', FeaturesSelector(features_toselect=['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME'])),
@@ -475,6 +658,18 @@ prediction_pipeline = Pipeline([
     #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
 ])
 #copy=False passed to StandardScaler() allows to gain memory
+
+
+
+prediction_pipeline_without_sparse = Pipeline([
+    ('features_selector', FeaturesSelector(features_toselect=['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME'])),
+    ('standardscaler', ColumnTransformer([
+        ('standardscaler_specific', StandardScaler(), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])
+    ], remainder='passthrough', sparse_threshold=1)),
+    
+    #('dense_to_sparse_converter', DenseToSparseConverter()),
+    #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
 
 '''
 # Old code that used scikit learn OneHotEncoder (which does not keep DataFrame type) instead of Pandas
@@ -494,10 +689,77 @@ ColumnTransformer([
 '''
 
 
+# In[17]:
+
+
+feature_name='UNIQUE_CARRIER'
+
+
 # In[18]:
 
 
+df_train[['ARR_DELAY', feature_name]].groupby(feature_name).mean().sort_values(by='ARR_DELAY', ascending=True)
+
+
+# In[20]:
+
+
+df_train[['ARR_DELAY', feature_name]].groupby(feature_name).mean().sort_values(by='ARR_DELAY', ascending=True)
+
+
+# In[93]:
+
+
+df_train[['ARR_DELAY', feature_name]].groupby(feature_name).mean().sort_values(by='ARR_DELAY', ascending=True).index.tolist()
+
+
+# In[17]:
+
+
 df_train_transformed = preparation_pipeline.fit_transform(df_train)
+
+
+# In[18]:
+
+
+df_train_transformed
+
+
+# In[18]:
+
+
+df_train_transformed
+
+
+# In[ ]:
+
+
+get_ipython().run_line_magic('debug', '')
+
+
+# In[40]:
+
+
+preparation_pipeline_meansort['numericalEncoder'].feature_maps['ORIGIN']['list_feature_mean_ordered_dict']['YAK']
+
+
+# In[45]:
+
+
+preparation_pipeline_meansort['numericalEncoder'].feature_maps['UNIQUE_CARRIER']['list_feature_mean_ordered_dict']['B6']
+#self.feature_maps[feature_name]['list_feature_mean_ordered_dict']
+
+
+# In[33]:
+
+
+preparation_pipeline_meansort['numericalEncoder'].feature_maps['UNIQUE_CARRIER']
+
+
+# In[25]:
+
+
+df_train[df_train['UNIQUE_CARRIER'] == 'B6']
 
 
 # In[19]:
@@ -567,12 +829,12 @@ pd.set_option('display.max_columns', 400)
 # In[29]:
 
 
-quantitative_features, qualitative_features = identify_features(df, all_features)
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
 # # Test set encoding
 
-# In[30]:
+# In[19]:
 
 
 df_test_transformed = preparation_pipeline.transform(df_test)
@@ -597,7 +859,7 @@ df_train[model1_label].shape
 # In[33]:
 
 
-from sklearn.linear_model import LinearRegression
+
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
     lin_reg = LinearRegression()
@@ -607,7 +869,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # In[34]:
 
 
-from sklearn.metrics import mean_squared_error
+
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
     df_test_predictions = lin_reg.predict(df_test_transformed)
@@ -821,7 +1083,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[53]:
+# In[36]:
 
 
 from sklearn import dummy
@@ -836,6 +1098,7 @@ y_pred_dum = dum.predict(df_test_transformed)
 
 # Evaluate
 print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
+print("MAE : {:.2f}".format(np.sqrt(mean_absolute_error(df_test[model1_label], y_pred_dum)) ))
 
 
 # In[54]:
@@ -983,7 +1246,7 @@ evaluate_model(grid_search_SVR.best_estimator_, df_test_transformed, df_test[mod
 # In[31]:
 
 
-from sklearn.preprocessing import PolynomialFeatures
+
 
 
 # In[32]:
@@ -1124,10 +1387,183 @@ polynomial_reg.fit(df_train_transformed, df_train[model1_label])
 evaluate_model(polynomial_reg, df_test_transformed, df_test[model1_label])
 
 
+# # New try with group by + mean + sort encoding of categorical features
+# With preparation_pipeline_meansort instead of preparation_pipeline
+
+# In[45]:
+
+
+del df
+del df_train
+del df_test
+del df_train_transformed
+del df_test_transformed
+
+
+# In[46]:
+
+
+df = load_data()
+
+
+# In[53]:
+
+
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+
+
+# In[54]:
+
+
+df, df_train, df_test = custom_train_test_split_sample(df)
+
+
+# In[55]:
+
+
+df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train)
+df_train_transformed = prediction_pipeline_without_sparse.fit_transform(df_train_transformed)
+
+df_test_transformed = preparation_pipeline_meansort.transform(df_test)
+df_test_transformed = prediction_pipeline_without_sparse.transform(df_test_transformed)
+df_test_transformed.shape
+
+
+# In[56]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+
+# => RMSE = 42.21335009806042
+
+# In[57]:
+
+
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# => RMSE on training set : 41.35267146874754 (close to RMSE on test set => under fitting)
+
+# In[43]:
+
+
+lin_reg.coef_
+
+
+# In[81]:
+
+
+# Feature importances :
+(abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+
+
+# In[18]:
+
+
+df_train_transformed.shape
+
+
+# In[19]:
+
+
+df_train_transformed
+
+
+# In[82]:
+
+
+poly = PolynomialFeatures(degree=2)
+poly.fit(df_train_transformed)
+df_train_transformed = poly.transform(df_train_transformed)
+df_test_transformed = poly.transform(df_test_transformed)
+
+
+# In[83]:
+
+
+poly.n_output_features_
+
+
+# In[84]:
+
+
+df_train_transformed.shape
+
+
+# In[85]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    lin_reg = LinearRegression()
+    lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[86]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+
+# => RMSE on test set : RMSE : 42.12678182212536
+
+# In[87]:
+
+
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# => RMSE on training set : 41.26055791264713
+
+# In[90]:
+
+
+# Feature importances :
+(abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+
+
+# In[31]:
+
+
+poly = PolynomialFeatures(degree=3)
+poly.fit(df_train_transformed)
+df_train_transformed = poly.transform(df_train_transformed)
+df_test_transformed = poly.transform(df_test_transformed)
+
+
 # In[ ]:
 
 
+df_train_transformed.shape
 
+
+# In[ ]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    lin_reg = LinearRegression()
+    lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[ ]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+
+# In[35]:
+
+
+evaluate_model_MAE(lin_reg, df_test_transformed, df_test[model1_label])
 
 
 # # Annex : unused code
