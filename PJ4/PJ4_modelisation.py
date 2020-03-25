@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ4 : transats dataset : modelisation notebook
 
-# In[34]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -56,6 +56,10 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
 
 from sklearn.preprocessing import PolynomialFeatures
+
+
+### For progress bar :
+from tqdm import tqdm_notebook as tqdm
 
 
 # In[2]:
@@ -189,7 +193,7 @@ def evaluate_model(model, X_test, Y_test):
     
 
 
-# In[32]:
+# In[10]:
 
 
 def evaluate_model_MAE(model, X_test, Y_test):
@@ -199,27 +203,84 @@ def evaluate_model_MAE(model, X_test, Y_test):
     
 
 
-# # Data load
-
-# In[10]:
-
-
-df = load_data()
-
-
 # In[11]:
 
 
-df.shape
+def minibatch_generate_indexes(df_train_transformed, step_size):
+    nb_instances = df_train_transformed.shape[0]
+    final_index = nb_instances - 1
+
+    for m in range(int(nb_instances/step_size)):
+        left_index = m*step_size
+        right_index = m*step_size + step_size - 1
+
+        yield((left_index, right_index))
+
+    # Last step :
+    yield((left_index + step_size, final_index))
 
 
 # In[12]:
 
 
-display_percent_complete(df)
+def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size):
+    train_errors, val_errors = [], []
+    
+    minibatch_indexes = minibatch_generate_indexes(X_train, step_size)
+    
+    # Initiate progress bar
+    #nb_instances = len(df_train_transformed)
+    nb_instances = df_train_transformed.shape[0]
+    nb_iter = int(nb_instances/step_size) + 1    
+    progbar = tqdm(range(nb_iter))
+    #cnt = 0
+    print(f'Calculating learning curve for {nb_iter} iterations')
+    
+    for (left_index, right_index) in minibatch_indexes:
+        model.fit(X_train[:right_index], y_train[:right_index])
+        y_train_predict = model.predict(X_train[:right_index])
+        y_test_predict = model.predict(X_test)
+        train_errors.append(mean_squared_error(y_train[:right_index], y_train_predict))
+        val_errors.append(mean_squared_error(y_test, y_test_predict))
+        
+        # Update progress bar
+        progbar.update(1)
+        #cnt += 1
+
+    plt.plot(np.sqrt(train_errors), "r-+", linewidth=2, label="train")
+    plt.plot(np.sqrt(val_errors), "b-", linewidth=3, label="test")
+    plt.legend(loc="upper right", fontsize=14)   # not shown in the book
+    plt.xlabel("Training set iterations", fontsize=14) # not shown
+    plt.ylabel("RMSE", fontsize=14)              # not shown
 
 
 # In[13]:
+
+
+#minibatches = minibatch_generate_indexes(df_train_transformed)
+
+
+# # Data load
+
+# In[14]:
+
+
+df = load_data()
+
+
+# In[15]:
+
+
+df.shape
+
+
+# In[16]:
+
+
+display_percent_complete(df)
+
+
+# In[17]:
 
 
 '''
@@ -231,7 +292,7 @@ for column_name in df.columns:
 
 # # Identification of features
 
-# In[14]:
+# In[18]:
 
 
 # Below are feature from dataset that we decided to keep: 
@@ -247,7 +308,7 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 # # Split train set, test set
 
-# In[16]:
+# In[19]:
 
 
 from sklearn.model_selection import train_test_split
@@ -261,109 +322,43 @@ if (SAMPLED_DATA == True):
     df = df.loc[df_train.index]
 
 
-# In[17]:
-
-
-get_ipython().run_line_magic('macro', '-q __split_train_test 16')
-
-
-# In[15]:
+# In[20]:
 
 
 df_train
 
 
-# In[16]:
+# In[21]:
 
 
 df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True)
 
 
-# In[17]:
+# In[22]:
 
 
 df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True).plot()
 
 
-# In[46]:
+# In[23]:
 
 
 list_carriers_mean_ordered = df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True).index.tolist()
 
 
-# In[47]:
+# In[24]:
 
 
 list_carriers_mean_ordered_dict = {list_carriers_mean_ordered[i] : i for i in range(len(list_carriers_mean_ordered))  }
 
 
-# In[48]:
+# In[25]:
 
 
 list_carriers_mean_ordered_mapper = lambda k : list_carriers_mean_ordered_dict[k]
 
 
-# In[49]:
-
-
-list_carriers_mean_ordered_mapper('UA')
-
-
-# In[50]:
-
-
-list_carriers_mean_ordered_dict
-
-
-# In[51]:
-
-
-df_train[['UNIQUE_CARRIER']]
-
-
-# In[52]:
-
-
-df_train['UNIQUE_CARRIER'].apply(list_carriers_mean_ordered_mapper)
-
-
-# In[85]:
-
-
-df_train['UNIQUE_CARRIER'].dtype
-
-
-# In[79]:
-
-
-df_train['UNIQUE_CARRIER'] = df_train.loc[:, 'UNIQUE_CARRIER'].apply(list_carriers_mean_ordered_mapper)
-
-
-# In[81]:
-
-
-df_train['UNIQUE_CARRIER'].astype()
-
-
-# In[37]:
-
-
-list_carriers_mean_ordered
-
-
 # In[26]:
-
-
-list_carriers_mean_ordered
-
-
-# In[ ]:
-
-
-list_carriers_mean_ordered[]
-
-
-# In[16]:
 
 
 #df = df.loc[df_train.index]
@@ -371,7 +366,7 @@ list_carriers_mean_ordered[]
 
 # # Features encoding
 
-# In[52]:
+# In[14]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -689,144 +684,62 @@ ColumnTransformer([
 '''
 
 
-# In[17]:
-
-
-feature_name='UNIQUE_CARRIER'
-
-
-# In[18]:
-
-
-df_train[['ARR_DELAY', feature_name]].groupby(feature_name).mean().sort_values(by='ARR_DELAY', ascending=True)
-
-
-# In[20]:
-
-
-df_train[['ARR_DELAY', feature_name]].groupby(feature_name).mean().sort_values(by='ARR_DELAY', ascending=True)
-
-
-# In[93]:
-
-
-df_train[['ARR_DELAY', feature_name]].groupby(feature_name).mean().sort_values(by='ARR_DELAY', ascending=True).index.tolist()
-
-
-# In[17]:
+# In[28]:
 
 
 df_train_transformed = preparation_pipeline.fit_transform(df_train)
 
 
-# In[18]:
+# In[29]:
 
 
 df_train_transformed
 
 
-# In[18]:
-
-
-df_train_transformed
-
-
-# In[ ]:
-
-
-get_ipython().run_line_magic('debug', '')
-
-
-# In[40]:
-
-
-preparation_pipeline_meansort['numericalEncoder'].feature_maps['ORIGIN']['list_feature_mean_ordered_dict']['YAK']
-
-
-# In[45]:
-
-
-preparation_pipeline_meansort['numericalEncoder'].feature_maps['UNIQUE_CARRIER']['list_feature_mean_ordered_dict']['B6']
-#self.feature_maps[feature_name]['list_feature_mean_ordered_dict']
-
-
-# In[33]:
-
-
-preparation_pipeline_meansort['numericalEncoder'].feature_maps['UNIQUE_CARRIER']
-
-
-# In[25]:
-
-
-df_train[df_train['UNIQUE_CARRIER'] == 'B6']
-
-
-# In[19]:
+# In[30]:
 
 
 df_train_transformed.shape
 
 
-# In[20]:
+# In[31]:
 
 
 df_train_transformed.info()
 
 
-# In[21]:
-
-
-'''
-pd.set_option('display.max_columns', 1000)
-df_train_transformed
-'''
-
-
-# In[22]:
+# In[32]:
 
 
 df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
 
 
-# In[23]:
+# In[35]:
 
 
 df_train_transformed.shape
 
 
-# In[24]:
-
-
-#pd.DataFrame(df_train_transformed)
-
-
-# In[25]:
+# In[37]:
 
 
 from scipy import sparse
 sparse.issparse(df_train_transformed)
 
 
-# In[26]:
+# In[38]:
 
 
 #pd.DataFrame.sparse.from_spmatrix(df_train_transformed)
 
 
-# In[27]:
-
-
-#df_train_transformed.info()
-
-
-# In[28]:
+# In[40]:
 
 
 pd.set_option('display.max_columns', 400)
 
 
-# In[29]:
+# In[41]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
@@ -834,7 +747,7 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 # # Test set encoding
 
-# In[19]:
+# In[42]:
 
 
 df_test_transformed = preparation_pipeline.transform(df_test)
@@ -844,19 +757,13 @@ df_test_transformed.shape
 
 # # Linear regression
 
-# In[31]:
-
-
-df_train_transformed.shape
-
-
-# In[32]:
+# In[43]:
 
 
 df_train[model1_label].shape
 
 
-# In[33]:
+# In[44]:
 
 
 
@@ -866,7 +773,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[34]:
+# In[45]:
 
 
 
@@ -879,6 +786,36 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 
 # => 42.17  (42.16679389006135)
+
+# In[48]:
+
+
+df_train_transformed.shape[0]
+
+
+# In[53]:
+
+
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+
+
+# In[60]:
+
+
+df_train
+
+
+# In[73]:
+
+
+df_train_transformed[0, :].toarray()
+
+
+# In[75]:
+
+
+df_train[[model1_label]]
+
 
 # In[43]:
 
@@ -915,7 +852,7 @@ lin_reg.coef_
 #          9.46369559,  -0.27437885,  -1.82963879,   0.47213692,
 #         -2.5256052 ,  -2.053249  ,  -1.04523965])
 
-# In[38]:
+# In[56]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1243,12 +1180,6 @@ evaluate_model(grid_search_SVR.best_estimator_, df_test_transformed, df_test[mod
 
 # # Polynomial features + linear regression
 
-# In[31]:
-
-
-
-
-
 # In[32]:
 
 
@@ -1390,7 +1321,7 @@ evaluate_model(polynomial_reg, df_test_transformed, df_test[model1_label])
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[45]:
+# In[77]:
 
 
 del df
@@ -1400,25 +1331,25 @@ del df_train_transformed
 del df_test_transformed
 
 
-# In[46]:
+# In[15]:
 
 
 df = load_data()
 
 
-# In[53]:
+# In[16]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[54]:
+# In[17]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[55]:
+# In[18]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train)
@@ -1429,7 +1360,7 @@ df_test_transformed = prediction_pipeline_without_sparse.transform(df_test_trans
 df_test_transformed.shape
 
 
-# In[56]:
+# In[19]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1442,9 +1373,7 @@ df_test_predictions = lin_reg.predict(df_test_transformed)
 evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 
 
-# => RMSE = 42.21335009806042
-
-# In[57]:
+# In[20]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
@@ -1452,32 +1381,68 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 # => RMSE on training set : 41.35267146874754 (close to RMSE on test set => under fitting)
 
-# In[43]:
+# In[21]:
 
 
 lin_reg.coef_
 
 
-# In[81]:
+# In[22]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[18]:
+# In[23]:
 
 
 df_train_transformed.shape
 
 
-# In[19]:
+# In[24]:
 
 
 df_train_transformed
 
 
-# In[82]:
+# In[25]:
+
+
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+
+
+# ## Linear Regression with bias
+
+# In[26]:
+
+
+df_train_transformed_bias = np.c_[np.ones((len(df_train_transformed), 1)), df_train_transformed]  # add x0 = 1 to each instance
+df_test_transformed_bias = np.c_[np.ones((len(df_test_transformed), 1)), df_test_transformed]  # add x0 = 1 to each instance
+
+
+# In[27]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed_bias, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed_bias)
+evaluate_model(lin_reg, df_test_transformed_bias, df_test[model1_label])
+
+
+# In[28]:
+
+
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+
+
+# ## Polynomial regression
+
+# In[89]:
 
 
 poly = PolynomialFeatures(degree=2)
@@ -1486,19 +1451,19 @@ df_train_transformed = poly.transform(df_train_transformed)
 df_test_transformed = poly.transform(df_test_transformed)
 
 
-# In[83]:
+# In[90]:
 
 
 poly.n_output_features_
 
 
-# In[84]:
+# In[91]:
 
 
 df_train_transformed.shape
 
 
-# In[85]:
+# In[92]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1506,7 +1471,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[86]:
+# In[93]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1515,13 +1480,19 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # => RMSE on test set : RMSE : 42.12678182212536
 
-# In[87]:
+# In[94]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 
 # => RMSE on training set : 41.26055791264713
+
+# In[95]:
+
+
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+
 
 # In[90]:
 
