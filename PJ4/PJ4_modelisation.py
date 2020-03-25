@@ -260,9 +260,27 @@ def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size):
 #minibatches = minibatch_generate_indexes(df_train_transformed)
 
 
+# In[66]:
+
+
+def reset_data():
+    df = load_data()
+    all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+    df, df_train, df_test = custom_train_test_split_sample(df)
+
+    df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train)
+    df_train_transformed = prediction_pipeline_without_sparse.fit_transform(df_train_transformed)
+
+    df_test_transformed = preparation_pipeline_meansort.transform(df_test)
+    df_test_transformed = prediction_pipeline_without_sparse.transform(df_test_transformed)
+    df_test_transformed.shape
+    
+    return df, df_train, df_test, df_train_transformed, df_test_transformed
+
+
 # # Data load
 
-# In[14]:
+# In[ ]:
 
 
 df = load_data()
@@ -366,7 +384,7 @@ list_carriers_mean_ordered_mapper = lambda k : list_carriers_mean_ordered_dict[k
 
 # # Features encoding
 
-# In[14]:
+# In[30]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -616,7 +634,43 @@ class DenseToSparseConverter(BaseEstimator, TransformerMixin):
     def transform(self, matrix):   
         return(sparse.csr_matrix(matrix))
 
+    
+'''
+This class adds polynomial features in univariate way  (if feature X and n_degree 3 :  then it will add X², X³, and an intercept at the end)
+'''    
+class PolynomialFeaturesUnivariateAdder(BaseEstimator, TransformerMixin):
+    def __init__(self, n_degrees=2):
+        self.n_degrees = n_degrees
+        self.fitted = False
+    
+    def fit(self, df, labels=None):              
+        return self
+    
+    def transform(self, df):
+        if (self.fitted == False):
+            self.fit(df)
+
+        nb_instances, n_features = df.shape
+        df_poly = np.empty((nb_instances, 0)) # Create empty array of nb_instances line and 0 features yet (we'll concatenate polynomial features to it)
+
+        progbar = tqdm(range(n_features))
+        print('Adding polynomial features')
+
+        for feature_index in range(n_features):    
+            df_1feature = df[:,feature_index]  # Reshape 
+
+            for n_degree in range(self.n_degrees):
+                df_poly = np.c_[df_poly, np.power(df_1feature, n_degree + 1)]
+
+            progbar.update(1)
+
+        # Add bias (intercept)
+        df_poly = np.c_[df_poly, np.ones((len(df_poly), 1))]  # add x0 = 1 feature        
         
+        return(df_poly)
+        
+    
+
         
 '''
 conversion_pipeline = Pipeline([
@@ -1202,12 +1256,6 @@ poly = ColumnTransformer([
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
     df_train_transformed = poly.fit_transform(df_train_transformed)
-
-
-# In[35]:
-
-
-if (EXECUTE_INTERMEDIATE_MODELS == True):
     df_test_transformed = poly.transform(df_test_transformed)
 
 
@@ -1321,7 +1369,7 @@ evaluate_model(polynomial_reg, df_test_transformed, df_test[model1_label])
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[77]:
+# In[53]:
 
 
 del df
@@ -1331,25 +1379,25 @@ del df_train_transformed
 del df_test_transformed
 
 
-# In[15]:
+# In[16]:
 
 
 df = load_data()
 
 
-# In[16]:
+# In[17]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[17]:
+# In[18]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[18]:
+# In[19]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train)
@@ -1440,7 +1488,7 @@ evaluate_model(lin_reg, df_test_transformed_bias, df_test[model1_label])
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
 
 
-# ## Polynomial regression
+# ## Polynomial regression degree 2
 
 # In[89]:
 
@@ -1501,40 +1549,95 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[31]:
+# In[38]:
 
 
-poly = PolynomialFeatures(degree=3)
-poly.fit(df_train_transformed)
-df_train_transformed = poly.transform(df_train_transformed)
+df_train_transformed[:,0].shape
+
+
+# ## Polynomial regression univariate, and higher degree
+
+# ### Degree 3
+
+# In[46]:
+
+
+nb_instances = df_train_transformed.shape[0]
+
+
+# In[47]:
+
+
+poly = PolynomialFeaturesUnivariateAdder(n_degrees = 3)
+
+
+# In[48]:
+
+
+df_train_transformed = poly.fit_transform(df_train_transformed)
+df_test_transformed = poly.fit_transform(df_test_transformed)
+
+
+# In[51]:
+
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+
+
+# ### Degree 4
+
+# In[67]:
+
+
+del df
+del df_train
+del df_test
+del df_train_transformed
+del df_test_transformed
+
+
+# In[68]:
+
+
+df, df_train, df_test, df_train_transformed, df_test_transformed = reset_data()
+
+
+# In[69]:
+
+
+df_train_transformed
+
+
+# In[70]:
+
+
+poly = PolynomialFeaturesUnivariateAdder(n_degrees = 4)
+df_train_transformed = poly.fit_transform(df_train_transformed)
 df_test_transformed = poly.transform(df_test_transformed)
 
 
-# In[ ]:
+# In[71]:
 
 
-df_train_transformed.shape
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
 
 
-# In[ ]:
+# In[75]:
 
 
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    lin_reg = LinearRegression()
-    lin_reg.fit(df_train_transformed, df_train[model1_label])
-
-
-# In[ ]:
-
-
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
-
-
-# In[35]:
-
-
-evaluate_model_MAE(lin_reg, df_test_transformed, df_test[model1_label])
+lin_reg.summary
 
 
 # # Annex : unused code
@@ -1581,8 +1684,41 @@ stratified_split_train = StratifiedShuffleSplit(n_splits=5, test_size=0.2, rando
 '''
 
 
-# In[ ]:
+# poly = PolynomialFeatures(degree=3)
+# poly.fit(df_train_transformed)
+# df_train_transformed = poly.transform(df_train_transformed)
+# df_test_transformed = poly.transform(df_test_transformed)
 
+# df_train_transformed.shape
 
+# if (EXECUTE_INTERMEDIATE_MODELS == True):
+#     lin_reg = LinearRegression()
+#     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
+# if (EXECUTE_INTERMEDIATE_MODELS == True):
+#     evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 
+# evaluate_model_MAE(lin_reg, df_test_transformed, df_test[model1_label])
+
+# 
+
+# # This code is now in a transformer function :
+# n_degrees = 3
+# n_features = df_train_transformed.shape[1]
+# 
+# nb_instances = df_train_transformed.shape[0]
+# df_poly = np.empty((nb_instances, 0)) # Create empty array of nb_instances line and 0 features yet (we'll concatenate polynomial features to it)
+# 
+# progbar = tqdm(range(n_features))
+# print('Adding polynomial features')
+# 
+# for feature_index in range(n_features):    
+#     df_1feature = df_train_transformed[:,feature_index]  # Reshape 
+#     
+#     for n_degree in range(n_degrees):
+#         df_poly = np.c_[df_poly, np.power(df_1feature, n_degree + 1)]
+#     
+#     progbar.update(1)
+#     
+# # Add bias (intercept)
+# df_poly = np.c_[df_poly, np.ones((len(df_poly), 1))]  # add x0 = 1 feature
