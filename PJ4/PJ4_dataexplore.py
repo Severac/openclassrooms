@@ -539,20 +539,20 @@ ax.legend(["Mean delay in minutes"])
 
 # ## Mean delay by origin airport
 
-# In[64]:
+# In[55]:
 
 
 df[['ARR_DELAY', 'ORIGIN']].groupby('ORIGIN').mean().std()
 
 
-# In[62]:
+# In[56]:
 
 
 pd.set_option('display.max_rows', 500)
 df[['ARR_DELAY', 'ORIGIN']].groupby('ORIGIN').mean().sort_values(by='ARR_DELAY', ascending=False)
 
 
-# In[55]:
+# In[57]:
 
 
 fig, ax = plt.subplots()
@@ -562,13 +562,13 @@ ax.legend(["Mean delay in minutes"])
 
 # ## Mean delay by destination airport
 
-# In[65]:
+# In[58]:
 
 
 df[['ARR_DELAY', 'DEST']].groupby('DEST').mean().std()
 
 
-# In[63]:
+# In[59]:
 
 
 df[['ARR_DELAY', 'DEST']].groupby('DEST').mean().sort_values(by='ARR_DELAY', ascending=False)
@@ -582,18 +582,36 @@ df[['ARR_DELAY', 'DEST']].groupby('DEST').mean().sort_values(by='ARR_DELAY', asc
 
 # ## Mean delay by day of week
 
-# In[55]:
+# In[66]:
 
 
 df['DAY_OF_WEEK'] = df['DAY_OF_WEEK'].astype(str)
 
 
-# In[56]:
+# In[78]:
 
 
 fig, ax = plt.subplots()
 df[['ARR_DELAY', 'DAY_OF_WEEK']].groupby('DAY_OF_WEEK').mean().plot.bar(figsize=(16,10), title='Mean delay by day of week', ax=ax)
 ax.legend(["Mean delay in minutes"])
+plt.show()
+
+
+# In[124]:
+
+
+fig, ax = plt.subplots()
+df[['DAY_OF_WEEK']].groupby('DAY_OF_WEEK').size().plot.bar(figsize=(16,10), title='Number of flights by day of week', ax=ax)
+ax.legend(["Number of flights"])
+plt.show()
+
+
+# In[68]:
+
+
+fig, ax = plt.subplots()
+df[['ARR_DELAY', 'DAY_OF_WEEK']].groupby('DAY_OF_WEEK').std().plot.bar(figsize=(16,10), title='Standard deviation delay by day of week', ax=ax)
+ax.legend(["Standard deviation delay in minutes"])
 
 
 # ## Mean delay by month

@@ -81,7 +81,7 @@ def load_data():
     return(df)
 
 
-# In[4]:
+# In[85]:
 
 
 def custom_train_test_split_sample(df):
@@ -1074,7 +1074,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[36]:
+# In[86]:
 
 
 from sklearn import dummy
@@ -1379,25 +1379,25 @@ del df_train_transformed
 del df_test_transformed
 
 
-# In[16]:
+# In[78]:
 
 
 df = load_data()
 
 
-# In[17]:
+# In[79]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[18]:
+# In[80]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[19]:
+# In[81]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train)
@@ -1408,7 +1408,7 @@ df_test_transformed = prediction_pipeline_without_sparse.transform(df_test_trans
 df_test_transformed.shape
 
 
-# In[19]:
+# In[82]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1421,7 +1421,7 @@ df_test_predictions = lin_reg.predict(df_test_transformed)
 evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 
 
-# In[20]:
+# In[83]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
@@ -1454,7 +1454,7 @@ df_train_transformed.shape
 df_train_transformed
 
 
-# In[25]:
+# In[84]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
@@ -1592,7 +1592,7 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 
 # ### Degree 4
 
-# In[67]:
+# In[77]:
 
 
 del df
