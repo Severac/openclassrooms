@@ -3,6 +3,8 @@
 
 # # Openclassrooms PJ4 : transats dataset : modelisation notebook
 
+# # Global variables and functions used in the notebook
+
 # In[1]:
 
 
@@ -28,6 +30,18 @@ DATA_PATH = os.path.join("datasets", "transats")
 DATA_PATH = os.path.join(DATA_PATH, "out")
 
 DATA_PATH_FILE_INPUT = os.path.join(DATA_PATH, "transats_metadata_transformed.csv")
+
+
+ALL_FEATURES = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME','ARR_DELAY','DEP_DELAY', 'TAXI_OUT', 'TAIL_NUM', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
+
+'''
+MODEL1_FEATURES = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME']
+MODEL1_LABEL = 'ARR_DELAY'
+'''
+
+MODEL1_FEATURES = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
+MODEL1_FEATURES_QUANTITATIVE = ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
+MODEL1_LABEL = 'ARR_DELAY'
 
 plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
 
@@ -81,7 +95,7 @@ def load_data():
     return(df)
 
 
-# In[85]:
+# In[4]:
 
 
 def custom_train_test_split_sample(df):
@@ -125,10 +139,10 @@ def display_percent_complete(df):
 
 
 def identify_features(df):
-    all_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME','ARR_DELAY','DEP_DELAY', 'TAXI_OUT', 'TAIL_NUM']
+    all_features = ALL_FEATURES
 
-    model1_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME']
-    model1_label = 'ARR_DELAY'
+    model1_features = MODEL1_FEATURES
+    model1_label = MODEL1_LABEL
     
     quantitative_features = []
     qualitative_features = []
@@ -260,7 +274,7 @@ def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size):
 #minibatches = minibatch_generate_indexes(df_train_transformed)
 
 
-# In[66]:
+# In[14]:
 
 
 def reset_data():
@@ -280,25 +294,25 @@ def reset_data():
 
 # # Data load
 
-# In[ ]:
+# In[15]:
 
 
 df = load_data()
 
 
-# In[15]:
+# In[16]:
 
 
 df.shape
 
 
-# In[16]:
+# In[17]:
 
 
 display_percent_complete(df)
 
 
-# In[17]:
+# In[18]:
 
 
 '''
@@ -310,7 +324,7 @@ for column_name in df.columns:
 
 # # Identification of features
 
-# In[18]:
+# In[19]:
 
 
 # Below are feature from dataset that we decided to keep: 
@@ -326,7 +340,7 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 # # Split train set, test set
 
-# In[19]:
+# In[20]:
 
 
 from sklearn.model_selection import train_test_split
@@ -340,43 +354,43 @@ if (SAMPLED_DATA == True):
     df = df.loc[df_train.index]
 
 
-# In[20]:
+# In[21]:
 
 
 df_train
 
 
-# In[21]:
+# In[22]:
 
 
 df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True)
 
 
-# In[22]:
+# In[23]:
 
 
 df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True).plot()
 
 
-# In[23]:
+# In[24]:
 
 
 list_carriers_mean_ordered = df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True).index.tolist()
 
 
-# In[24]:
+# In[25]:
 
 
 list_carriers_mean_ordered_dict = {list_carriers_mean_ordered[i] : i for i in range(len(list_carriers_mean_ordered))  }
 
 
-# In[25]:
+# In[26]:
 
 
 list_carriers_mean_ordered_mapper = lambda k : list_carriers_mean_ordered_dict[k]
 
 
-# In[26]:
+# In[27]:
 
 
 #df = df.loc[df_train.index]
@@ -384,7 +398,7 @@ list_carriers_mean_ordered_mapper = lambda k : list_carriers_mean_ordered_dict[k
 
 # # Features encoding
 
-# In[30]:
+# In[28]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -698,9 +712,9 @@ preparation_pipeline_meansort = Pipeline([
 
 # If matrix is sparse, with_mean=False must be passed to StandardScaler
 prediction_pipeline = Pipeline([
-    ('features_selector', FeaturesSelector(features_toselect=['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME'])),
+    ('features_selector', FeaturesSelector(features_toselect=MODEL1_FEATURES)),
     ('standardscaler', ColumnTransformer([
-        ('standardscaler_specific', StandardScaler(), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])
+        ('standardscaler_specific', StandardScaler(), MODEL1_FEATURES_QUANTITATIVE)
     ], remainder='passthrough', sparse_threshold=1)),
     
     ('dense_to_sparse_converter', DenseToSparseConverter()),
@@ -711,9 +725,9 @@ prediction_pipeline = Pipeline([
 
 
 prediction_pipeline_without_sparse = Pipeline([
-    ('features_selector', FeaturesSelector(features_toselect=['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME'])),
+    ('features_selector', FeaturesSelector(features_toselect=MODEL1_FEATURES)),
     ('standardscaler', ColumnTransformer([
-        ('standardscaler_specific', StandardScaler(), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])
+        ('standardscaler_specific', StandardScaler(), MODEL1_FEATURES_QUANTITATIVE)
     ], remainder='passthrough', sparse_threshold=1)),
     
     #('dense_to_sparse_converter', DenseToSparseConverter()),
@@ -738,62 +752,62 @@ ColumnTransformer([
 '''
 
 
-# In[28]:
+# In[29]:
 
 
 df_train_transformed = preparation_pipeline.fit_transform(df_train)
 
 
-# In[29]:
+# In[30]:
 
 
 df_train_transformed
 
 
-# In[30]:
-
-
-df_train_transformed.shape
-
-
 # In[31]:
 
 
-df_train_transformed.info()
+df_train_transformed.shape
 
 
 # In[32]:
 
 
+df_train_transformed.info()
+
+
+# In[33]:
+
+
 df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
 
 
-# In[35]:
+# In[34]:
 
 
 df_train_transformed.shape
 
 
-# In[37]:
+# In[35]:
 
 
 from scipy import sparse
 sparse.issparse(df_train_transformed)
 
 
-# In[38]:
+# In[36]:
 
 
 #pd.DataFrame.sparse.from_spmatrix(df_train_transformed)
 
 
-# In[40]:
+# In[37]:
 
 
 pd.set_option('display.max_columns', 400)
 
 
-# In[41]:
+# In[38]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
@@ -801,7 +815,7 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 # # Test set encoding
 
-# In[42]:
+# In[39]:
 
 
 df_test_transformed = preparation_pipeline.transform(df_test)
@@ -811,13 +825,13 @@ df_test_transformed.shape
 
 # # Linear regression
 
-# In[43]:
+# In[40]:
 
 
 df_train[model1_label].shape
 
 
-# In[44]:
+# In[41]:
 
 
 
@@ -827,7 +841,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[45]:
+# In[42]:
 
 
 
@@ -841,37 +855,37 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # => 42.17  (42.16679389006135)
 
-# In[48]:
+# In[43]:
 
 
 df_train_transformed.shape[0]
 
 
-# In[53]:
+# In[44]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
 
 
-# In[60]:
+# In[45]:
 
 
 df_train
 
 
-# In[73]:
+# In[46]:
 
 
 df_train_transformed[0, :].toarray()
 
 
-# In[75]:
+# In[47]:
 
 
 df_train[[model1_label]]
 
 
-# In[43]:
+# In[48]:
 
 
 lin_reg.coef_
@@ -906,7 +920,7 @@ lin_reg.coef_
 #          9.46369559,  -0.27437885,  -1.82963879,   0.47213692,
 #         -2.5256052 ,  -2.053249  ,  -1.04523965])
 
-# In[56]:
+# In[49]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -917,7 +931,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test_predictions, color='coral')
 
 
-# In[39]:
+# In[50]:
 
 
 from sklearn.model_selection import cross_validate
@@ -925,7 +939,7 @@ from sklearn.model_selection import cross_validate
 #scores = cross_validate(lin_reg, df_train_transformed, df_train[model1_label], scoring='neg_root_mean_squared_error', cv=5)
 
 
-# In[40]:
+# In[51]:
 
 
 #scores['test_score'].mean()
@@ -1074,7 +1088,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[86]:
+# In[52]:
 
 
 from sklearn import dummy
@@ -1092,19 +1106,19 @@ print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y
 print("MAE : {:.2f}".format(np.sqrt(mean_absolute_error(df_test[model1_label], y_pred_dum)) ))
 
 
-# In[54]:
+# In[53]:
 
 
 plt.scatter(df_test[model1_label], y_pred_dum, color='coral')
 
 
-# In[55]:
+# In[54]:
 
 
 df_test[model1_label]
 
 
-# In[56]:
+# In[55]:
 
 
 y_pred_dum
@@ -1369,7 +1383,7 @@ evaluate_model(polynomial_reg, df_test_transformed, df_test[model1_label])
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[53]:
+# In[56]:
 
 
 del df
@@ -1379,25 +1393,25 @@ del df_train_transformed
 del df_test_transformed
 
 
-# In[78]:
+# In[57]:
 
 
 df = load_data()
 
 
-# In[79]:
+# In[58]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[80]:
+# In[59]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[81]:
+# In[60]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train)
@@ -1408,7 +1422,7 @@ df_test_transformed = prediction_pipeline_without_sparse.transform(df_test_trans
 df_test_transformed.shape
 
 
-# In[82]:
+# In[61]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1421,7 +1435,7 @@ df_test_predictions = lin_reg.predict(df_test_transformed)
 evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 
 
-# In[83]:
+# In[62]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
@@ -1429,32 +1443,32 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 # => RMSE on training set : 41.35267146874754 (close to RMSE on test set => under fitting)
 
-# In[21]:
+# In[63]:
 
 
 lin_reg.coef_
 
 
-# In[22]:
+# In[64]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[23]:
+# In[65]:
 
 
 df_train_transformed.shape
 
 
-# In[24]:
+# In[66]:
 
 
 df_train_transformed
 
 
-# In[84]:
+# In[67]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
@@ -1559,26 +1573,26 @@ df_train_transformed[:,0].shape
 
 # ### Degree 3
 
-# In[46]:
+# In[68]:
 
 
 nb_instances = df_train_transformed.shape[0]
 
 
-# In[47]:
+# In[69]:
 
 
 poly = PolynomialFeaturesUnivariateAdder(n_degrees = 3)
 
 
-# In[48]:
+# In[70]:
 
 
 df_train_transformed = poly.fit_transform(df_train_transformed)
 df_test_transformed = poly.fit_transform(df_test_transformed)
 
 
-# In[51]:
+# In[71]:
 
 
 lin_reg = LinearRegression()

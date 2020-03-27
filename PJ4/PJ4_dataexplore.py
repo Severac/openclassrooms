@@ -42,6 +42,8 @@ sns.set()
 #import common_functions
 
 
+### For progress bar :
+from tqdm import tqdm_notebook as tqdm
 
 
 # In[2]:
@@ -560,35 +562,43 @@ df[['ARR_DELAY', 'ORIGIN']].groupby('ORIGIN').mean().plot.bar(figsize=(16,10), t
 ax.legend(["Mean delay in minutes"])
 
 
+# In[58]:
+
+
+fig, ax = plt.subplots()
+df[['ARR_DELAY', 'ORIGIN']].groupby('ORIGIN').mean().sort_values(by='ARR_DELAY', ascending=False).head(10).plot.bar(figsize=(16,10), title='Mean delay by origin airport', ax=ax)
+ax.legend(["Mean delay in minutes"])
+
+
 # ## Mean delay by destination airport
 
-# In[58]:
+# In[59]:
 
 
 df[['ARR_DELAY', 'DEST']].groupby('DEST').mean().std()
 
 
-# In[59]:
+# In[60]:
 
 
 df[['ARR_DELAY', 'DEST']].groupby('DEST').mean().sort_values(by='ARR_DELAY', ascending=False)
 
 
-# In[ ]:
+# In[61]:
 
 
-
+df[['ARR_DELAY', 'ORIGIN', 'DAY_OF_WEEK']].groupby(['ORIGIN', 'DAY_OF_WEEK']).mean().sort_values(by='ARR_DELAY', ascending=False).head(10)
 
 
 # ## Mean delay by day of week
 
-# In[66]:
+# In[62]:
 
 
 df['DAY_OF_WEEK'] = df['DAY_OF_WEEK'].astype(str)
 
 
-# In[78]:
+# In[63]:
 
 
 fig, ax = plt.subplots()
@@ -597,7 +607,7 @@ ax.legend(["Mean delay in minutes"])
 plt.show()
 
 
-# In[124]:
+# In[64]:
 
 
 fig, ax = plt.subplots()
@@ -606,7 +616,7 @@ ax.legend(["Number of flights"])
 plt.show()
 
 
-# In[68]:
+# In[65]:
 
 
 fig, ax = plt.subplots()
@@ -616,18 +626,12 @@ ax.legend(["Standard deviation delay in minutes"])
 
 # ## Mean delay by month
 
-# In[57]:
+# In[66]:
 
 
 fig, ax = plt.subplots()
 df[['ARR_DELAY', 'MONTH']].groupby('MONTH').mean().plot.bar(figsize=(16,10), title='Mean delay by month', ax=ax)
 ax.legend(["Mean delay in minutes"])
-
-
-# In[58]:
-
-
-#pd.to_datetime(df['CRS_DEP_TIME'], format="%I%M")
 
 
 # # Feature engineering
@@ -772,25 +776,128 @@ ax.legend(["Mean delay in minutes"])
 # CANCELLED                0.999999 => Not kept for now.  May be useful to predict cancellations, but we predict delays.
 # DIVERTED                 0.999999 => Not kept for now.  May be useful to predict cancellations, but we predict delays.
 
-# In[59]:
+# In[67]:
 
 
 df[['ARR_DEL15','TAIL_NUM']].groupby(['ARR_DEL15','TAIL_NUM'])
 
 
+# ## Identification of features to add for the model
+
+# ### Number of flights per origin airport per day
+
+# In[68]:
+
+
+# Create dictionary containing sum of flights for each tuple (date, origin airport)
+dict_date_airport_nbflights = df[['FL_DATE', 'ORIGIN']].groupby(['FL_DATE', 'ORIGIN']).size().to_dict()
+
+
+# In[69]:
+
+
+def map_nbflights(date_val, airport_val):
+    progbar.update(1)
+    return(dict_date_airport_nbflights[(date_val, airport_val)])
+    
+
+
+# In[70]:
+
+
+# Then for each row, we apply the dictionary and create a new column with its vales
+progbar = tqdm(range(len(df)))
+df['NBFLIGHTS_FORDAY_FORAIRPORT'] = df[['FL_DATE', 'ORIGIN']].apply(lambda row : map_nbflights(row.FL_DATE, row.ORIGIN), axis=1)
+
+
+# ## Mean delay airport / day compared to mean flights airport / day
+
+# In[71]:
+
+
+fig, ax = plt.subplots()
+df[df['ORIGIN'].isin(['ATL', 'ORD', 'DEN', 'LAX', 'DFW'])][['ORIGIN', 'NBFLIGHTS_FORDAY_FORAIRPORT']].groupby(['ORIGIN']).mean().sort_values(by='ORIGIN', ascending=False).plot.bar(figsize=(16,10), title='Mean number of flights per airport per day', ax=ax)
+ax.legend(["Mean number of flights"])
+
+
+# In[72]:
+
+
+fig, ax = plt.subplots()
+df[df['ORIGIN'].isin(['ATL', 'ORD', 'DEN', 'LAX', 'DFW'])][['ORIGIN', 'ARR_DELAY']].groupby(['ORIGIN']).mean().sort_values(by='ORIGIN', ascending=False).plot.bar(figsize=(16,10), title='Mean delay per origin airport', ax=ax)
+ax.legend(["Mean delay per origin airport"])
+
+
+# => No correlation between delay airport / day compared to mean flights airport / day
+
+# ### Number of flights per origin airport per day and hour
+
+# In[73]:
+
+
+# Extract hour from scheduled departure time
+df['HOUR_SCHEDULED'] = df['CRS_DEP_TIME'].str.slice(start=0,stop=2, step=1)
+
+
+# In[74]:
+
+
+df['HOUR_SCHEDULED'] = df['HOUR_SCHEDULED'].astype(str)
+
+
+# In[75]:
+
+
+# Create dictionary containing sum of flights for each tuple (date, origin airport)
+dict_date_hour_airport_nbflights = df[['FL_DATE', 'HOUR_SCHEDULED', 'ORIGIN']].groupby(['FL_DATE', 'HOUR_SCHEDULED', 'ORIGIN']).size().to_dict()
+
+
+# In[76]:
+
+
+len(dict_date_hour_airport_nbflights)
+
+
+# In[77]:
+
+
+def map_date_hour_airport_to_nbflights(date_val, hour_val, airport_val):
+    progbar.update(1)
+    return(dict_date_hour_airport_nbflights[(date_val, hour_val, airport_val)])
+    
+
+
+# In[78]:
+
+
+# Then for each row, we apply the dictionary and create a new column with its vales
+progbar = tqdm(range(len(df)))
+df['NBFLIGHTS_FORDAYHOUR_FORAIRPORT'] = df[['FL_DATE', 'HOUR_SCHEDULED', 'ORIGIN']].apply(lambda row : map_date_hour_airport_to_nbflights(row.FL_DATE, row.HOUR_SCHEDULED, row.ORIGIN), axis=1)
+
+
+# In[79]:
+
+
+fig, ax = plt.subplots()
+df[df['ORIGIN'].isin(['ATL', 'ORD', 'DEN', 'LAX', 'DFW'])][['ORIGIN', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT']].groupby(['ORIGIN']).mean().sort_values(by='NBFLIGHTS_FORDAYHOUR_FORAIRPORT', ascending=False).plot.bar(figsize=(16,10), title='Mean number of flights per airport per day hour', ax=ax)
+ax.legend(["Mean number of flights"])
+
+
+# => No correlation between mear delay per origin airport and mean number of flights per airport per day hour
+
 # ## Identification of quantitative and qualitative features
 
-# In[60]:
+# In[80]:
 
 
 df.columns[1]
 
 
-# In[61]:
+# In[81]:
 
 
 # Below are feature from dataset that we decided to keep: 
-all_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME','ARR_DELAY','DEP_DELAY', 'TAXI_OUT', 'TAIL_NUM']
+all_features = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME','ARR_DELAY','DEP_DELAY', 'TAXI_OUT', 'TAIL_NUM', 'NBFLIGHTS_FORDAY_FORAIRPORT', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT']
 
 quantitative_features = []
 qualitative_features = []
@@ -817,7 +924,7 @@ print(f'Features to drop : {features_todrop} \n')
 
 # ### Quality of data
 
-# In[62]:
+# In[82]:
 
 
 pd.set_option('display.max_rows', 100)
@@ -827,7 +934,7 @@ not_na_df = pd.DataFrame({'column_name': df.columns,
 not_na_df
 
 
-# In[63]:
+# In[83]:
 
 
 df[df['DEP_TIME'].notnull() == False].sample(20)
@@ -836,7 +943,7 @@ df[df['DEP_TIME'].notnull() == False].sample(20)
 # => We see that when flight is cancelled (value 1), we don't have actual delay values which is normal  
 # => We may want to keep these values later, to be able to predict cancellations.  But for now, our model will not consider cancellations as delay.
 
-# In[64]:
+# In[84]:
 
 
 df[df['CANCELLED'] == 1].shape
@@ -847,19 +954,19 @@ df[df['CANCELLED'] == 1].shape
 
 # We also have nan values that correspond to DIVERTED flights :
 
-# In[65]:
+# In[85]:
 
 
 df[df['DEP_TIME'].notnull() == False].shape
 
 
-# In[66]:
+# In[86]:
 
 
 df[df['DIVERTED'] == 1].shape
 
 
-# In[67]:
+# In[87]:
 
 
 df[df['DIVERTED'] == 1]
@@ -867,13 +974,13 @@ df[df['DIVERTED'] == 1]
 
 # Let's check flights that have arrival delay null, but not cancelled  (cancelled flights do have null arrival delay : in that case it's normal)
 
-# In[68]:
+# In[88]:
 
 
 df[(df['ARR_DELAY'].notnull() == False) & (df['CANCELLED'] == 0)].shape
 
 
-# In[69]:
+# In[89]:
 
 
 df[(df['ARR_DELAY'].notnull() == False) & (df['CANCELLED'] == 0)][all_features].sample(10)
@@ -883,7 +990,7 @@ df[(df['ARR_DELAY'].notnull() == False) & (df['CANCELLED'] == 0)][all_features].
 
 # ### Display of qualitative features values :
 
-# In[70]:
+# In[90]:
 
 
 for feature_name in qualitative_features:
@@ -892,7 +999,7 @@ for feature_name in qualitative_features:
 
 # ### Display of quantiative features values :
 
-# In[71]:
+# In[91]:
 
 
 pd.set_option('display.max_rows', 10000)
@@ -903,7 +1010,7 @@ for column_name in quantitative_features:
 
 # ### Conversion of qualitative features into clean str format
 
-# In[72]:
+# In[92]:
 
 
 for feature_name in qualitative_features:
@@ -912,7 +1019,7 @@ for feature_name in qualitative_features:
 
 # ### Display qualitative features again
 
-# In[73]:
+# In[93]:
 
 
 pd.set_option('display.max_rows', 1000)
@@ -922,7 +1029,7 @@ for feature_name in qualitative_features:
 
 # ### Remove delays caused by a delay from a previous flight 
 
-# In[74]:
+# In[94]:
 
 
 df.drop(index=df[df['LATE_AIRCRAFT_DELAY'] == 1].index, axis=0, inplace=True)
@@ -930,7 +1037,7 @@ df.drop(index=df[df['LATE_AIRCRAFT_DELAY'] == 1].index, axis=0, inplace=True)
 
 # ### Clean of DISTANCE
 
-# In[75]:
+# In[95]:
 
 
 df[df['DISTANCE'].notnull() == False][['DIVERTED', 'CANCELLED']]
@@ -938,7 +1045,7 @@ df[df['DISTANCE'].notnull() == False][['DIVERTED', 'CANCELLED']]
 
 # => Inconsistant values (NaN or 313.0)
 
-# In[76]:
+# In[96]:
 
 
 df.drop(index=df[df['DISTANCE'].notnull() == False].index, axis=0, inplace=True)
@@ -975,13 +1082,13 @@ df.drop(index=df[df['DISTANCE'].notnull() == False].index, axis=0, inplace=True)
 
 # ### Remove cancellations, divertions
 
-# In[77]:
+# In[97]:
 
 
 df.drop(index=df[ (df['CANCELLED'] == 1) | (df['DIVERTED'] == 1)].index, axis=0, inplace=True)
 
 
-# In[78]:
+# In[98]:
 
 
 df.reset_index(drop=True, inplace=True)
@@ -989,19 +1096,19 @@ df.reset_index(drop=True, inplace=True)
 
 # #### Creating new dataframe with only the features we keep, to gain memory :
 
-# In[79]:
+# In[99]:
 
 
 df_new = df[all_features].copy(deep = True)
 
 
-# In[80]:
+# In[100]:
 
 
 del df
 
 
-# In[81]:
+# In[101]:
 
 
 df = df_new
@@ -1009,7 +1116,7 @@ df = df_new
 
 # #### Clean ORIGIN
 
-# In[82]:
+# In[102]:
 
 
 df.drop(index=df[df['ORIGIN'].isin(['SPN', 'BFF', 'MHK', 'ENV', 'EFD', '4.00'])].index, axis=0, inplace=True)
@@ -1017,7 +1124,7 @@ df.drop(index=df[df['ORIGIN'].isin(['SPN', 'BFF', 'MHK', 'ENV', 'EFD', '4.00'])]
 
 # #### Clean DEST
 
-# In[83]:
+# In[103]:
 
 
 df.drop(index=df[df['DEST'].isin(['MHK', 'SPN', '1800-1859'])].index, axis=0, inplace=True)
@@ -1025,31 +1132,31 @@ df.drop(index=df[df['DEST'].isin(['MHK', 'SPN', '1800-1859'])].index, axis=0, in
 
 # ### Clean TAXI OUT value
 
-# In[84]:
+# In[104]:
 
 
 df.loc[1701904]['TAXI_OUT']
 
 
-# In[85]:
+# In[105]:
 
 
 df.at[1701904, 'TAXI_OUT'] = '11.00'
 
 
-# In[86]:
+# In[106]:
 
 
 df.loc[1701904]['TAXI_OUT']
 
 
-# In[87]:
+# In[107]:
 
 
 df['TAXI_OUT'] = df['TAXI_OUT'].astype(float)
 
 
-# In[88]:
+# In[108]:
 
 
 df.loc[1701904]['TAXI_OUT']
@@ -1057,7 +1164,7 @@ df.loc[1701904]['TAXI_OUT']
 
 # ### Display final data quality
 
-# In[89]:
+# In[109]:
 
 
 display_percent_complete(df)
@@ -1065,19 +1172,19 @@ display_percent_complete(df)
 
 # ### Display quantitative features distributions
 
-# In[90]:
+# In[110]:
 
 
 df.hist(bins=50, figsize=(20,15), log=True)
 
 
-# In[91]:
+# In[111]:
 
 
 df['ARR_DELAY'].hist(bins=[-100, -50, -10, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, +100], figsize=(20,15))
 
 
-# In[92]:
+# In[112]:
 
 
 df[df['ARR_DELAY'] < 0].count()
@@ -1087,19 +1194,19 @@ df[df['ARR_DELAY'] < 0].count()
 
 # ## Correlation matrix of quantitative features
 
-# In[93]:
+# In[113]:
 
 
 corr_matrix = df.corr()
 
 
-# In[94]:
+# In[114]:
 
 
 corr_matrix[quantitative_features].loc[quantitative_features]
 
 
-# In[95]:
+# In[115]:
 
 
 plt.figure(figsize=(16, 10))
@@ -1111,13 +1218,13 @@ sns.heatmap(corr_matrix[quantitative_features].loc[quantitative_features],
 
 # # Cercle des corrélations et première réduction de dimensionalité des variables numériques
 
-# In[96]:
+# In[116]:
 
 
 #common_functions.display_projections(df.head(10000), quantitative_features)
 
 
-# In[97]:
+# In[117]:
 
 
 df
@@ -1125,7 +1232,7 @@ df
 
 # # Export cleaned data to CSV
 
-# In[98]:
+# In[118]:
 
 
 if not os.path.isdir(DATA_PATH_OUT):
