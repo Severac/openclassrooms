@@ -242,10 +242,10 @@ def minibatch_generate_indexes(df_train_transformed, step_size):
     yield((left_index + step_size, final_index))
 
 
-# In[12]:
+# In[29]:
 
 
-def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size):
+def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, evaluation_method='RMSE'):
     train_errors, val_errors = [], []
     
     minibatch_indexes = minibatch_generate_indexes(X_train, step_size)
@@ -262,8 +262,14 @@ def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size):
         model.fit(X_train[:right_index], y_train[:right_index])
         y_train_predict = model.predict(X_train[:right_index])
         y_test_predict = model.predict(X_test)
-        train_errors.append(mean_squared_error(y_train[:right_index], y_train_predict))
-        val_errors.append(mean_squared_error(y_test, y_test_predict))
+        
+        if (evaluation_method == 'RMSE'):
+            train_errors.append(mean_squared_error(y_train[:right_index], y_train_predict))
+            val_errors.append(mean_squared_error(y_test, y_test_predict))
+            
+        elif (evaluation_method == 'MAE'):
+            train_errors.append(mean_absolute_error(y_train[:right_index], y_train_predict))
+            val_errors.append(mean_absolute_error(y_test, y_test_predict))            
         
         # Update progress bar
         progbar.update(1)
@@ -273,7 +279,12 @@ def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size):
     plt.plot(np.sqrt(val_errors), "b-", linewidth=3, label="test")
     plt.legend(loc="upper right", fontsize=14)   # not shown in the book
     plt.xlabel("Training set iterations", fontsize=14) # not shown
-    plt.ylabel("RMSE", fontsize=14)              # not shown
+    
+    if (evaluation_method == 'RMSE'):
+        plt.ylabel("RMSE", fontsize=14)              # not shown
+        
+    elif (evaluation_method == 'MAE'):
+         plt.ylabel("MAE", fontsize=14)  
 
 
 # In[13]:
@@ -1133,7 +1144,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[52]:
+# In[28]:
 
 
 from sklearn import dummy
@@ -1850,6 +1861,12 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     df_test_predictions = random_reg.predict(df_test_transformed)
     evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
     plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+
+
+# In[ ]:
+
+
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000, evaluation_method='MAE')
 
 
 # # Annex : unused code
