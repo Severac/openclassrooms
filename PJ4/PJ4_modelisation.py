@@ -24,7 +24,8 @@ import glob
 
 from pandas.plotting import scatter_matrix
 
-SAMPLED_DATA = False  # If True : data is sampled (1000 instances only) for faster testing purposes
+SAMPLED_DATA = True  # If True : data is sampled (1000 instances only) for faster testing purposes
+NB_SAMPLES = 1000000
 
 DATA_PATH = os.path.join("datasets", "transats")
 DATA_PATH = os.path.join(DATA_PATH, "out")
@@ -41,6 +42,7 @@ MODEL1_LABEL = 'ARR_DELAY'
 
 MODEL1_FEATURES = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
 MODEL1_FEATURES_QUANTITATIVE = ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
+MODEL1bis_FEATURES_QUANTITATIVE = ['CRS_DEP_TIME','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
 MODEL1_LABEL = 'ARR_DELAY'
 
 plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
@@ -101,14 +103,20 @@ def load_data():
 def custom_train_test_split_sample(df):
     from sklearn.model_selection import train_test_split
 
+    if (SAMPLED_DATA == True):
+        df = df.sample(NB_SAMPLES).copy(deep=True)
+    
     df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
     df_train = df_train.copy()
     df_test = df_test.copy()
 
+    '''
+    # Old code: we sampled only training set. But that's a problem when you encounter values in test set (not sampled) that were not in training set
     if (SAMPLED_DATA == True):
-        df_train = df_train.sample(1200000).copy(deep=True)
+        df_train = df_train.sample(NB_SAMPLES).copy(deep=True)
         df = df.loc[df_train.index]
-        
+    '''   
+    
     return df, df_train, df_test
 
 
@@ -350,7 +358,7 @@ df_train = df_train.copy()
 df_test = df_test.copy()
 
 if (SAMPLED_DATA == True):
-    df_train = df_train.sample(1200000).copy(deep=True)
+    df_train = df_train.sample(NB_SAMPLES).copy(deep=True)
     df = df.loc[df_train.index]
 
 
@@ -398,7 +406,7 @@ list_carriers_mean_ordered_mapper = lambda k : list_carriers_mean_ordered_dict[k
 
 # # Features encoding
 
-# In[28]:
+# In[15]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -487,16 +495,26 @@ class CategoricalFeatures1HotEncoder_old(BaseEstimator, TransformerMixin):
 '''
 
 class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
-    def __init__(self, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):
-        self.categorical_features_totransform = categorical_features_totransform
+    #def __init__(self, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):
+    def __init__(self):
+        #self.categorical_features_totransform = categorical_features_totransform
         self.fitted = False
         self.all_feature_values = {}
         #self.df_encoded = None
     
-    def fit(self, df, labels=None):      
+    #def fit(self, df, labels=None):      
+    def fit(self, df, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):      
         print('Fit data')
+        self.categorical_features_totransform = categorical_features_totransform
+        print('!! categorical_features_totransform' + str(self.categorical_features_totransform))
+
+        print('Convert features to str in case they are not already...')
         for feature_name in self.categorical_features_totransform:
-            self.all_feature_values[feature_name] = feature_name + '_' + df[feature_name].unique()
+            df[feature_name] = df[feature_name].astype(str)        
+        
+        if (self.categorical_features_totransform != None):
+            for feature_name in self.categorical_features_totransform:
+                self.all_feature_values[feature_name] = feature_name + '_' + df[feature_name].unique()
         
         self.fitted = True
         
@@ -506,25 +524,29 @@ class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
         if (self.fitted == False):
             self.fit(df)
         
-        print('Transform data')
-        print('1hot encode categorical features...')
-        df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=True)  # Sparse allows to gain memory. But then, standardscale must be with_mean=False
-        #df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=False)
-        
-        # Get category values that were in fitted data, but that are not in data to transform 
-        for feature_name, feature_values in self.all_feature_values.items():
-            diff_columns = list(set(feature_values) - set(df_encoded.columns.tolist()))
-            print(f'Column values that were in fitted data but not in current data: {diff_columns}')
-        
-            if (len(diff_columns) > 0):
-                print('Adding those column with 0 values to the DataFrme...')
-                # Create columns with 0 for the above categories, in order to preserve same matrix shape between train et test set
-                zeros_dict = dict.fromkeys(diff_columns, 0)
-                df_encoded.assign(**zeros_dict)
-        
-        print('type of df : ' + str(type(df_encoded)))
-        return(df_encoded)
-    
+        if (self.categorical_features_totransform != None):
+            print('Transform data')
+            
+            print('1hot encode categorical features...')
+            df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=True)  # Sparse allows to gain memory. But then, standardscale must be with_mean=False
+            #df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=False)
+
+            # Get category values that were in fitted data, but that are not in data to transform 
+            for feature_name, feature_values in self.all_feature_values.items():
+                diff_columns = list(set(feature_values) - set(df_encoded.columns.tolist()))
+                print(f'Column values that were in fitted data but not in current data: {diff_columns}')
+
+                if (len(diff_columns) > 0):
+                    print('Adding those column with 0 values to the DataFrme...')
+                    # Create columns with 0 for the above categories, in order to preserve same matrix shape between train et test set
+                    zeros_dict = dict.fromkeys(diff_columns, 0)
+                    df_encoded.assign(**zeros_dict)
+
+            print('type of df : ' + str(type(df_encoded)))
+            return(df_encoded)
+
+        else:
+            return(df)
 
 class Aggregate_then_GroupByMean_then_Sort_numericalEncoder(BaseEstimator, TransformerMixin):
     def __init__(self, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):
@@ -585,6 +607,8 @@ class FeaturesSelector(BaseEstimator, TransformerMixin):
     def transform(self, df):       
         if (self.features_toselect != None):
             filter_cols = [col for col in df if (col.startswith(tuple(self.features_toselect)))]
+            
+            filter_cols.sort()
             
             print("Features selected (in order): " + str(df[filter_cols].columns))
             
@@ -702,10 +726,20 @@ preparation_pipeline = Pipeline([
 ])
 
 
+'''
 preparation_pipeline_meansort = Pipeline([
     #('filter_highpercentile', Filter_High_Percentile()),
     ('data_converter', HHMM_to_Minutes()),
     ('numericalEncoder', Aggregate_then_GroupByMean_then_Sort_numericalEncoder()),
+    #('standardscaler', preprocessing.StandardScaler()),
+])
+'''
+
+preparation_pipeline_meansort = Pipeline([
+    #('filter_highpercentile', Filter_High_Percentile()),
+    ('data_converter', HHMM_to_Minutes()),
+    ('numericalEncoder', Aggregate_then_GroupByMean_then_Sort_numericalEncoder()),
+    ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
     #('standardscaler', preprocessing.StandardScaler()),
 ])
 
@@ -723,7 +757,6 @@ prediction_pipeline = Pipeline([
 #copy=False passed to StandardScaler() allows to gain memory
 
 
-
 prediction_pipeline_without_sparse = Pipeline([
     ('features_selector', FeaturesSelector(features_toselect=MODEL1_FEATURES)),
     ('standardscaler', ColumnTransformer([
@@ -733,6 +766,17 @@ prediction_pipeline_without_sparse = Pipeline([
     #('dense_to_sparse_converter', DenseToSparseConverter()),
     #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
 ])
+
+prediction_pipeline_1hotall_without_sparse = Pipeline([
+    ('features_selector', FeaturesSelector(features_toselect=MODEL1_FEATURES)),
+    ('standardscaler', ColumnTransformer([
+        ('standardscaler_specific', StandardScaler(), MODEL1bis_FEATURES_QUANTITATIVE)
+    ], remainder='passthrough', sparse_threshold=1)),
+    
+    #('dense_to_sparse_converter', DenseToSparseConverter()),
+    #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+
 
 '''
 # Old code that used scikit learn OneHotEncoder (which does not keep DataFrame type) instead of Pandas
@@ -820,6 +864,7 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 df_test_transformed = preparation_pipeline.transform(df_test)
 df_test_transformed = prediction_pipeline.transform(df_test_transformed)
+DATA_LOADED = True
 df_test_transformed.shape
 
 
@@ -1383,46 +1428,48 @@ evaluate_model(polynomial_reg, df_test_transformed, df_test[model1_label])
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[56]:
+# In[128]:
 
 
-del df
-del df_train
-del df_test
-del df_train_transformed
-del df_test_transformed
+if (DATA_LOADED == True):
+    del df
+    del df_train
+    del df_test
+    del df_train_transformed
+    del df_test_transformed
 
 
-# In[57]:
+# In[129]:
 
 
 df = load_data()
 
 
-# In[58]:
+# In[130]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[59]:
+# In[131]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[60]:
+# In[132]:
 
 
-df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train)
+df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 df_train_transformed = prediction_pipeline_without_sparse.fit_transform(df_train_transformed)
 
 df_test_transformed = preparation_pipeline_meansort.transform(df_test)
 df_test_transformed = prediction_pipeline_without_sparse.transform(df_test_transformed)
+DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[61]:
+# In[110]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1435,7 +1482,7 @@ df_test_predictions = lin_reg.predict(df_test_transformed)
 evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 
 
-# In[62]:
+# In[111]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
@@ -1443,35 +1490,35 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 # => RMSE on training set : 41.35267146874754 (close to RMSE on test set => under fitting)
 
-# In[63]:
+# In[112]:
 
 
 lin_reg.coef_
 
 
-# In[64]:
+# In[113]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[65]:
+# In[114]:
 
 
 df_train_transformed.shape
 
 
-# In[66]:
+# In[115]:
 
 
 df_train_transformed
 
 
-# In[67]:
+# In[116]:
 
 
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 500)
 
 
 # ## Linear Regression with bias
@@ -1652,6 +1699,157 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 
 
 lin_reg.summary
+
+
+# # New try with 1 hot encode of : 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'
+
+# In[16]:
+
+
+if (DATA_LOADED == True):
+    del df
+    del df_train
+    del df_test
+    del df_train_transformed
+    del df_test_transformed
+
+
+# In[16]:
+
+
+df = load_data()
+
+
+# In[17]:
+
+
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+
+
+# In[18]:
+
+
+df, df_train, df_test = custom_train_test_split_sample(df)
+
+
+# In[19]:
+
+
+df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'])
+df_train_transformed = prediction_pipeline_1hotall_without_sparse.fit_transform(df_train_transformed)
+
+df_test_transformed = preparation_pipeline_meansort.transform(df_test)
+df_test_transformed = prediction_pipeline_1hotall_without_sparse.transform(df_test_transformed)
+DATA_LOADED = True
+df_test_transformed.shape
+
+
+# In[20]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+
+# => RMSE training set : 41.98
+
+# In[183]:
+
+
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# => RMSE on training set : 41.12
+
+# In[184]:
+
+
+lin_reg.coef_
+
+
+# In[185]:
+
+
+# Feature importances :
+(abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+
+
+# In[186]:
+
+
+df_train_transformed.shape
+
+
+# In[187]:
+
+
+df_train_transformed
+
+
+# In[189]:
+
+
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+
+
+# ### Degree 2
+
+# In[21]:
+
+
+nb_instances = df_train_transformed.shape[0]
+
+
+# In[22]:
+
+
+poly = PolynomialFeaturesUnivariateAdder(n_degrees = 2)
+
+
+# In[23]:
+
+
+df_train_transformed = poly.fit_transform(df_train_transformed)
+df_test_transformed = poly.fit_transform(df_test_transformed)
+
+
+# In[24]:
+
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+
+
+# # Random forest
+
+# In[25]:
+
+
+from sklearn.ensemble import RandomForestRegressor
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    random_reg = RandomForestRegressor(n_estimators=10, max_depth=2, random_state=42)
+    random_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[26]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_test_predictions = random_reg.predict(df_test_transformed)
+    evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+    plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
 
 
 # # Annex : unused code
