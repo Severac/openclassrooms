@@ -24,6 +24,8 @@ import glob
 
 from pandas.plotting import scatter_matrix
 
+from sklearn.model_selection import StratifiedShuffleSplit
+
 SAMPLED_DATA = True  # If True : data is sampled (1000 instances only) for faster testing purposes
 NB_SAMPLES = 1000000
 
@@ -92,21 +94,30 @@ def load_data():
     # hhmm timed features formatted
     feats_hhmm = ['CRS_DEP_TIME',  'CRS_ARR_TIME']
 
-    df = pd.read_csv(DATA_PATH_FILE_INPUT, sep=',', header=0, encoding='utf-8', low_memory=False, parse_dates=feats_hhmm)    
+    df = pd.read_csv(DATA_PATH_FILE_INPUT, sep=',', header=0, encoding='utf-8', low_memory=False, parse_dates=feats_hhmm)   
+    
+    # Drop outliers (low quantile data : extreme delays not enough represented)
+    df.drop(index=df[(df['ARR_DELAY'] < df.ARR_DELAY.quantile(.01)) | (df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99))].index, axis=0, inplace=True)
     
     return(df)
 
 
-# In[4]:
+# In[30]:
 
 
 def custom_train_test_split_sample(df):
     from sklearn.model_selection import train_test_split
-
-    if (SAMPLED_DATA == True):
-        df = df.sample(NB_SAMPLES).copy(deep=True)
     
-    df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
+    if (SAMPLED_DATA == True):
+        df_labels_discrete = pd.cut(df['ARR_DELAY'], bins=50)
+        #df = df.sample(NB_SAMPLES).copy(deep=True)
+        df, df2 = train_test_split(df, train_size=NB_SAMPLES, random_state=42, shuffle = True, stratify = df_labels_discrete) # Does not work
+        
+    df_labels_discrete = pd.cut(df['ARR_DELAY'], bins=50)
+    
+    df_train, df_test = train_test_split(df, test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
+    #df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
+    
     df_train = df_train.copy()
     df_test = df_test.copy()
 
@@ -242,7 +253,7 @@ def minibatch_generate_indexes(df_train_transformed, step_size):
     yield((left_index + step_size, final_index))
 
 
-# In[29]:
+# In[12]:
 
 
 def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, evaluation_method='RMSE'):
@@ -311,6 +322,28 @@ def reset_data():
     return df, df_train, df_test, df_train_transformed, df_test_transformed
 
 
+# In[15]:
+
+
+from IPython.display import display, Markdown
+
+def display_freq_table(df, col_names):
+    for col_name in col_names:    
+        effectifs = df[col_name].value_counts(bins=50)
+
+        modalites = effectifs.index # l'index de effectifs contient les modalités
+
+
+        tab = pd.DataFrame(modalites, columns = [col_name]) # création du tableau à partir des modalités
+        tab["Nombre"] = effectifs.values
+        tab["Frequence"] = tab["Nombre"] / len(df) # len(data) renvoie la taille de l'échantillon
+        tab = tab.sort_values(col_name) # tri des valeurs de la variable X (croissant)
+        tab["Freq. cumul"] = tab["Frequence"].cumsum() # cumsum calcule la somme cumulée
+        
+        display(Markdown('#### ' + col_name))
+        display(tab)
+
+
 # # Data load
 
 # In[15]:
@@ -343,7 +376,7 @@ for column_name in df.columns:
 
 # # Identification of features
 
-# In[19]:
+# In[35]:
 
 
 # Below are feature from dataset that we decided to keep: 
@@ -417,7 +450,7 @@ list_carriers_mean_ordered_mapper = lambda k : list_carriers_mean_ordered_dict[k
 
 # # Features encoding
 
-# In[15]:
+# In[16]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -1144,7 +1177,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[28]:
+# In[49]:
 
 
 from sklearn import dummy
@@ -1714,7 +1747,7 @@ lin_reg.summary
 
 # # New try with 1 hot encode of : 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'
 
-# In[16]:
+# In[31]:
 
 
 if (DATA_LOADED == True):
@@ -1725,25 +1758,25 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[16]:
+# In[32]:
 
 
 df = load_data()
 
 
-# In[17]:
+# In[33]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[18]:
+# In[34]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[19]:
+# In[37]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'])
@@ -1755,7 +1788,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[20]:
+# In[38]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1770,7 +1803,7 @@ evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 
 # => RMSE training set : 41.98
 
-# In[183]:
+# In[39]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
@@ -1778,32 +1811,32 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 # => RMSE on training set : 41.12
 
-# In[184]:
+# In[40]:
 
 
 lin_reg.coef_
 
 
-# In[185]:
+# In[41]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[186]:
+# In[42]:
 
 
 df_train_transformed.shape
 
 
-# In[187]:
+# In[43]:
 
 
 df_train_transformed
 
 
-# In[189]:
+# In[44]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
@@ -1811,26 +1844,26 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 
 # ### Degree 2
 
-# In[21]:
+# In[45]:
 
 
 nb_instances = df_train_transformed.shape[0]
 
 
-# In[22]:
+# In[46]:
 
 
 poly = PolynomialFeaturesUnivariateAdder(n_degrees = 2)
 
 
-# In[23]:
+# In[47]:
 
 
 df_train_transformed = poly.fit_transform(df_train_transformed)
 df_test_transformed = poly.fit_transform(df_test_transformed)
 
 
-# In[24]:
+# In[48]:
 
 
 lin_reg = LinearRegression()
@@ -1844,17 +1877,17 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 
 # # Random forest
 
-# In[25]:
+# In[50]:
 
 
 from sklearn.ensemble import RandomForestRegressor
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
-    random_reg = RandomForestRegressor(n_estimators=10, max_depth=2, random_state=42)
+    random_reg = RandomForestRegressor(n_estimators=10, max_depth=50, random_state=42)
     random_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[26]:
+# In[51]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1863,10 +1896,148 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
 
 
-# In[ ]:
+# In[52]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000, evaluation_method='MAE')
+
+
+# In[34]:
+
+
+sss = StratifiedShuffleSplit(test_size = 0.1, random_state=42)
+
+
+# In[ ]:
+
+
+X_train, X_test, income_train, income_test = tts( other_colums, income_column,
+                         shuffle = True, stratify = Income_column)`
+
+
+# In[40]:
+
+
+df.shape
+
+
+# In[23]:
+
+
+df_labels_discrete = pd.cut(df['ARR_DELAY'], bins=50)
+
+
+# In[23]:
+
+
+df_labels_discrete.head(50)
+
+
+# In[77]:
+
+
+df[['ARR_DELAY']]
+
+
+# In[21]:
+
+
+display_freq_table(df, ['ARR_DELAY'])
+
+
+# In[128]:
+
+
+df['ARR_DELAY'].quantile([0,1])
+
+
+# In[148]:
+
+
+df.ARR_DELAY.quantile(.01)
+
+
+# In[145]:
+
+
+df[df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99)]
+
+
+# In[154]:
+
+
+df.loc[(df['ARR_DELAY'] < df.ARR_DELAY.quantile(.01)) | (df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99)) , :]
+
+
+# In[157]:
+
+
+((df['ARR_DELAY'] < df.ARR_DELAY.quantile(.01)) | (df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99))).index
+
+
+# In[159]:
+
+
+((df['ARR_DELAY'] < df.ARR_DELAY.quantile(.01)) | (df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99)))
+
+
+# In[28]:
+
+
+df.shape
+
+
+# In[24]:
+
+
+df_labels_discrete.shape
+
+
+# In[25]:
+
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(df, df[model1_label], test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
+
+
+# In[26]:
+
+
+from sklearn.model_selection import train_test_split
+X_train, X_test = train_test_split(df, test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
+
+
+# In[27]:
+
+
+X_test
+
+
+# In[24]:
+
+
+split = StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=42)
+for train_index, test_index in split.split(df, df_labels_discrete):
+    strat_train_set = df.loc[train_index]
+    strat_test_set = df.loc[test_index]
+
+
+# In[103]:
+
+
+df_labels_discrete.value_counts()
+
+
+# In[66]:
+
+
+df[['DEST']]
+
+
+# In[46]:
+
+
+df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
 
 
 # # Annex : unused code
