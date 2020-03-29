@@ -26,8 +26,9 @@ from pandas.plotting import scatter_matrix
 
 from sklearn.model_selection import StratifiedShuffleSplit
 
-SAMPLED_DATA = True  # If True : data is sampled (1000 instances only) for faster testing purposes
-NB_SAMPLES = 1000000
+SAMPLED_DATA = True  # If True : data is sampled (NB_SAMPLES instances only) for faster testing purposes
+NB_SAMPLES = 800000
+LEARNING_CURVE_STEP_SIZE = 10000 # Change that when you change NB_SAMPLES size
 
 DATA_PATH = os.path.join("datasets", "transats")
 DATA_PATH = os.path.join(DATA_PATH, "out")
@@ -59,7 +60,8 @@ import pickle
 ####### Paramètres à changer par l'utilisateur selon son besoin :
 RECOMPUTE_GRIDSEARCH = False  # CAUTION : computation is several hours long
 SAVE_GRID_RESULTS = False # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
-LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
+LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
+                          # Grid search results are loaded with full samples (SAMPLED_DATA must be False)
 
 #GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
 
@@ -102,7 +104,7 @@ def load_data():
     return(df)
 
 
-# In[30]:
+# In[4]:
 
 
 def custom_train_test_split_sample(df):
@@ -111,7 +113,7 @@ def custom_train_test_split_sample(df):
     if (SAMPLED_DATA == True):
         df_labels_discrete = pd.cut(df['ARR_DELAY'], bins=50)
         #df = df.sample(NB_SAMPLES).copy(deep=True)
-        df, df2 = train_test_split(df, train_size=NB_SAMPLES, random_state=42, shuffle = True, stratify = df_labels_discrete) # Does not work
+        df, df2 = train_test_split(df, train_size=NB_SAMPLES, random_state=42, shuffle = True, stratify = df_labels_discrete)
         
     df_labels_discrete = pd.cut(df['ARR_DELAY'], bins=50)
     
@@ -312,6 +314,19 @@ def reset_data():
     all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
     df, df_train, df_test = custom_train_test_split_sample(df)
 
+    df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+    df_train_transformed = prediction_pipeline_without_sparse.fit_transform(df_train_transformed)
+
+    df_test_transformed = preparation_pipeline_meansort.transform(df_test)
+    df_test_transformed = prediction_pipeline_without_sparse.transform(df_test_transformed)
+    
+    return df, df_train, df_test, df_train_transformed, df_test_transformed
+
+def reset_data_old():
+    df = load_data()
+    all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+    df, df_train, df_test = custom_train_test_split_sample(df)
+
     df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train)
     df_train_transformed = prediction_pipeline_without_sparse.fit_transform(df_train_transformed)
 
@@ -346,25 +361,25 @@ def display_freq_table(df, col_names):
 
 # # Data load
 
-# In[15]:
+# In[16]:
 
 
 df = load_data()
 
 
-# In[16]:
+# In[17]:
 
 
 df.shape
 
 
-# In[17]:
+# In[18]:
 
 
 display_percent_complete(df)
 
 
-# In[18]:
+# In[19]:
 
 
 '''
@@ -376,7 +391,7 @@ for column_name in df.columns:
 
 # # Identification of features
 
-# In[35]:
+# In[20]:
 
 
 # Below are feature from dataset that we decided to keep: 
@@ -392,9 +407,12 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 # # Split train set, test set
 
-# In[20]:
+# In[21]:
 
 
+df, df_train, df_test = custom_train_test_split_sample(df)
+
+'''
 from sklearn.model_selection import train_test_split
 
 df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
@@ -404,53 +422,30 @@ df_test = df_test.copy()
 if (SAMPLED_DATA == True):
     df_train = df_train.sample(NB_SAMPLES).copy(deep=True)
     df = df.loc[df_train.index]
-
-
-# In[21]:
-
-
-df_train
+'''
 
 
 # In[22]:
 
 
-df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True)
+df_train
 
 
 # In[23]:
 
 
-df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True).plot()
+df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True)
 
 
 # In[24]:
 
 
-list_carriers_mean_ordered = df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True).index.tolist()
-
-
-# In[25]:
-
-
-list_carriers_mean_ordered_dict = {list_carriers_mean_ordered[i] : i for i in range(len(list_carriers_mean_ordered))  }
-
-
-# In[26]:
-
-
-list_carriers_mean_ordered_mapper = lambda k : list_carriers_mean_ordered_dict[k]
-
-
-# In[27]:
-
-
-#df = df.loc[df_train.index]
+df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True).plot()
 
 
 # # Features encoding
 
-# In[16]:
+# In[25]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -552,12 +547,9 @@ class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
         self.categorical_features_totransform = categorical_features_totransform
         print('!! categorical_features_totransform' + str(self.categorical_features_totransform))
 
-        print('Convert features to str in case they are not already...')
-        for feature_name in self.categorical_features_totransform:
-            df[feature_name] = df[feature_name].astype(str)        
-        
         if (self.categorical_features_totransform != None):
             for feature_name in self.categorical_features_totransform:
+                df[feature_name] = df[feature_name].astype(str) # Convert features to str in case they are not already     
                 self.all_feature_values[feature_name] = feature_name + '_' + df[feature_name].unique()
         
         self.fitted = True
@@ -840,16 +832,34 @@ ColumnTransformer([
 '''
 
 
-# In[29]:
+# In[26]:
 
 
 df_train_transformed = preparation_pipeline.fit_transform(df_train)
 
 
-# In[30]:
+# In[27]:
 
 
 df_train_transformed
+
+
+# In[28]:
+
+
+df_train_transformed.shape
+
+
+# In[29]:
+
+
+df_train_transformed.info()
+
+
+# In[30]:
+
+
+df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
 
 
 # In[31]:
@@ -861,41 +871,23 @@ df_train_transformed.shape
 # In[32]:
 
 
-df_train_transformed.info()
+from scipy import sparse
+sparse.issparse(df_train_transformed)
 
 
 # In[33]:
 
 
-df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
+#pd.DataFrame.sparse.from_spmatrix(df_train_transformed)
 
 
 # In[34]:
 
 
-df_train_transformed.shape
-
-
-# In[35]:
-
-
-from scipy import sparse
-sparse.issparse(df_train_transformed)
-
-
-# In[36]:
-
-
-#pd.DataFrame.sparse.from_spmatrix(df_train_transformed)
-
-
-# In[37]:
-
-
 pd.set_option('display.max_columns', 400)
 
 
-# In[38]:
+# In[35]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
@@ -903,7 +895,7 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 # # Test set encoding
 
-# In[39]:
+# In[36]:
 
 
 df_test_transformed = preparation_pipeline.transform(df_test)
@@ -914,15 +906,13 @@ df_test_transformed.shape
 
 # # Linear regression
 
-# In[40]:
+# In[37]:
 
 
 df_train[model1_label].shape
 
 
-# In[41]:
-
-
+# In[38]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -930,7 +920,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[42]:
+# In[39]:
 
 
 
@@ -939,42 +929,42 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     df_test_predictions = lin_reg.predict(df_test_transformed)
     lin_mse = mean_squared_error(df_test[model1_label], df_test_predictions)
     lin_rmse = np.sqrt(lin_mse)
-    lin_rmse
+    print(lin_rmse)
 
 
 # => 42.17  (42.16679389006135)
 
-# In[43]:
+# In[40]:
 
 
 df_train_transformed.shape[0]
 
 
-# In[44]:
+# In[41]:
 
 
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# In[45]:
+# In[42]:
 
 
 df_train
 
 
-# In[46]:
+# In[43]:
 
 
 df_train_transformed[0, :].toarray()
 
 
-# In[47]:
+# In[44]:
 
 
 df_train[[model1_label]]
 
 
-# In[48]:
+# In[45]:
 
 
 lin_reg.coef_
@@ -1009,7 +999,7 @@ lin_reg.coef_
 #          9.46369559,  -0.27437885,  -1.82963879,   0.47213692,
 #         -2.5256052 ,  -2.053249  ,  -1.04523965])
 
-# In[49]:
+# In[46]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1020,7 +1010,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test_predictions, color='coral')
 
 
-# In[50]:
+# In[47]:
 
 
 from sklearn.model_selection import cross_validate
@@ -1028,7 +1018,7 @@ from sklearn.model_selection import cross_validate
 #scores = cross_validate(lin_reg, df_train_transformed, df_train[model1_label], scoring='neg_root_mean_squared_error', cv=5)
 
 
-# In[51]:
+# In[48]:
 
 
 #scores['test_score'].mean()
@@ -1036,7 +1026,7 @@ from sklearn.model_selection import cross_validate
 
 # # ElasticNET regression
 
-# In[48]:
+# In[49]:
 
 
 from sklearn.model_selection import ShuffleSplit
@@ -1045,13 +1035,13 @@ from sklearn.model_selection import ShuffleSplit
 shuffled_split_train = ShuffleSplit(n_splits=5, test_size=0.2, random_state=42)
 
 
-# In[49]:
+# In[50]:
 
 
 from sklearn.linear_model import ElasticNet
 
 
-# In[50]:
+# In[51]:
 
 
 from sklearn.model_selection import GridSearchCV
@@ -1063,7 +1053,7 @@ grid_search = GridSearchCV(eNet, param_grid = {"max_iter": [1, 5, 10],
                       "l1_ratio": np.arange(0.0, 1.0, 0.4)},cv=shuffled_split_train, scoring='neg_mean_squared_error', error_score=np.nan, verbose=2)
 
 
-# In[51]:
+# In[52]:
 
 
 '''
@@ -1077,26 +1067,28 @@ grid_search = GridSearchCV(eNet, param_grid = {"max_iter": [1, 5, 10],
 '''
 
 
-# In[52]:
+# In[53]:
 
 
 if (RECOMPUTE_GRIDSEARCH == True):
     grid_search.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[53]:
-
-
-grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'eNet_20200319')
-
-
 # In[54]:
 
 
-df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
+if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
+    grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'eNet_20200319')
 
 
 # In[55]:
+
+
+if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
+    df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
+
+
+# In[56]:
 
 
 np.sqrt(1741.47)
@@ -1104,26 +1096,28 @@ np.sqrt(1741.47)
 
 # => 41.73092378560532
 
-# In[56]:
+# In[57]:
 
 
-grid_search.best_estimator_
+if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
+    grid_search.best_estimator_
 
 
-# In[60]:
+# In[58]:
 
 
-if (EXECUTE_INTERMEDIATE_MODELS == True):
+if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
     df_test_predictions = grid_search.best_estimator_.predict(df_test_transformed)
     mse = mean_squared_error(df_test[model1_label], df_test_predictions)
     rmse = np.sqrt(mse)
-    rmse
+    print(rmse)
 
 
-# In[65]:
+# In[59]:
 
 
-grid_search.best_estimator_.coef_
+if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
+    grid_search.best_estimator_.coef_
 
 
 # array([ 3.81842241e-01,  5.38463257e-02,  4.20287224e-02,  5.22019019e-04,
@@ -1155,7 +1149,7 @@ grid_search.best_estimator_.coef_
 #         1.91647269e-02, -4.83097086e-05, -6.78384591e-03,  1.00960720e-03,
 #        -2.12687675e-03, -2.30717357e-04,  1.28182126e-04])
 
-# In[51]:
+# In[60]:
 
 
 from sklearn import metrics 
@@ -1166,7 +1160,7 @@ sorted(metrics.SCORERS.keys())
 
 # ### Random value between min and max
 
-# In[52]:
+# In[61]:
 
 
 y_pred_random = np.random.randint(df['ARR_DELAY'].min(), df['ARR_DELAY'].max(), df_test['ARR_DELAY'].shape)
@@ -1177,7 +1171,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[49]:
+# In[62]:
 
 
 from sklearn import dummy
@@ -1195,25 +1189,25 @@ print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y
 print("MAE : {:.2f}".format(np.sqrt(mean_absolute_error(df_test[model1_label], y_pred_dum)) ))
 
 
-# In[53]:
+# In[63]:
 
 
 plt.scatter(df_test[model1_label], y_pred_dum, color='coral')
 
 
-# In[54]:
+# In[64]:
 
 
 df_test[model1_label]
 
 
-# In[55]:
+# In[65]:
 
 
 y_pred_dum
 
 
-# In[57]:
+# In[66]:
 
 
 df['ARR_DELAY'].abs().mean()
@@ -1225,7 +1219,7 @@ df['ARR_DELAY'].abs().mean()
 
 # # Random forest
 
-# In[58]:
+# In[67]:
 
 
 from sklearn.ensemble import RandomForestRegressor
@@ -1235,21 +1229,21 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     random_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[59]:
+# In[68]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
     df_test_predictions = random_reg.predict(df_test_transformed)
     mse = mean_squared_error(df_test[model1_label], df_test_predictions)
     rmse = np.sqrt(mse)
-    rmse
+    print(rmse)
 
 
 # => 42.373691516139964
 
 # # SVM
 
-# In[60]:
+# In[69]:
 
 
 '''
@@ -1260,7 +1254,7 @@ svm_reg.fit(df_train_transformed, df_train[model1_label])
 '''
 
 
-# In[67]:
+# In[70]:
 
 
 from sklearn.svm import LinearSVR
@@ -1271,7 +1265,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     svm_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[62]:
+# In[71]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1280,7 +1274,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # => RMSE : 43.45607643335432
 
-# In[68]:
+# In[72]:
 
 
 grid_search_SVR = GridSearchCV(svm_reg, param_grid = {"epsilon": [0, 0.5],
@@ -1288,7 +1282,7 @@ grid_search_SVR = GridSearchCV(svm_reg, param_grid = {"epsilon": [0, 0.5],
                               "loss": ['epsilon_insensitive', 'squared_epsilon_insensitive'],},cv=shuffled_split_train, scoring='neg_mean_squared_error', error_score=np.nan, verbose=2)
 
 
-# In[69]:
+# In[73]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1299,34 +1293,39 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # => Warning at execution : /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/svm/base.py:929: ConvergenceWarning: Liblinear failed to converge, increase the number of iterations.
 #   "the number of iterations.", ConvergenceWarning)  
 
-# In[70]:
-
-
-grid_search_SVR, df_grid_search_results = save_or_load_search_params(grid_search_SVR, 'LinearSVR_20200319')
-
-
-# In[71]:
-
-
-df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
-
-
-# In[72]:
-
-
-np.sqrt(1709.197402)
-
-
-# In[73]:
-
-
-grid_search_SVR.best_estimator_
-
-
 # In[74]:
 
 
-evaluate_model(grid_search_SVR.best_estimator_, df_test_transformed, df_test[model1_label])
+if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
+    grid_search_SVR, df_grid_search_results = save_or_load_search_params(grid_search_SVR, 'LinearSVR_20200319')
+
+
+# In[75]:
+
+
+if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
+    df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
+
+
+# In[76]:
+
+
+if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
+    np.sqrt(1709.197402)
+
+
+# In[77]:
+
+
+if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
+    grid_search_SVR.best_estimator_
+
+
+# In[78]:
+
+
+if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
+    evaluate_model(grid_search_SVR.best_estimator_, df_test_transformed, df_test[model1_label])
 
 
 # => Best estimator :  inearSVR(C=1, dual=True, epsilon=0, fit_intercept=True, intercept_scaling=1.0,
@@ -1337,13 +1336,13 @@ evaluate_model(grid_search_SVR.best_estimator_, df_test_transformed, df_test[mod
 
 # # Polynomial features + linear regression
 
-# In[32]:
+# In[79]:
 
 
 df_train_transformed
 
 
-# In[33]:
+# In[80]:
 
 
 poly = ColumnTransformer([
@@ -1354,7 +1353,7 @@ poly = ColumnTransformer([
 #poly.fit(df_train_transformed)
 
 
-# In[34]:
+# In[81]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1362,13 +1361,13 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     df_test_transformed = poly.transform(df_test_transformed)
 
 
-# In[33]:
+# In[82]:
 
 
 df_train_transformed.shape
 
 
-# In[36]:
+# In[83]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1376,7 +1375,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[41]:
+# In[84]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1387,7 +1386,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # # Polynomial features + random forest
 
-# In[43]:
+# In[85]:
 
 
 from sklearn.ensemble import RandomForestRegressor
@@ -1397,7 +1396,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     random_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[44]:
+# In[86]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1405,74 +1404,16 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
 
 
-# In[ ]:
+# In[87]:
 
 
-'''
-#Too slow
-
-from sklearn.ensemble import RandomForestRegressor
-
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    random_reg = RandomForestRegressor(n_estimators=100, max_depth=None, random_state=42)
-    random_reg.fit(df_train_transformed, df_train[model1_label])
-    
-'''
-
-
-# In[ ]:
-
-
-'''
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    df_test_predictions = random_reg.predict(df_test_transformed)
-    evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
-'''
-
-
-# In[78]:
-
-
-poly = ColumnTransformer([
-                                ('poly', PolynomialFeatures(degree=2), [0, 1, 2, 3, 4, 5, 6])     
-                                ], remainder='passthrough', sparse_threshold=1)
-
-poly.fit(df_train_transformed, df_train[model1_label])
-
-
-# In[ ]:
-
-
-
-polynomial_reg = Pipeline([('poly_columntransformer', ColumnTransformer([
-                                ('poly', PolynomialFeatures(degree=3), ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_ARR_TIME', 'DISTANCE', 'CRS_ELAPSED_TIME'])     
-                                ], remainder='passthrough', sparse_threshold=1)),
-                          ('linear', LinearRegression(fit_intercept=False))])
-
-polynomial_reg.fit(df_train_transformed, df_train[model1_label])
-
-
-# In[ ]:
-
-
-
-
-polynomial_reg = Pipeline([('poly', PolynomialFeatures(degree=3)),
-                          ('linear', LinearRegression(fit_intercept=False))])
-
-polynomial_reg.fit(df_train_transformed, df_train[model1_label])
-
-
-# In[ ]:
-
-
-evaluate_model(polynomial_reg, df_test_transformed, df_test[model1_label])
+#evaluate_model(polynomial_reg, df_test_transformed, df_test[model1_label])
 
 
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[128]:
+# In[88]:
 
 
 if (DATA_LOADED == True):
@@ -1483,25 +1424,25 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[129]:
+# In[89]:
 
 
 df = load_data()
 
 
-# In[130]:
+# In[90]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[131]:
+# In[91]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[132]:
+# In[92]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
@@ -1513,7 +1454,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[110]:
+# In[93]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1526,7 +1467,7 @@ df_test_predictions = lin_reg.predict(df_test_transformed)
 evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 
 
-# In[111]:
+# In[94]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
@@ -1534,47 +1475,47 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 # => RMSE on training set : 41.35267146874754 (close to RMSE on test set => under fitting)
 
-# In[112]:
+# In[95]:
 
 
 lin_reg.coef_
 
 
-# In[113]:
+# In[96]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[114]:
+# In[97]:
 
 
 df_train_transformed.shape
 
 
-# In[115]:
+# In[98]:
 
 
 df_train_transformed
 
 
-# In[116]:
+# In[99]:
 
 
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 500)
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 10000)
 
 
 # ## Linear Regression with bias
 
-# In[26]:
+# In[100]:
 
 
 df_train_transformed_bias = np.c_[np.ones((len(df_train_transformed), 1)), df_train_transformed]  # add x0 = 1 to each instance
 df_test_transformed_bias = np.c_[np.ones((len(df_test_transformed), 1)), df_test_transformed]  # add x0 = 1 to each instance
 
 
-# In[27]:
+# In[101]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1587,15 +1528,15 @@ df_test_predictions = lin_reg.predict(df_test_transformed_bias)
 evaluate_model(lin_reg, df_test_transformed_bias, df_test[model1_label])
 
 
-# In[28]:
+# In[102]:
 
 
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 10000)
 
 
 # ## Polynomial regression degree 2
 
-# In[89]:
+# In[103]:
 
 
 poly = PolynomialFeatures(degree=2)
@@ -1604,19 +1545,19 @@ df_train_transformed = poly.transform(df_train_transformed)
 df_test_transformed = poly.transform(df_test_transformed)
 
 
-# In[90]:
+# In[104]:
 
 
 poly.n_output_features_
 
 
-# In[91]:
+# In[105]:
 
 
 df_train_transformed.shape
 
 
-# In[92]:
+# In[106]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1624,7 +1565,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[93]:
+# In[107]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1633,7 +1574,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # => RMSE on test set : RMSE : 42.12678182212536
 
-# In[94]:
+# In[108]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
@@ -1641,20 +1582,20 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 # => RMSE on training set : 41.26055791264713
 
-# In[95]:
+# In[109]:
 
 
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# In[90]:
+# In[110]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[38]:
+# In[111]:
 
 
 df_train_transformed[:,0].shape
@@ -1664,90 +1605,7 @@ df_train_transformed[:,0].shape
 
 # ### Degree 3
 
-# In[68]:
-
-
-nb_instances = df_train_transformed.shape[0]
-
-
-# In[69]:
-
-
-poly = PolynomialFeaturesUnivariateAdder(n_degrees = 3)
-
-
-# In[70]:
-
-
-df_train_transformed = poly.fit_transform(df_train_transformed)
-df_test_transformed = poly.fit_transform(df_test_transformed)
-
-
-# In[71]:
-
-
-lin_reg = LinearRegression()
-
-lin_reg.fit(df_train_transformed, df_train[model1_label])
-
-df_test_predictions = lin_reg.predict(df_test_transformed)
-evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
-
-
-# ### Degree 4
-
-# In[77]:
-
-
-del df
-del df_train
-del df_test
-del df_train_transformed
-del df_test_transformed
-
-
-# In[68]:
-
-
-df, df_train, df_test, df_train_transformed, df_test_transformed = reset_data()
-
-
-# In[69]:
-
-
-df_train_transformed
-
-
-# In[70]:
-
-
-poly = PolynomialFeaturesUnivariateAdder(n_degrees = 4)
-df_train_transformed = poly.fit_transform(df_train_transformed)
-df_test_transformed = poly.transform(df_test_transformed)
-
-
-# In[71]:
-
-
-lin_reg = LinearRegression()
-
-lin_reg.fit(df_train_transformed, df_train[model1_label])
-
-df_test_predictions = lin_reg.predict(df_test_transformed)
-evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
-
-
-# In[75]:
-
-
-lin_reg.summary
-
-
-# # New try with 1 hot encode of : 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'
-
-# In[31]:
+# In[117]:
 
 
 if (DATA_LOADED == True):
@@ -1758,25 +1616,149 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[32]:
+# In[118]:
 
 
 df = load_data()
 
 
-# In[33]:
+# In[119]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[34]:
+# In[120]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[37]:
+# In[121]:
+
+
+df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+df_train_transformed = prediction_pipeline_without_sparse.fit_transform(df_train_transformed)
+
+df_test_transformed = preparation_pipeline_meansort.transform(df_test)
+df_test_transformed = prediction_pipeline_without_sparse.transform(df_test_transformed)
+DATA_LOADED = True
+df_test_transformed.shape
+
+
+# In[122]:
+
+
+nb_instances = df_train_transformed.shape[0]
+
+
+# In[123]:
+
+
+poly = PolynomialFeaturesUnivariateAdder(n_degrees = 3)
+
+
+# In[125]:
+
+
+df_train_transformed = poly.fit_transform(df_train_transformed)
+df_test_transformed = poly.fit_transform(df_test_transformed)
+
+
+# In[126]:
+
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
+
+
+# ### Degree 4
+
+# In[127]:
+
+
+del df
+del df_train
+del df_test
+del df_train_transformed
+del df_test_transformed
+
+
+# In[128]:
+
+
+df, df_train, df_test, df_train_transformed, df_test_transformed = reset_data()
+
+
+# In[129]:
+
+
+df_train_transformed
+
+
+# In[130]:
+
+
+poly = PolynomialFeaturesUnivariateAdder(n_degrees = 4)
+df_train_transformed = poly.fit_transform(df_train_transformed)
+df_test_transformed = poly.transform(df_test_transformed)
+
+
+# In[131]:
+
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
+
+
+# In[ ]:
+
+
+#lin_reg.summary
+
+
+# # New try with 1 hot encode of : 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'
+
+# In[143]:
+
+
+if (DATA_LOADED == True):
+    del df
+    del df_train
+    del df_test
+    del df_train_transformed
+    del df_test_transformed
+
+
+# In[144]:
+
+
+df = load_data()
+
+
+# In[145]:
+
+
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+
+
+# In[146]:
+
+
+df, df_train, df_test = custom_train_test_split_sample(df)
+
+
+# In[147]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'])
@@ -1788,7 +1770,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[38]:
+# In[148]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1801,69 +1783,89 @@ df_test_predictions = lin_reg.predict(df_test_transformed)
 evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 
 
-# => RMSE training set : 41.98
+# => RMSE : 41.98  
+# => RMSE without outliers : 26.88
 
-# In[39]:
+# In[149]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 
-# => RMSE on training set : 41.12
+# => RMSE on training set : 41.12  
+# => RMSE training set without outliers : 26.89
 
-# In[40]:
+# In[150]:
 
 
 lin_reg.coef_
 
 
-# In[41]:
+# In[151]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[42]:
+# In[152]:
 
 
 df_train_transformed.shape
 
 
-# In[43]:
+# In[153]:
 
 
 df_train_transformed
 
 
-# In[44]:
+# In[ ]:
 
 
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
+
+
+# In[ ]:
+
+
+'''
+To gain memory
+y_train = df_train[model1_label]
+y_test = df_test[model1_label]
+del df_train
+del df_test
+'''
+
+
+# In[ ]:
+
+
+
 
 
 # ### Degree 2
 
-# In[45]:
+# In[ ]:
 
 
 nb_instances = df_train_transformed.shape[0]
 
 
-# In[46]:
+# In[ ]:
 
 
 poly = PolynomialFeaturesUnivariateAdder(n_degrees = 2)
 
 
-# In[47]:
+# In[ ]:
 
 
 df_train_transformed = poly.fit_transform(df_train_transformed)
 df_test_transformed = poly.fit_transform(df_test_transformed)
 
 
-# In[48]:
+# In[ ]:
 
 
 lin_reg = LinearRegression()
@@ -1872,177 +1874,60 @@ lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 df_test_predictions = lin_reg.predict(df_test_transformed)
 evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
 # # Random forest
 
-# In[50]:
+# In[ ]:
 
 
 from sklearn.ensemble import RandomForestRegressor
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
-    random_reg = RandomForestRegressor(n_estimators=10, max_depth=50, random_state=42)
+    random_reg = RandomForestRegressor(n_estimators=10, max_depth=10, random_state=42)
     random_reg.fit(df_train_transformed, df_train[model1_label])
-
-
-# In[51]:
-
-
-if (EXECUTE_INTERMEDIATE_MODELS == True):
-    df_test_predictions = random_reg.predict(df_test_transformed)
-    evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
-    plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000)
-
-
-# In[52]:
-
-
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 100000, evaluation_method='MAE')
-
-
-# In[34]:
-
-
-sss = StratifiedShuffleSplit(test_size = 0.1, random_state=42)
 
 
 # In[ ]:
 
 
-X_train, X_test, income_train, income_test = tts( other_colums, income_column,
-                         shuffle = True, stratify = Income_column)`
+random_reg.feature_importances_
 
 
-# In[40]:
+# => feature importance : 25% for CRS_ARR_TIME and 14% for UNIQUE_CARRIER
 
+# In[ ]:
 
-df.shape
 
+random_reg.estimators_[0]
 
-# In[23]:
 
+# In[ ]:
 
-df_labels_discrete = pd.cut(df['ARR_DELAY'], bins=50)
 
+from sklearn.tree import export_graphviz
+export_graphviz(random_reg.estimators_[0], out_file="tree.dot", rounded=True, filled=True)
 
-# In[23]:
 
+# In[ ]:
 
-df_labels_discrete.head(50)
 
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_test_predictions = random_reg.predict(df_test_transformed)
+    evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+    plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
-# In[77]:
 
+# In[ ]:
 
-df[['ARR_DELAY']]
 
-
-# In[21]:
-
-
-display_freq_table(df, ['ARR_DELAY'])
-
-
-# In[128]:
-
-
-df['ARR_DELAY'].quantile([0,1])
-
-
-# In[148]:
-
-
-df.ARR_DELAY.quantile(.01)
-
-
-# In[145]:
-
-
-df[df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99)]
-
-
-# In[154]:
-
-
-df.loc[(df['ARR_DELAY'] < df.ARR_DELAY.quantile(.01)) | (df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99)) , :]
-
-
-# In[157]:
-
-
-((df['ARR_DELAY'] < df.ARR_DELAY.quantile(.01)) | (df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99))).index
-
-
-# In[159]:
-
-
-((df['ARR_DELAY'] < df.ARR_DELAY.quantile(.01)) | (df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99)))
-
-
-# In[28]:
-
-
-df.shape
-
-
-# In[24]:
-
-
-df_labels_discrete.shape
-
-
-# In[25]:
-
-
-from sklearn.model_selection import train_test_split
-X_train, X_test, y_train, y_test = train_test_split(df, df[model1_label], test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
-
-
-# In[26]:
-
-
-from sklearn.model_selection import train_test_split
-X_train, X_test = train_test_split(df, test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
-
-
-# In[27]:
-
-
-X_test
-
-
-# In[24]:
-
-
-split = StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=42)
-for train_index, test_index in split.split(df, df_labels_discrete):
-    strat_train_set = df.loc[train_index]
-    strat_test_set = df.loc[test_index]
-
-
-# In[103]:
-
-
-df_labels_discrete.value_counts()
-
-
-# In[66]:
-
-
-df[['DEST']]
-
-
-# In[46]:
-
-
-df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE, evaluation_method='MAE')
 
 
 # # Annex : unused code
 
-# In[55]:
+# In[ ]:
 
 
 '''from sklearn import linear_model
@@ -2052,7 +1937,7 @@ regressor.fit(df_transformed, df_train[model1_label])
 '''
 
 
-# In[56]:
+# In[ ]:
 
 
 '''
@@ -2063,7 +1948,7 @@ svm_reg.fit(df_train_transformed, df_train[model1_label])
 '''
 
 
-# In[57]:
+# In[ ]:
 
 
 '''
@@ -2074,7 +1959,7 @@ svm_rmse
 '''
 
 
-# In[58]:
+# In[ ]:
 
 
 '''
@@ -2122,3 +2007,82 @@ stratified_split_train = StratifiedShuffleSplit(n_splits=5, test_size=0.2, rando
 #     
 # # Add bias (intercept)
 # df_poly = np.c_[df_poly, np.ones((len(df_poly), 1))]  # add x0 = 1 feature
+
+# X_train, X_test, income_train, income_test = tts( other_colums, income_column,
+#                          shuffle = True, stratify = Income_column)`
+
+# df.shape
+
+# df_labels_discrete = pd.cut(df['ARR_DELAY'], bins=50)
+
+# df_labels_discrete.head(50)
+
+# df[['ARR_DELAY']]
+
+# display_freq_table(df, ['ARR_DELAY'])
+
+# df['ARR_DELAY'].quantile([0,1])
+
+# df.ARR_DELAY.quantile(.01)
+
+# df[df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99)]
+
+# df.loc[(df['ARR_DELAY'] < df.ARR_DELAY.quantile(.01)) | (df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99)) , :]
+
+# ((df['ARR_DELAY'] < df.ARR_DELAY.quantile(.01)) | (df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99))).index
+
+# ((df['ARR_DELAY'] < df.ARR_DELAY.quantile(.01)) | (df['ARR_DELAY'] > df.ARR_DELAY.quantile(.99)))
+
+# df.shape
+
+# df_labels_discrete.shape
+
+# from sklearn.model_selection import train_test_split
+# X_train, X_test, y_train, y_test = train_test_split(df, df[model1_label], test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
+
+# from sklearn.model_selection import train_test_split
+# X_train, X_test = train_test_split(df, test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
+
+# X_test
+
+# split = StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=42)
+# for train_index, test_index in split.split(df, df_labels_discrete):
+#     strat_train_set = df.loc[train_index]
+#     strat_test_set = df.loc[test_index]
+
+# df_labels_discrete.value_counts()
+
+# df[['DEST']]
+
+# df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
+
+# poly = ColumnTransformer([
+#                                 ('poly', PolynomialFeatures(degree=2), [0, 1, 2, 3, 4, 5, 6])     
+#                                 ], remainder='passthrough', sparse_threshold=1)
+# 
+# poly.fit(df_train_transformed, df_train[model1_label])
+
+# '''
+# #Too slow
+# 
+# from sklearn.ensemble import RandomForestRegressor
+# 
+# if (EXECUTE_INTERMEDIATE_MODELS == True):
+#     random_reg = RandomForestRegressor(n_estimators=100, max_depth=None, random_state=42)
+#     random_reg.fit(df_train_transformed, df_train[model1_label])
+#     
+# '''
+
+# '''
+# if (EXECUTE_INTERMEDIATE_MODELS == True):
+#     df_test_predictions = random_reg.predict(df_test_transformed)
+#     evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+# '''
+
+# '''
+# # Commented out because memory error
+# polynomial_reg = Pipeline([('poly', PolynomialFeatures(degree=3)),
+#                           ('linear', LinearRegression(fit_intercept=False))])
+# 
+# polynomial_reg.fit(df_train_transformed, df_train[model1_label])
+# '''
