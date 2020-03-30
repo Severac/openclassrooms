@@ -5,7 +5,7 @@
 
 # # Global variables and functions used in the notebook
 
-# In[1]:
+# In[172]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -47,6 +47,10 @@ MODEL1_FEATURES = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK',
 MODEL1_FEATURES_QUANTITATIVE = ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
 MODEL1bis_FEATURES_QUANTITATIVE = ['CRS_DEP_TIME','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
 MODEL1_LABEL = 'ARR_DELAY'
+
+
+MODEL_cheat_FEATURES = ['ARR_DELAY','ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
+MODEL_cheat_FEATURES_QUANTITATIVE = ['ARR_DELAY','CRS_DEP_TIME','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
 
 plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
 
@@ -445,7 +449,7 @@ df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_
 
 # # Features encoding
 
-# In[25]:
+# In[173]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -812,6 +816,17 @@ prediction_pipeline_1hotall_without_sparse = Pipeline([
     #('dense_to_sparse_converter', DenseToSparseConverter()),
     #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
 ])
+
+prediction_pipeline_cheat_without_sparse = Pipeline([
+    ('features_selector', FeaturesSelector(features_toselect=MODEL_cheat_FEATURES)),
+    ('standardscaler', ColumnTransformer([
+        ('standardscaler_specific', StandardScaler(), MODEL_cheat_FEATURES_QUANTITATIVE)
+    ], remainder='passthrough', sparse_threshold=1)),
+    
+    #('dense_to_sparse_converter', DenseToSparseConverter()),
+    #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+
 
 
 '''
@@ -1820,13 +1835,13 @@ df_train_transformed.shape
 df_train_transformed
 
 
-# In[ ]:
+# In[154]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# In[ ]:
+# In[155]:
 
 
 '''
@@ -1846,26 +1861,26 @@ del df_test
 
 # ### Degree 2
 
-# In[ ]:
+# In[156]:
 
 
 nb_instances = df_train_transformed.shape[0]
 
 
-# In[ ]:
+# In[157]:
 
 
 poly = PolynomialFeaturesUnivariateAdder(n_degrees = 2)
 
 
-# In[ ]:
+# In[158]:
 
 
 df_train_transformed = poly.fit_transform(df_train_transformed)
 df_test_transformed = poly.fit_transform(df_test_transformed)
 
 
-# In[ ]:
+# In[159]:
 
 
 lin_reg = LinearRegression()
@@ -1879,7 +1894,7 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 
 # # Random forest
 
-# In[ ]:
+# In[160]:
 
 
 from sklearn.ensemble import RandomForestRegressor
@@ -1889,28 +1904,28 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     random_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[ ]:
+# In[161]:
 
 
 random_reg.feature_importances_
 
 
-# => feature importance : 25% for CRS_ARR_TIME and 14% for UNIQUE_CARRIER
+# => feature importance : 25% for CRS_ARR_TIME and 14% for UNIQUE_CARRIER  in previous model  (not this one)
 
-# In[ ]:
+# In[162]:
 
 
 random_reg.estimators_[0]
 
 
-# In[ ]:
+# In[163]:
 
 
 from sklearn.tree import export_graphviz
 export_graphviz(random_reg.estimators_[0], out_file="tree.dot", rounded=True, filled=True)
 
 
-# In[ ]:
+# In[164]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1919,15 +1934,114 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# In[ ]:
+# In[165]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE, evaluation_method='MAE')
 
 
+# # Cheat model : give access to the model to the ARR_DELAY variable ! it should now learn
+
+# In[174]:
+
+
+if (DATA_LOADED == True):
+    del df
+    del df_train
+    del df_test
+    del df_train_transformed
+    del df_test_transformed
+
+
+# In[175]:
+
+
+df = load_data()
+
+
+# In[176]:
+
+
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+
+
+# In[177]:
+
+
+df, df_train, df_test = custom_train_test_split_sample(df)
+
+
+# In[178]:
+
+
+df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'])
+df_train_transformed = prediction_pipeline_cheat_without_sparse.fit_transform(df_train_transformed)
+
+df_test_transformed = preparation_pipeline_meansort.transform(df_test)
+df_test_transformed = prediction_pipeline_cheat_without_sparse.transform(df_test_transformed)
+DATA_LOADED = True
+df_test_transformed.shape
+
+
+# In[179]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+
+# => RMSE : 41.98  
+# => RMSE without outliers : 26.88
+
+# In[180]:
+
+
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# => RMSE on training set : 41.12  
+# => RMSE training set without outliers : 26.89
+
+# In[181]:
+
+
+lin_reg.coef_
+
+
+# In[182]:
+
+
+# Feature importances :
+(abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+
+
+# In[183]:
+
+
+df_train_transformed.shape
+
+
+# In[184]:
+
+
+df_train_transformed
+
+
+# In[185]:
+
+
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
+
+
 # # Annex : unused code
 
-# In[ ]:
+# In[166]:
 
 
 '''from sklearn import linear_model
@@ -1937,7 +2051,7 @@ regressor.fit(df_transformed, df_train[model1_label])
 '''
 
 
-# In[ ]:
+# In[167]:
 
 
 '''
@@ -1948,7 +2062,7 @@ svm_reg.fit(df_train_transformed, df_train[model1_label])
 '''
 
 
-# In[ ]:
+# In[168]:
 
 
 '''
@@ -1959,7 +2073,7 @@ svm_rmse
 '''
 
 
-# In[ ]:
+# In[169]:
 
 
 '''
