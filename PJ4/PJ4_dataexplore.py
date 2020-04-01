@@ -845,20 +845,20 @@ df['HOUR_SCHEDULED'] = df['CRS_DEP_TIME'].str.slice(start=0,stop=2, step=1)
 df['HOUR_SCHEDULED'] = df['HOUR_SCHEDULED'].astype(str)
 
 
-# In[75]:
+# In[ ]:
 
 
 # Create dictionary containing sum of flights for each tuple (date, origin airport)
 dict_date_hour_airport_nbflights = df[['FL_DATE', 'HOUR_SCHEDULED', 'ORIGIN']].groupby(['FL_DATE', 'HOUR_SCHEDULED', 'ORIGIN']).size().to_dict()
 
 
-# In[76]:
+# In[ ]:
 
 
 len(dict_date_hour_airport_nbflights)
 
 
-# In[77]:
+# In[ ]:
 
 
 def map_date_hour_airport_to_nbflights(date_val, hour_val, airport_val):
@@ -867,7 +867,7 @@ def map_date_hour_airport_to_nbflights(date_val, hour_val, airport_val):
     
 
 
-# In[78]:
+# In[ ]:
 
 
 # Then for each row, we apply the dictionary and create a new column with its vales
@@ -875,7 +875,7 @@ progbar = tqdm(range(len(df)))
 df['NBFLIGHTS_FORDAYHOUR_FORAIRPORT'] = df[['FL_DATE', 'HOUR_SCHEDULED', 'ORIGIN']].apply(lambda row : map_date_hour_airport_to_nbflights(row.FL_DATE, row.HOUR_SCHEDULED, row.ORIGIN), axis=1)
 
 
-# In[79]:
+# In[ ]:
 
 
 fig, ax = plt.subplots()

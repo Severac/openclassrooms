@@ -5,7 +5,7 @@
 
 # # Global variables and functions used in the notebook
 
-# In[172]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -76,6 +76,7 @@ EXECUTE_INTERMEDIATE_MODELS = True # If True: every intermediate model (which re
 
 # Necessary for predictors used in the notebook :
 from sklearn.linear_model import LinearRegression
+from sklearn.compose import TransformedTargetRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
 
@@ -84,6 +85,12 @@ from sklearn.preprocessing import PolynomialFeatures
 
 ### For progress bar :
 from tqdm import tqdm_notebook as tqdm
+
+# Statsmodel : 
+import statsmodels.formula.api as smf
+
+import statsmodels.api as sm
+from scipy import stats
 
 
 # In[2]:
@@ -449,7 +456,7 @@ df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_
 
 # # Features encoding
 
-# In[173]:
+# In[25]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -686,6 +693,7 @@ class Filter_High_Percentile(BaseEstimator, TransformerMixin):
             print(f'Number of {feature_tofilter} low percentile values : {low_percentile_sum}')
             print(f'Sum of high percentile + low percentile values : {high_low_sum}')
         
+        print('End of high percentile filter fit')
         return self
     
     def transform(self, df):       
@@ -693,6 +701,7 @@ class Filter_High_Percentile(BaseEstimator, TransformerMixin):
             print('Apply high percentile filter...')
             
             for feature_tofilter in self.features_tofilter:
+                print(f'Apply filter on feature {feature_tofilter}')
                 df.loc[df[feature_tofilter].isin(self.low_percentile), feature_tofilter] = 'OTHERS'   
             
             return(df)    
@@ -799,9 +808,9 @@ prediction_pipeline = Pipeline([
 
 prediction_pipeline_without_sparse = Pipeline([
     ('features_selector', FeaturesSelector(features_toselect=MODEL1_FEATURES)),
-    ('standardscaler', ColumnTransformer([
-        ('standardscaler_specific', StandardScaler(), MODEL1_FEATURES_QUANTITATIVE)
-    ], remainder='passthrough', sparse_threshold=1)),
+    #('standardscaler', ColumnTransformer([
+    #    ('standardscaler_specific', StandardScaler(), MODEL1_FEATURES_QUANTITATIVE)
+    #], remainder='passthrough', sparse_threshold=1)),
     
     #('dense_to_sparse_converter', DenseToSparseConverter()),
     #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
@@ -874,7 +883,8 @@ df_train_transformed.info()
 # In[30]:
 
 
-df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)
+#df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)  # Used if standard scale not commented out
+df_train_transformed = prediction_pipeline_without_sparse.fit_transform(df_train_transformed)
 
 
 # In[31]:
@@ -914,7 +924,8 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 
 df_test_transformed = preparation_pipeline.transform(df_test)
-df_test_transformed = prediction_pipeline.transform(df_test_transformed)
+#df_test_transformed = prediction_pipeline.transform(df_test_transformed)  # Used if standardscale not commented out
+df_test_transformed = prediction_pipeline_without_sparse.transform(df_test_transformed)
 DATA_LOADED = True
 df_test_transformed.shape
 
@@ -927,15 +938,16 @@ df_test_transformed.shape
 df_train[model1_label].shape
 
 
-# In[38]:
+# In[50]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
-    lin_reg = LinearRegression()
+    lin_reg = LinearRegression(normalize=False)
+    #lin_reg = TransformedTargetRegressor(regressor=lin_reg, transformer=StandardScaler())  # To scale y variable
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[39]:
+# In[51]:
 
 
 
@@ -947,39 +959,42 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     print(lin_rmse)
 
 
-# => 42.17  (42.16679389006135)
+# => 42.17  (42.16679389006135)  
+# => 26.998703285049196  with outliers removed  
+# => 26.998703285632104 with TransformedTargetRegressor  
+# => 26.99870280932372 without standardscale
 
-# In[40]:
+# In[52]:
 
 
 df_train_transformed.shape[0]
 
 
-# In[41]:
+# In[53]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# In[42]:
+# In[54]:
 
 
 df_train
 
 
-# In[43]:
+# In[55]:
 
 
 df_train_transformed[0, :].toarray()
 
 
-# In[44]:
+# In[56]:
 
 
 df_train[[model1_label]]
 
 
-# In[45]:
+# In[57]:
 
 
 lin_reg.coef_
@@ -1014,7 +1029,7 @@ lin_reg.coef_
 #          9.46369559,  -0.27437885,  -1.82963879,   0.47213692,
 #         -2.5256052 ,  -2.053249  ,  -1.04523965])
 
-# In[46]:
+# In[58]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1023,6 +1038,60 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.ylabel("Predicted")
     plt.xlabel("Actual")
     plt.scatter(df_test[model1_label], df_test_predictions, color='coral')
+
+
+# In[99]:
+
+
+df_train_transformed[:,1].shape
+
+
+# In[106]:
+
+
+df_test_predictions.shape
+
+
+# In[124]:
+
+
+df_train_transformed[:,1].toarray()
+
+
+# In[116]:
+
+
+np.ravel(df_train_transformed[:,1]).shape
+
+
+# In[118]:
+
+
+df_train_transformed[:,1]
+
+
+# In[44]:
+
+
+df_train_transformed
+
+
+# In[41]:
+
+
+plt.hist(df_train_transformed[:,8].toarray(), bins=50)
+
+
+# In[42]:
+
+
+plt.hist(df_test_predictions, bins=50)
+
+
+# In[94]:
+
+
+plt.hist(df_test[model1_label], bins=50)
 
 
 # In[47]:
@@ -1744,7 +1813,7 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 
 # # New try with 1 hot encode of : 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'
 
-# In[143]:
+# In[59]:
 
 
 if (DATA_LOADED == True):
@@ -1755,25 +1824,25 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[144]:
+# In[18]:
 
 
 df = load_data()
 
 
-# In[145]:
+# In[19]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[146]:
+# In[20]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[147]:
+# In[21]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'])
@@ -1785,7 +1854,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[148]:
+# In[22]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1801,7 +1870,7 @@ evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 # => RMSE : 41.98  
 # => RMSE without outliers : 26.88
 
-# In[149]:
+# In[23]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
@@ -1810,32 +1879,32 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 # => RMSE on training set : 41.12  
 # => RMSE training set without outliers : 26.89
 
-# In[150]:
+# In[24]:
 
 
 lin_reg.coef_
 
 
-# In[151]:
+# In[25]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[152]:
+# In[26]:
 
 
 df_train_transformed.shape
 
 
-# In[153]:
+# In[27]:
 
 
 df_train_transformed
 
 
-# In[154]:
+# In[28]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
@@ -1853,10 +1922,48 @@ del df_test
 '''
 
 
-# In[ ]:
+# In[32]:
 
 
+df_train_transformed.shape
 
+
+# In[37]:
+
+
+np.asarray(df_train_transformed)
+
+
+# In[39]:
+
+
+#X2 = sm.add_constant(df_train_transformed)
+est = sm.OLS(df_train[model1_label], np.asarray(df_train_transformed.astype(float)))
+est2 = est.fit()
+print(est2.summary())
+
+
+# In[40]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral')
+
+
+# In[54]:
+
+
+plt.hist(df_test_predictions, bins=50)
+
+
+# In[55]:
+
+
+plt.hist(df_test[model1_label], bins=50)
 
 
 # ### Degree 2
