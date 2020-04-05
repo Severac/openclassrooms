@@ -28,7 +28,8 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 SAMPLED_DATA = True  # If True : data is sampled (NB_SAMPLES instances only) for faster testing purposes
 NB_SAMPLES = 800000
-LEARNING_CURVE_STEP_SIZE = 10000 # Change that when you change NB_SAMPLES size
+#NB_SAMPLES = 2000000
+LEARNING_CURVE_STEP_SIZE = 50000 # Change that when you change NB_SAMPLES size
 
 DATA_PATH = os.path.join("datasets", "transats")
 DATA_PATH = os.path.join(DATA_PATH, "out")
@@ -45,6 +46,11 @@ MODEL1_LABEL = 'ARR_DELAY'
 
 MODEL1_FEATURES = ['ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
 MODEL1_FEATURES_QUANTITATIVE = ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
+
+MODEL1_GOUPBYMEAN_FEATURES = ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DEST','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'CRS_ARR_TIME', 'DAY_OF_WEEK', 'NBFLIGHTS_FORDAY_FORAIRPORT', 'ORIGIN', 'UNIQUE_CARRIER']
+MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE = ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DISTANCE','CRS_ELAPSED_TIME', 'DEST', 'CRS_ARR_TIME', 'DAY_OF_WEEK', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'ORIGIN', 'UNIQUE_CARRIER' ]
+
+
 MODEL1bis_FEATURES_QUANTITATIVE = ['CRS_DEP_TIME','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
 MODEL1_LABEL = 'ARR_DELAY'
 
@@ -130,6 +136,30 @@ def custom_train_test_split_sample(df):
     
     df_train, df_test = train_test_split(df, test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
     #df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
+    
+    df_train = df_train.copy()
+    df_test = df_test.copy()
+
+    '''
+    # Old code: we sampled only training set. But that's a problem when you encounter values in test set (not sampled) that were not in training set
+    if (SAMPLED_DATA == True):
+        df_train = df_train.sample(NB_SAMPLES).copy(deep=True)
+        df = df.loc[df_train.index]
+    '''   
+    
+    return df, df_train, df_test
+
+
+# In[22]:
+
+
+def custom_train_test_split_sample_random(df):
+    from sklearn.model_selection import train_test_split
+    
+    if (SAMPLED_DATA == True):
+        df = df.sample(NB_SAMPLES).copy(deep=True)
+        
+    df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
     
     df_train = df_train.copy()
     df_test = df_test.copy()
@@ -456,7 +486,7 @@ df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_
 
 # # Features encoding
 
-# In[25]:
+# In[118]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -575,8 +605,8 @@ class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
             print('Transform data')
             
             print('1hot encode categorical features...')
-            df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=True)  # Sparse allows to gain memory. But then, standardscale must be with_mean=False
-            #df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=False)
+            #df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=True)  # Sparse allows to gain memory. But then, standardscale must be with_mean=False
+            df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=False)
 
             # Get category values that were in fitted data, but that are not in data to transform 
             for feature_name, feature_values in self.all_feature_values.items():
@@ -702,6 +732,7 @@ class Filter_High_Percentile(BaseEstimator, TransformerMixin):
             
             for feature_tofilter in self.features_tofilter:
                 print(f'Apply filter on feature {feature_tofilter}')
+                # To do for later : apply low_percentile specific to the feature, and not only last calculated low_percentile  (in our case it's the same percentile for ORIGIN and DEST so this is not a problem)
                 df.loc[df[feature_tofilter].isin(self.low_percentile), feature_tofilter] = 'OTHERS'   
             
             return(df)    
@@ -757,7 +788,34 @@ class PolynomialFeaturesUnivariateAdder(BaseEstimator, TransformerMixin):
         return(df_poly)
         
     
+class StandardScalerMultiple(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.fitted = False
+    
+    def fit(self, df, columns=None):              
+        self.columns = columns
+        self.scaler = StandardScaler()
+  
+        if (self.columns == None):
+            return(df)
+        else:
+            self.scaler.fit(df[self.columns].to_numpy())            
+        
+        return self
+    
+    def transform(self, df):
+        if (self.fitted == False):
+            self.fit(df)
+        
+        if (self.columns == None):
+            return(df)
+        
+        else:
+            df[self.columns] = self.scaler.transform(df[self.columns].to_numpy())
 
+        return(df)
+        
+    
         
 '''
 conversion_pipeline = Pipeline([
@@ -808,13 +866,27 @@ prediction_pipeline = Pipeline([
 
 prediction_pipeline_without_sparse = Pipeline([
     ('features_selector', FeaturesSelector(features_toselect=MODEL1_FEATURES)),
-    #('standardscaler', ColumnTransformer([
-    #    ('standardscaler_specific', StandardScaler(), MODEL1_FEATURES_QUANTITATIVE)
-    #], remainder='passthrough', sparse_threshold=1)),
+    ('standardscaler', ColumnTransformer([
+        ('standardscaler_specific', StandardScaler(), MODEL1_FEATURES_QUANTITATIVE)
+    #], remainder='passthrough', sparse_threshold=1)), # For sparse output. Seems not to work well.
+    ], remainder='passthrough')),
     
     #('dense_to_sparse_converter', DenseToSparseConverter()),
     #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
 ])
+
+prediction_pipeline_groupbymean = Pipeline([
+    ('features_selector', FeaturesSelector(features_toselect=MODEL1_GOUPBYMEAN_FEATURES)),
+    ('standardscaler', ColumnTransformer([
+        ('standardscaler_specific', StandardScaler(), MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE)
+    ], remainder='passthrough')),
+    #], remainder='passthrough', sparse_threshold=1)), # For sparse output. Seems not to work well.
+    
+    #('dense_to_sparse_converter', DenseToSparseConverter()),
+    #('predictor', To_Complete(predictor_params =  {'n_neighbors':6, 'algorithm':'ball_tree', 'metric':'minkowski'})),
+])
+
+
 
 prediction_pipeline_1hotall_without_sparse = Pipeline([
     ('features_selector', FeaturesSelector(features_toselect=MODEL1_FEATURES)),
@@ -854,6 +926,12 @@ ColumnTransformer([
         ('standardscaler_specific', StandardScaler(), ['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'DISTANCE', 'CRS_ELAPSED_TIME', 'ARR_DELAY', 'DEP_DELAY', 'TAXI_OUT'])
     ], remainder='passthrough')
 '''
+
+
+# In[215]:
+
+
+df
 
 
 # In[26]:
@@ -930,26 +1008,87 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
+# In[37]:
+
+
+df_train_transformed
+
+
+# In[38]:
+
+
+df_test[model1_label]
+
+
+# In[39]:
+
+
+df_test.index
+
+
+# In[40]:
+
+
+df.loc[df_test.index, model1_label]
+
+
 # # Linear regression
 
-# In[37]:
+# In[41]:
 
 
 df_train[model1_label].shape
 
 
-# In[50]:
+# In[42]:
+
+
+# Add bias :
+df_train_transformed = np.c_[np.ones((len(df_train_transformed), 1)), df_train_transformed]  # add x0 = 1 to each instance
+df_test_transformed = np.c_[np.ones((len(df_test_transformed), 1)), df_test_transformed]  # add x0 = 1 to each instance
+
+
+# In[43]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
-    lin_reg = LinearRegression(normalize=False)
+    lin_reg = LinearRegression(normalize=False, fit_intercept=True)
     #lin_reg = TransformedTargetRegressor(regressor=lin_reg, transformer=StandardScaler())  # To scale y variable
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[51]:
+# In[46]:
 
 
+lin_reg = linear_model.SGDRegressor(alpha=0,max_iter=200)
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[92]:
+
+
+df_train.iloc[25, :]
+
+
+# In[93]:
+
+
+df_train.iloc[25, :]
+
+
+# In[94]:
+
+
+df
+
+
+# In[95]:
+
+
+df_train.iloc[50, :]
+
+
+# In[45]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -962,7 +1101,15 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # => 42.17  (42.16679389006135)  
 # => 26.998703285049196  with outliers removed  
 # => 26.998703285632104 with TransformedTargetRegressor  
-# => 26.99870280932372 without standardscale
+# => 26.99870280932372 without standardscale  
+# => 27.00905767522797 with SGDRegressor ((alpha=0,max_iter=200) and standarscale
+
+# In[51]:
+
+
+print("Evaluation on training set :")
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
 
 # In[52]:
 
@@ -982,19 +1129,13 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 df_train
 
 
-# In[55]:
-
-
-df_train_transformed[0, :].toarray()
-
-
 # In[56]:
 
 
 df_train[[model1_label]]
 
 
-# In[57]:
+# In[51]:
 
 
 lin_reg.coef_
@@ -1029,7 +1170,7 @@ lin_reg.coef_
 #          9.46369559,  -0.27437885,  -1.82963879,   0.47213692,
 #         -2.5256052 ,  -2.053249  ,  -1.04523965])
 
-# In[58]:
+# In[46]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1037,37 +1178,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     fig.suptitle('Comparison actual values / predict values')
     plt.ylabel("Predicted")
     plt.xlabel("Actual")
-    plt.scatter(df_test[model1_label], df_test_predictions, color='coral')
-
-
-# In[99]:
-
-
-df_train_transformed[:,1].shape
-
-
-# In[106]:
-
-
-df_test_predictions.shape
-
-
-# In[124]:
-
-
-df_train_transformed[:,1].toarray()
-
-
-# In[116]:
-
-
-np.ravel(df_train_transformed[:,1]).shape
-
-
-# In[118]:
-
-
-df_train_transformed[:,1]
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
 
 
 # In[44]:
@@ -1076,25 +1187,31 @@ df_train_transformed[:,1]
 df_train_transformed
 
 
-# In[41]:
-
-
-plt.hist(df_train_transformed[:,8].toarray(), bins=50)
-
-
-# In[42]:
+# In[47]:
 
 
 plt.hist(df_test_predictions, bins=50)
 
 
-# In[94]:
+# In[48]:
 
 
 plt.hist(df_test[model1_label], bins=50)
 
 
-# In[47]:
+# In[78]:
+
+
+df_train_predictions = lin_reg.predict(df_train_transformed)
+
+
+# In[70]:
+
+
+plt.hist(df_train_predictions, bins=50)
+
+
+# In[ ]:
 
 
 from sklearn.model_selection import cross_validate
@@ -1255,7 +1372,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[62]:
+# In[49]:
 
 
 from sklearn import dummy
@@ -1497,7 +1614,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[88]:
+# In[108]:
 
 
 if (DATA_LOADED == True):
@@ -1508,37 +1625,200 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[89]:
+# In[109]:
 
 
 df = load_data()
 
 
-# In[90]:
+# In[110]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[91]:
+# In[111]:
 
 
-df, df_train, df_test = custom_train_test_split_sample(df)
+df, df_train, df_test = custom_train_test_split_sample_random(df)
 
 
-# In[92]:
+# In[112]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
-df_train_transformed = prediction_pipeline_without_sparse.fit_transform(df_train_transformed)
+
+
+# In[119]:
+
+
+transformer = StandardScalerMultiple()
+
+
+# In[120]:
+
+
+transformer.fit(df_train_transformed, columns=MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE)
+
+
+# In[121]:
+
+
+MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE
+
+
+# In[134]:
+
+
+transformer.transform(df_train_transformed)
+
+
+# In[124]:
+
+
+df[MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE].to_numpy()
+
+
+# In[125]:
+
+
+scaler = StandardScaler()
+
+
+# In[130]:
+
+
+df[MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE]
+
+
+# In[131]:
+
+
+scaler.fit(df_train_transformed[MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE].to_numpy())  
+
+
+# In[132]:
+
+
+df_train_transformed[MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE] = scaler.transform(df_train_transformed[MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE].to_numpy())
+
+
+# In[133]:
+
+
+df_train_transformed
+
+
+# In[117]:
+
+
+df_train
+
+
+# In[21]:
+
+
+df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+df_train_transformed = prediction_pipeline_groupbymean.fit_transform(df_train_transformed)
 
 df_test_transformed = preparation_pipeline_meansort.transform(df_test)
-df_test_transformed = prediction_pipeline_without_sparse.transform(df_test_transformed)
+df_test_transformed = prediction_pipeline_groupbymean.transform(df_test_transformed)
 DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[93]:
+# In[42]:
+
+
+prediction_pipeline_groupbymean['standardscaler'].transformers[0]
+
+
+# In[105]:
+
+
+prediction_pipeline_groupbymean.steps[1][1].get_feature_names()
+
+
+# In[106]:
+
+
+prediction_pipeline_groupbymean.steps[1][1]
+
+
+# In[75]:
+
+
+prediction_pipeline_groupbymean.named_steps['standardscaler'].transformers_[0][1]
+
+
+# In[102]:
+
+
+prediction_pipeline_groupbymean.steps[1]
+
+
+# In[ ]:
+
+
+get_feature_names
+
+
+# In[205]:
+
+
+df_train_transformed[:, df_train_transformed.shape[1] - 1].mean()
+
+
+# In[206]:
+
+
+MODEL1_GOUPBYMEAN_FEATURES
+
+
+# In[207]:
+
+
+df_train_transformed.shape[1]
+
+
+# In[194]:
+
+
+len(MODEL1_GOUPBYMEAN_FEATURES)
+
+
+# In[195]:
+
+
+df_train_transformed.shape[1]
+
+
+# In[196]:
+
+
+for feat_indice in range(df_train_transformed.shape[1]):
+    fig = plt.figure()
+    plt.hist(df_train_transformed[:, feat_indice], bins=50)
+
+
+# In[210]:
+
+
+df_train.hist()
+
+
+# In[197]:
+
+
+# Add bias :
+# Bias has been removed: its linear regression coeficient was 0
+'''
+df_train_transformed = np.c_[np.ones((len(df_train_transformed), 1)), df_train_transformed]  # add x0 = 1 to each instance
+df_test_transformed = np.c_[np.ones((len(df_test_transformed), 1)), df_test_transformed]  # add x0 = 1 to each instance
+'''
+
+
+# In[198]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1548,74 +1828,103 @@ lin_reg = LinearRegression()
 lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 df_test_predictions = lin_reg.predict(df_test_transformed)
+
+print("Evaluation on test set :")
 evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 
+print('\n')
 
-# In[94]:
-
-
+print("Evaluation on training set :")
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 
+# => Evaluation on test set :  
+# RMSE : 27.079383490783385  
+# 
+#   
+# Evaluation on training set :  
+# RMSE : 27.07763523727725  
+# 
+# 
+# 
+# En ayant enlevé  :  'NBFLIGHTS_FORDAY_FORAIRPORT',  
+#        'ORIGIN', 'UNIQUE_CARRIER' :  
+# 
+# Evaluation on test set :  
+# RMSE : 27.19385016531133  
+# 
+# Remettre juste 'NBFLIGHTS_FORDAY_FORAIRPORT' n'y change rien  
+# En remettant ORIGIN => passage à 27.14  
+# En remettant UNIQUE_CARRIER => passage à 27.08
+
 # => RMSE on training set : 41.35267146874754 (close to RMSE on test set => under fitting)
 
-# In[95]:
+# In[199]:
+
+
+plt.hist(df_test_predictions, bins=50)
+
+
+# In[200]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
+
+
+# In[201]:
+
+
+df_train_predictions = lin_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[141]:
 
 
 lin_reg.coef_
 
 
-# In[96]:
+# In[202]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[97]:
+# Features < 0.01 importance :   
+# 'NBFLIGHTS_FORDAY_FORAIRPORT',
+#        'ORIGIN', 'UNIQUE_CARRIER'
+#        
+# => NBFLIGHTS_FORDAY_FORAIRPORT removed from MODEL1_GOUPBYMEAN_FEATURES  
+# => ORIGIN and UNIQUE_CARRIER kept   
+
+# In[ ]:
 
 
 df_train_transformed.shape
 
 
-# In[98]:
+# In[ ]:
 
 
 df_train_transformed
 
 
-# In[99]:
+# In[ ]:
 
 
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 10000)
-
-
-# ## Linear Regression with bias
-
-# In[100]:
-
-
-df_train_transformed_bias = np.c_[np.ones((len(df_train_transformed), 1)), df_train_transformed]  # add x0 = 1 to each instance
-df_test_transformed_bias = np.c_[np.ones((len(df_test_transformed), 1)), df_test_transformed]  # add x0 = 1 to each instance
-
-
-# In[101]:
-
-
-from sklearn.linear_model import LinearRegression
-
-lin_reg = LinearRegression()
-
-lin_reg.fit(df_train_transformed_bias, df_train[model1_label])
-
-df_test_predictions = lin_reg.predict(df_test_transformed_bias)
-evaluate_model(lin_reg, df_test_transformed_bias, df_test[model1_label])
-
-
-# In[102]:
-
-
-plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], 10000)
+plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
 # ## Polynomial regression degree 2
@@ -2028,8 +2337,10 @@ random_reg.estimators_[0]
 # In[163]:
 
 
+'''
 from sklearn.tree import export_graphviz
 export_graphviz(random_reg.estimators_[0], out_file="tree.dot", rounded=True, filled=True)
+'''
 
 
 # In[164]:
@@ -2144,6 +2455,157 @@ df_train_transformed
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
+
+
+# # Random forest without polynomial feature
+
+# In[64]:
+
+
+if (DATA_LOADED == True):
+    del df
+    del df_train
+    del df_test
+    del df_train_transformed
+    del df_test_transformed
+
+
+# In[65]:
+
+
+df = load_data()
+
+
+# In[66]:
+
+
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+
+
+# In[67]:
+
+
+df, df_train, df_test = custom_train_test_split_sample(df)
+
+
+# In[68]:
+
+
+df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'])
+df_train_transformed = prediction_pipeline_1hotall_without_sparse.fit_transform(df_train_transformed)
+
+df_test_transformed = preparation_pipeline_meansort.transform(df_test)
+df_test_transformed = prediction_pipeline_1hotall_without_sparse.transform(df_test_transformed)
+DATA_LOADED = True
+df_test_transformed.shape
+
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(n_estimators=100, max_depth=100, n_jobs=-1, random_state=42)\n    random_reg.fit(df_train_transformed, df_train[model1_label])')
+
+
+# In[ ]:
+
+
+print("Evaluation on test set :")
+evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
+
+
+# => n_estimators=10, max_depth=10 : RMSE = 26.489032357237143  
+# => n_estimators=100, max_depth=10 : RMSE = 26.452279766206914  
+# => n_estimators=100, max_depth=100 : RMSE train = 9.623992685309045, RMSE test = 25.688478031845328
+
+# In[ ]:
+
+
+
+
+
+# In[23]:
+
+
+random_reg.feature_importances_
+
+
+# In[25]:
+
+
+random_reg.feature_importances_.cumsum()
+
+
+# => feature importance : 25% for CRS_ARR_TIME and 14% for UNIQUE_CARRIER  in previous model  (not this one)
+
+# In[ ]:
+
+
+random_reg.estimators_[0]
+
+
+# In[24]:
+
+
+'''
+from sklearn.tree import export_graphviz
+export_graphviz(random_reg.estimators_[0], out_file="tree.dot", rounded=True, filled=True)
+'''
+
+
+# In[27]:
+
+
+LEARNING_CURVE_STEP_SIZE
+
+
+# In[28]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_test_predictions = random_reg.predict(df_test_transformed)
+    evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+    plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE*5)
+
+
+# In[ ]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
+
+
+# In[ ]:
+
+
+df_train_predictions = lin_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[27]:
+
+
+plt.hist(df_test_predictions, bins=50)
+
+
+# In[28]:
+
+
+plt.hist(df_test[model1_label], bins=50)
 
 
 # # Annex : unused code
