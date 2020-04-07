@@ -54,6 +54,10 @@ MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE = ['CRS_DEP_TIME','MONTH','DAY_OF_MONTH'
 MODEL1bis_FEATURES_QUANTITATIVE = ['CRS_DEP_TIME','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
 MODEL1_LABEL = 'ARR_DELAY'
 
+MODEL_1HOTALL_FEATURES = ['DISTANCE', 'CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAY_FORAIRPORT', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER', 'CRS_DEP_TIME']
+MODEL_1HOTALL_FEATURES_QUANTITATIVE = ['DISTANCE', 'CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAY_FORAIRPORT', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT']
+# For later : maybe not include CRS_ELAPSED_TIME because close to DISTANCE
+
 
 MODEL_cheat_FEATURES = ['ARR_DELAY','ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
 MODEL_cheat_FEATURES_QUANTITATIVE = ['ARR_DELAY','CRS_DEP_TIME','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
@@ -150,7 +154,7 @@ def custom_train_test_split_sample(df):
     return df, df_train, df_test
 
 
-# In[22]:
+# In[5]:
 
 
 def custom_train_test_split_sample_random(df):
@@ -174,7 +178,7 @@ def custom_train_test_split_sample_random(df):
     return df, df_train, df_test
 
 
-# In[5]:
+# In[6]:
 
 
 def print_column_information(df, column_name):
@@ -187,7 +191,7 @@ def print_column_information(df, column_name):
     print('\n')
 
 
-# In[6]:
+# In[7]:
 
 
 def display_percent_complete(df):
@@ -197,7 +201,7 @@ def display_percent_complete(df):
     display(not_na_df)
 
 
-# In[7]:
+# In[8]:
 
 
 def identify_features(df):
@@ -223,7 +227,7 @@ def identify_features(df):
     return all_features, model1_features, model1_label, quantitative_features, qualitative_features
 
 
-# In[8]:
+# In[9]:
 
 
 def save_or_load_search_params(grid_search, save_file_suffix):
@@ -258,7 +262,7 @@ def save_or_load_search_params(grid_search, save_file_suffix):
             return(grid_search, df_grid_search_results)
 
 
-# In[9]:
+# In[10]:
 
 
 def evaluate_model(model, X_test, Y_test):
@@ -269,7 +273,7 @@ def evaluate_model(model, X_test, Y_test):
     
 
 
-# In[10]:
+# In[11]:
 
 
 def evaluate_model_MAE(model, X_test, Y_test):
@@ -279,7 +283,7 @@ def evaluate_model_MAE(model, X_test, Y_test):
     
 
 
-# In[11]:
+# In[12]:
 
 
 def minibatch_generate_indexes(df_train_transformed, step_size):
@@ -296,7 +300,7 @@ def minibatch_generate_indexes(df_train_transformed, step_size):
     yield((left_index + step_size, final_index))
 
 
-# In[12]:
+# In[13]:
 
 
 def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, evaluation_method='RMSE'):
@@ -341,13 +345,13 @@ def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, eva
          plt.ylabel("MAE", fontsize=14)  
 
 
-# In[13]:
+# In[14]:
 
 
 #minibatches = minibatch_generate_indexes(df_train_transformed)
 
 
-# In[14]:
+# In[15]:
 
 
 def reset_data():
@@ -378,7 +382,7 @@ def reset_data_old():
     return df, df_train, df_test, df_train_transformed, df_test_transformed
 
 
-# In[15]:
+# In[16]:
 
 
 from IPython.display import display, Markdown
@@ -486,7 +490,7 @@ df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_
 
 # # Features encoding
 
-# In[118]:
+# In[17]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -496,6 +500,7 @@ from sklearn import decomposition
 from sklearn import preprocessing
 
 from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
@@ -552,11 +557,29 @@ class HHMM_to_Minutes(BaseEstimator, TransformerMixin):
                     
             #print('2\n')
             df[feature_toconvert] = (df_concat.iloc[:, [0]] * 60 + df_concat.iloc[:, [1]])[feature_toconvert]
+            del df_concat
             
             #print('3\n')
         
         return(df)
 
+    
+class HHMM_to_HH(BaseEstimator, TransformerMixin):
+    def __init__(self, features_toconvert = ['CRS_DEP_TIME', 'CRS_ARR_TIME']):
+        self.features_toconvert = features_toconvert
+        return None
+    
+    def fit(self, df):      
+        return self
+    
+    def transform(self, df):       
+        for feature_toconvert in self.features_toconvert:
+            print(f'Converting feature {feature_toconvert}\n')
+            #print('1\n')
+
+            df.loc[:, feature_toconvert] = df[feature_toconvert].str.slice(start=0,stop=2, step=1)
+        
+        return(df)
     
 '''
 class CategoricalFeatures1HotEncoder_old(BaseEstimator, TransformerMixin):
@@ -689,7 +712,8 @@ class FeaturesSelector(BaseEstimator, TransformerMixin):
             
             print("Features selected (in order): " + str(df[filter_cols].columns))
             
-            return(df[filter_cols])    
+            df = df.loc[:, filter_cols]
+            return(df)
 
         else:
             return(df)
@@ -755,13 +779,16 @@ class DenseToSparseConverter(BaseEstimator, TransformerMixin):
     
 '''
 This class adds polynomial features in univariate way  (if feature X and n_degree 3 :  then it will add X², X³, and an intercept at the end)
+
+Requires ndarray as input
 '''    
 class PolynomialFeaturesUnivariateAdder(BaseEstimator, TransformerMixin):
     def __init__(self, n_degrees=2):
         self.n_degrees = n_degrees
         self.fitted = False
     
-    def fit(self, df, labels=None):              
+    def fit(self, df, labels=None):
+        self.fitted = True
         return self
     
     def transform(self, df):
@@ -786,9 +813,54 @@ class PolynomialFeaturesUnivariateAdder(BaseEstimator, TransformerMixin):
         df_poly = np.c_[df_poly, np.ones((len(df_poly), 1))]  # add x0 = 1 feature        
         
         return(df_poly)
-        
+
+'''
+This class adds polynomial features in univariate way  (if feature X and n_degree 3 :  then it will add X², X³, and an intercept at the end)
+
+Requires DataFrame as input
+'''        
     
-class StandardScalerMultiple(BaseEstimator, TransformerMixin):
+class PolynomialFeaturesUnivariateAdder_DataFrame(BaseEstimator, TransformerMixin):
+    def __init__(self, n_degrees=2):
+        self.n_degrees = n_degrees
+        self.fitted = False
+    
+    def fit(self, df, features_toadd=None):  
+        print('fit')
+        self.features_toadd = features_toadd
+        print('Features to add :')
+        print(self.features_toadd)
+        self.fitted = True
+        return self
+    
+    def transform(self, df):
+        print('transform')
+        if (self.fitted == False):
+            self.fit(df)
+
+        nb_instances, n_features = df.shape
+        #df_poly = np.empty((nb_instances, 0)) # Create empty array of nb_instances line and 0 features yet (we'll concatenate polynomial features to it)
+        #df_poly = pd.DataFrame(index=df.index,columns=None)
+        
+        progbar = tqdm(range(len(self.features_toadd)))
+        print('Adding polynomial features')
+
+        for column_name in self.features_toadd:    
+            #df_1feature = df.loc[:, column_name]
+
+            for n_degree in range(1, self.n_degrees):
+                #df = pd.concat([df, np.power(df.loc[:, column_name], n_degree + 1)], axis=1)
+                df = pd.concat([df, np.power(df[[column_name]], n_degree + 1).rename(columns={column_name : column_name+'_DEG'+str(n_degree+1)})], axis=1)
+
+            progbar.update(1)
+
+        # Add bias (intercept)
+        #df_poly = pd.concat([df_poly, np.ones((len(df_poly), 1))])  # add x0 = 1 feature        
+        #del df
+        return(df)    
+    
+    
+class StandardScalerMultiple_old(BaseEstimator, TransformerMixin):
     def __init__(self):
         self.fitted = False
     
@@ -815,7 +887,91 @@ class StandardScalerMultiple(BaseEstimator, TransformerMixin):
 
         return(df)
         
+class StandardScalerMultiple(BaseEstimator, TransformerMixin):
+    def __init__(self, features_toscale=None):
+        self.fitted = False
+        self.columns = features_toscale
     
+    def fit(self, df):              
+        print('Fit Std scale multiple')
+        self.scaler = StandardScaler()
+  
+        if (self.columns == None):
+            self.fitted = True
+            return(df)
+        else:
+            self.scaler.fit(df[self.columns].to_numpy())            
+            self.fitted = True
+        
+        return self
+    
+    def transform(self, df):
+        print('Transform Std scale multiple')
+        if (self.fitted == False):
+            self.fit(df)
+        
+        if (self.columns == None):
+            return(df)
+        
+        else:
+            df.loc[:, self.columns] = self.scaler.transform(df.loc[:, self.columns].to_numpy())
+
+        return(df)
+        
+
+class MinMaxScalerMultiple(BaseEstimator, TransformerMixin):
+    def __init__(self, features_toscale=None):
+        self.fitted = False
+        self.columns = features_toscale
+    
+    def fit(self, df):              
+        print('Fit Min max scaler multiple')
+        self.scaler = MinMaxScaler()
+  
+        if (self.columns == None):
+            self.fitted = True
+            return(df)
+        else:
+            self.scaler.fit(df[self.columns].to_numpy())            
+            self.fitted = True
+        
+        return self
+    
+    def transform(self, df):
+        print('Transform Min max scaler multiple')
+        if (self.fitted == False):
+            self.fit(df)
+        
+        if (self.columns == None):
+            return(df)
+        
+        else:
+            df.loc[:, self.columns] = self.scaler.transform(df.loc[:, self.columns].to_numpy())
+
+        return(df)        
+        
+class LogTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self, features_totransform = None):  # If None : every column is kept, nothing is done
+        self.features_toselect = features_toselect
+    
+    def fit(self, df, labels=None):      
+        return self
+    
+    def transform(self, df):       
+        if (self.features_toselect != None):
+            filter_cols = [col for col in df if (col.startswith(tuple(self.features_toselect)))]
+            
+            filter_cols.sort()
+            
+            print("Features selected (in order): " + str(df[filter_cols].columns))
+            
+            df = df.loc[:, filter_cols]
+            return(df)
+
+        else:
+            return(df)
+ 
+        
         
 '''
 conversion_pipeline = Pipeline([
@@ -910,6 +1066,28 @@ prediction_pipeline_cheat_without_sparse = Pipeline([
 
 
 
+preparation_pipeline_meansort_stdscale = Pipeline([
+    ('data_converter', HHMM_to_Minutes()),
+    ('numericalEncoder', Aggregate_then_GroupByMean_then_Sort_numericalEncoder()),
+    #('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()),
+    ('features_selector', FeaturesSelector(features_toselect=MODEL1_GOUPBYMEAN_FEATURES)),
+    ('standardscaler', StandardScalerMultiple(features_toscale=MODEL1_GOUPBYMEAN_FEATURES)),
+])
+
+
+# To defined features to 1hot encode, pass fit_transform parameter below:  
+# categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER', 'CRS_DEP_TIME']
+preparation_pipeline_1hotall_minmax = Pipeline([
+    ('filter_highpercentile', Filter_High_Percentile()),
+    ('hour_extractor', HHMM_to_HH()),
+    ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()), 
+    
+    ('features_selector', FeaturesSelector(features_toselect=MODEL_1HOTALL_FEATURES)),
+    ('minmaxscaler', MinMaxScalerMultiple(features_toscale=MODEL_1HOTALL_FEATURES_QUANTITATIVE)),
+])
+
+
+
 '''
 # Old code that used scikit learn OneHotEncoder (which does not keep DataFrame type) instead of Pandas
 preparation_pipeline2 = Pipeline([
@@ -928,7 +1106,37 @@ ColumnTransformer([
 '''
 
 
-# In[215]:
+# In[34]:
+
+
+df
+
+
+# In[48]:
+
+
+np.power(df[['MONTH']], 2).rename(columns={'MONTH' : 'MONTH2'})
+
+
+# In[40]:
+
+
+df[['MONTH']].rename(columns={'MONTH' : 'MONTH2'})
+
+
+# In[46]:
+
+
+(df.loc[:, 'MONTH'].rename(columns={'MONTH' : 'MONTH2'}))
+
+
+# In[ ]:
+
+
+np.power(df.loc[:, column_name], n_degree + 1).rename(columns={column_name : 'bla'})]
+
+
+# In[20]:
 
 
 df
@@ -1614,7 +1822,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[108]:
+# In[254]:
 
 
 if (DATA_LOADED == True):
@@ -1625,200 +1833,200 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[109]:
+# In[255]:
 
 
 df = load_data()
 
 
-# In[110]:
+# In[256]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[111]:
+# In[257]:
 
 
 df, df_train, df_test = custom_train_test_split_sample_random(df)
 
 
-# In[112]:
+# In[258]:
 
 
-df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+#df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[119]:
+# In[259]:
 
 
-transformer = StandardScalerMultiple()
+df_train_transformed = preparation_pipeline_meansort_stdscale.fit_transform(df_train)
+df_test_transformed = preparation_pipeline_meansort_stdscale.transform(df_test)
+DATA_LOADED = True
+df_test_transformed.shape
 
 
-# In[120]:
-
-
-transformer.fit(df_train_transformed, columns=MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE)
-
-
-# In[121]:
-
-
-MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE
-
-
-# In[134]:
-
-
-transformer.transform(df_train_transformed)
-
-
-# In[124]:
-
-
-df[MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE].to_numpy()
-
-
-# In[125]:
-
-
-scaler = StandardScaler()
-
-
-# In[130]:
-
-
-df[MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE]
-
-
-# In[131]:
-
-
-scaler.fit(df_train_transformed[MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE].to_numpy())  
-
-
-# In[132]:
-
-
-df_train_transformed[MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE] = scaler.transform(df_train_transformed[MODEL_GROUPBYMEAN_FEATURES_QUANTITATIVE].to_numpy())
-
-
-# In[133]:
-
-
-df_train_transformed
-
-
-# In[117]:
+# In[260]:
 
 
 df_train
 
 
-# In[21]:
+# In[261]:
 
 
-df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
-df_train_transformed = prediction_pipeline_groupbymean.fit_transform(df_train_transformed)
-
-df_test_transformed = preparation_pipeline_meansort.transform(df_test)
-df_test_transformed = prediction_pipeline_groupbymean.transform(df_test_transformed)
-DATA_LOADED = True
-df_test_transformed.shape
+df_train_transformed
 
 
-# In[42]:
-
-
-prediction_pipeline_groupbymean['standardscaler'].transformers[0]
-
-
-# In[105]:
-
-
-prediction_pipeline_groupbymean.steps[1][1].get_feature_names()
-
-
-# In[106]:
-
-
-prediction_pipeline_groupbymean.steps[1][1]
-
-
-# In[75]:
-
-
-prediction_pipeline_groupbymean.named_steps['standardscaler'].transformers_[0][1]
-
-
-# In[102]:
-
-
-prediction_pipeline_groupbymean.steps[1]
-
-
-# In[ ]:
-
-
-get_feature_names
-
-
-# In[205]:
-
-
-df_train_transformed[:, df_train_transformed.shape[1] - 1].mean()
-
-
-# In[206]:
-
-
-MODEL1_GOUPBYMEAN_FEATURES
-
-
-# In[207]:
+# In[171]:
 
 
 df_train_transformed.shape[1]
 
 
-# In[194]:
+# In[172]:
 
 
 len(MODEL1_GOUPBYMEAN_FEATURES)
 
 
-# In[195]:
+# In[173]:
 
 
 df_train_transformed.shape[1]
 
 
-# In[196]:
+# In[226]:
 
 
-for feat_indice in range(df_train_transformed.shape[1]):
+df_train[df_train['CRS_DEP_TIME'] < 200]
+
+
+# In[227]:
+
+
+df['CRS_DEP_TIME']
+
+
+# In[239]:
+
+
+df_train['CRS_DEP_TIME']
+
+
+# In[224]:
+
+
+plt.hist(df_train['CRS_DEP_TIME'], bins=50)
+
+
+# In[174]:
+
+
+for feat_name in df_train_transformed.columns:
     fig = plt.figure()
-    plt.hist(df_train_transformed[:, feat_indice], bins=50)
+    fig.suptitle(feat_name)
+    plt.hist(df_train_transformed[feat_name], bins=50)
+    plt.plot()
 
 
-# In[210]:
+# In[175]:
 
 
-df_train.hist()
+abs(df_train['ARR_DELAY'].min())
 
 
-# In[197]:
+# In[176]:
 
 
-# Add bias :
-# Bias has been removed: its linear regression coeficient was 0
-'''
-df_train_transformed = np.c_[np.ones((len(df_train_transformed), 1)), df_train_transformed]  # add x0 = 1 to each instance
-df_test_transformed = np.c_[np.ones((len(df_test_transformed), 1)), df_test_transformed]  # add x0 = 1 to each instance
-'''
+(df_train['ARR_DELAY'] + abs(df_train['ARR_DELAY'].min())).hist(bins=50)
 
 
-# In[198]:
+# In[177]:
+
+
+df_train['ARR_DELAY'].hist(bins=50)
+
+
+# In[178]:
+
+
+df_train['ARR_DELAY'].hist(bins=50, log=True)
+
+
+# In[179]:
+
+
+df_test['ARR_DELAY'].hist(bins=50)
+
+
+# In[199]:
+
+
+df_train_labels = df_train[model1_label]
+
+
+# In[200]:
+
+
+df_train_labels_positive = df_train[model1_label] + abs(df_train[model1_label].min()) + 1
+
+
+# In[201]:
+
+
+pt = preprocessing.PowerTransformer(method='box-cox', standardize=False)
+
+
+# In[202]:
+
+
+df_train_labels_positive_log = pt.fit_transform(df_train_labels_positive.to_numpy().reshape(-1, 1))
+
+
+# In[203]:
+
+
+#df_train_labels_positive_log_inverse = pt.inverse_transform(df_train_labels_positive_log) -1 - abs(df_train['ARR_DELAY'].min())
+
+
+# ## With scaling of labels
+
+# In[204]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train_labels_positive_log)
+
+df_train_predictions_positive_log = lin_reg.predict(df_train_transformed)
+df_train_predictions_positive = pt.inverse_transform(df_train_predictions_positive_log)
+df_train_predictions = df_train_predictions_positive -1 - abs(df_train['ARR_DELAY'].min())
+
+mse = mean_squared_error(df_labels, df_train_predictions)
+rmse = np.sqrt(mse)
+print(f'RMSE on training set : {rmse}')
+
+
+# => Log scaling of labels does not seem to make a difference. Result is even worse  (28.4 instead of 27)
+
+# In[205]:
+
+
+plt.hist(df_train_predictions_positive_log, bins=50)
+
+
+# In[206]:
+
+
+plt.hist(df_train_predictions, bins=50)
+
+
+# ## Without scaling of labels
+
+# In[228]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1857,9 +2065,15 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 # En remettant ORIGIN => passage à 27.14  
 # En remettant UNIQUE_CARRIER => passage à 27.08
 
+# In[192]:
+
+
+plt.hist(df_train_predictions, bins=50)
+
+
 # => RMSE on training set : 41.35267146874754 (close to RMSE on test set => under fitting)
 
-# In[199]:
+# In[191]:
 
 
 plt.hist(df_test_predictions, bins=50)
@@ -1870,10 +2084,21 @@ plt.hist(df_test_predictions, bins=50)
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
     fig = plt.figure()
-    fig.suptitle('Comparison actual values / predict values')
+    fig.suptitle('Comparison actual values / predict values on test set')
     plt.ylabel("Predicted")
     plt.xlabel("Actual")
     plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
+
+
+# In[230]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test[model1_label] - df_test_predictions, df_test_predictions, color='blue', alpha=0.1)
 
 
 # In[201]:
@@ -1996,9 +2221,9 @@ df_train_transformed[:,0].shape
 
 # ## Polynomial regression univariate, and higher degree
 
-# ### Degree 3
+# ### Degree 8
 
-# In[117]:
+# In[208]:
 
 
 if (DATA_LOADED == True):
@@ -2009,25 +2234,25 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[118]:
+# In[209]:
 
 
 df = load_data()
 
 
-# In[119]:
+# In[210]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[120]:
+# In[211]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[121]:
+# In[212]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
@@ -2039,26 +2264,26 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[122]:
+# In[213]:
 
 
 nb_instances = df_train_transformed.shape[0]
 
 
-# In[123]:
+# In[214]:
 
 
-poly = PolynomialFeaturesUnivariateAdder(n_degrees = 3)
+poly = PolynomialFeaturesUnivariateAdder(n_degrees = 8)
 
 
-# In[125]:
+# In[215]:
 
 
 df_train_transformed = poly.fit_transform(df_train_transformed)
 df_test_transformed = poly.fit_transform(df_test_transformed)
 
 
-# In[126]:
+# In[216]:
 
 
 lin_reg = LinearRegression()
@@ -2066,7 +2291,19 @@ lin_reg = LinearRegression()
 lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 df_test_predictions = lin_reg.predict(df_test_transformed)
+
+print("Evaluation on test set :")
 evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# In[221]:
+
+
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
@@ -2459,7 +2696,7 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 
 # # Random forest without polynomial feature
 
-# In[64]:
+# In[231]:
 
 
 if (DATA_LOADED == True):
@@ -2470,25 +2707,25 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[65]:
+# In[232]:
 
 
 df = load_data()
 
 
-# In[66]:
+# In[233]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[67]:
+# In[234]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[68]:
+# In[235]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'])
@@ -2500,13 +2737,13 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[ ]:
+# In[236]:
 
 
 get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(n_estimators=100, max_depth=100, n_jobs=-1, random_state=42)\n    random_reg.fit(df_train_transformed, df_train[model1_label])')
 
 
-# In[ ]:
+# In[237]:
 
 
 print("Evaluation on test set :")
@@ -2522,10 +2759,21 @@ evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
 # => n_estimators=100, max_depth=10 : RMSE = 26.452279766206914  
 # => n_estimators=100, max_depth=100 : RMSE train = 9.623992685309045, RMSE test = 25.688478031845328
 
-# In[ ]:
+# In[240]:
 
 
+df_test_predictions = random_reg.predict(df_test_transformed)
 
+
+# In[243]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test[model1_label] - df_test_predictions, df_test_predictions, color='blue', alpha=0.1)
 
 
 # In[23]:
@@ -2606,6 +2854,376 @@ plt.hist(df_test_predictions, bins=50)
 
 
 plt.hist(df_test[model1_label], bins=50)
+
+
+# # New try with 1 hot encode of : 'ORIGIN', 'CARRIER', 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_DEP_TIME' (scheduled dep hour)
+
+# In[60]:
+
+
+if (DATA_LOADED == True):
+    del df
+    del df_train
+    del df_test
+    del df_train_transformed
+    del df_test_transformed
+
+
+# In[61]:
+
+
+df = load_data()
+
+
+# In[62]:
+
+
+df
+
+
+# In[63]:
+
+
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+
+
+# In[64]:
+
+
+df, df_train, df_test = custom_train_test_split_sample_random(df)
+
+
+# In[65]:
+
+
+#df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+
+
+# In[66]:
+
+
+df_train_transformed = preparation_pipeline_1hotall_minmax.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER', 'CRS_DEP_TIME'])
+df_test_transformed = preparation_pipeline_1hotall_minmax.transform(df_test)
+DATA_LOADED = True
+df_test_transformed.shape
+
+
+# In[67]:
+
+
+for feat_name in df_train_transformed.columns:
+    if (feat_name in MODEL_1HOTALL_FEATURES_QUANTITATIVE):
+        fig = plt.figure()
+        fig.suptitle(feat_name)
+        plt.hist(df_train_transformed[feat_name], bins=50)
+        plt.plot()
+
+
+# ## Linear regression
+
+# In[68]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+
+print("Evaluation on test set :")
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# In[69]:
+
+
+plt.hist(df_test_predictions, bins=50)
+
+
+# In[70]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on test set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
+
+
+# In[71]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test[model1_label] - df_test_predictions, df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[72]:
+
+
+df_train_predictions = lin_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[73]:
+
+
+lin_reg.coef_
+
+
+# In[74]:
+
+
+coef_feature_importances = (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+
+
+# In[75]:
+
+
+coef_feature_importances.sum()
+
+
+# In[76]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : coef_feature_importances})
+
+
+# In[77]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# ## Random forest
+
+# In[25]:
+
+
+get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(n_estimators=100, max_depth=100, n_jobs=-1, random_state=42)\n    random_reg.fit(df_train_transformed, df_train[model1_label])')
+
+
+# In[26]:
+
+
+print("Evaluation on test set :")
+evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
+
+
+# => n_estimators=10, max_depth=10 : RMSE = 26.489032357237143  
+# => n_estimators=100, max_depth=10 : RMSE = 26.452279766206914  
+# => n_estimators=100, max_depth=100 : RMSE train = 9.763346955508453, RMSE test = 25.84449542291657
+
+# In[27]:
+
+
+df_test_predictions = random_reg.predict(df_test_transformed)
+
+
+# In[28]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test[model1_label] - df_test_predictions, df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[31]:
+
+
+df_train_transformed.columns
+
+
+# In[40]:
+
+
+pd.set_option('display.max_rows', 200)
+
+
+# In[48]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
+
+
+# In[59]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# In[29]:
+
+
+random_reg.feature_importances_
+
+
+# In[30]:
+
+
+random_reg.feature_importances_.cumsum()
+
+
+# In[ ]:
+
+
+
+
+
+# => feature importance : 
+
+# In[ ]:
+
+
+random_reg.estimators_[0]
+
+
+# In[24]:
+
+
+'''
+from sklearn.tree import export_graphviz
+export_graphviz(random_reg.estimators_[0], out_file="tree.dot", rounded=True, filled=True)
+'''
+
+
+# In[27]:
+
+
+LEARNING_CURVE_STEP_SIZE
+
+
+# In[28]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    df_test_predictions = random_reg.predict(df_test_transformed)
+    evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+    plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE*5)
+
+
+# In[ ]:
+
+
+
+
+
+# ## Linear regression with degree 8 polynomial
+
+# In[78]:
+
+
+poly = PolynomialFeaturesUnivariateAdder_DataFrame(n_degrees = 8)
+
+
+# In[79]:
+
+
+MODEL_1HOTALL_FEATURES_QUANTITATIVE
+
+
+# In[80]:
+
+
+df_train_transformed
+
+
+# In[81]:
+
+
+df_test_transformed
+
+
+# In[82]:
+
+
+df_train_transformed = poly.fit_transform(df_train_transformed, features_toadd=MODEL_1HOTALL_FEATURES_QUANTITATIVE)
+
+
+# In[83]:
+
+
+df_test_transformed = poly.transform(df_test_transformed)
+
+
+# In[84]:
+
+
+df_test_transformed
+
+
+# In[85]:
+
+
+df_train_transformed
+
+
+# In[86]:
+
+
+for col_name in df_test_transformed.columns:
+    print(col_name)
+
+
+# In[87]:
+
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+
+print("Evaluation on test set :")
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# In[88]:
+
+
+coef_feature_importances = (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+
+
+# In[89]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : coef_feature_importances})
+
+
+# In[90]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
 
 
 # # Annex : unused code
@@ -2762,6 +3380,19 @@ stratified_split_train = StratifiedShuffleSplit(n_splits=5, test_size=0.2, rando
 #     evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
 # '''
 
+# # Add bias :
+# # Bias has been removed: its linear regression coeficient was 0
+# '''
+# df_train_transformed = np.c_[np.ones((len(df_train_transformed), 1)), df_train_transformed]  # add x0 = 1 to each instance
+# df_test_transformed = np.c_[np.ones((len(df_test_transformed), 1)), df_test_transformed]  # add x0 = 1 to each instance
+# '''
+
+# In[ ]:
+
+
+
+
+
 # '''
 # # Commented out because memory error
 # polynomial_reg = Pipeline([('poly', PolynomialFeatures(degree=3)),
@@ -2769,3 +3400,7 @@ stratified_split_train = StratifiedShuffleSplit(n_splits=5, test_size=0.2, rando
 # 
 # polynomial_reg.fit(df_train_transformed, df_train[model1_label])
 # '''
+
+# for feat_indice in range(df_train_transformed.shape[1]):
+#     fig = plt.figure()
+#     plt.hist(df_train_transformed.iloc[:, feat_indice], bins=50)
