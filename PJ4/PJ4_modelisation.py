@@ -2858,7 +2858,7 @@ plt.hist(df_test[model1_label], bins=50)
 
 # # New try with 1 hot encode of : 'ORIGIN', 'CARRIER', 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_DEP_TIME' (scheduled dep hour)
 
-# In[60]:
+# In[92]:
 
 
 if (DATA_LOADED == True):
@@ -2869,37 +2869,37 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[61]:
+# In[18]:
 
 
 df = load_data()
 
 
-# In[62]:
+# In[19]:
 
 
 df
 
 
-# In[63]:
+# In[20]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[64]:
+# In[21]:
 
 
 df, df_train, df_test = custom_train_test_split_sample_random(df)
 
 
-# In[65]:
+# In[22]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[66]:
+# In[23]:
 
 
 df_train_transformed = preparation_pipeline_1hotall_minmax.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER', 'CRS_DEP_TIME'])
@@ -2908,7 +2908,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[67]:
+# In[24]:
 
 
 for feat_name in df_train_transformed.columns:
@@ -3042,6 +3042,12 @@ evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
 df_test_predictions = random_reg.predict(df_test_transformed)
 
 
+# In[33]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+
 # In[28]:
 
 
@@ -3056,22 +3062,68 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # In[31]:
 
 
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[34]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on training set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[38]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / instance numbers on training set')
+    plt.xlabel("Instance number")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[29]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[ ]:
+
+
 df_train_transformed.columns
 
 
-# In[40]:
+# In[ ]:
 
 
 pd.set_option('display.max_rows', 200)
 
 
-# In[48]:
+# In[ ]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
 
 
-# In[59]:
+# In[ ]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
