@@ -58,6 +58,9 @@ MODEL_1HOTALL_FEATURES = ['DISTANCE', 'CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAY_FORA
 MODEL_1HOTALL_FEATURES_QUANTITATIVE = ['DISTANCE', 'CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAY_FORAIRPORT', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT']
 # For later : maybe not include CRS_ELAPSED_TIME because close to DISTANCE
 
+MODEL1_2FEATS = ['DISTANCE', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'DEP_DELAY']
+MODEL1_2FEATS_QUANTITATIVE = ['DISTANCE', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'DEP_DELAY']
+
 
 MODEL_cheat_FEATURES = ['ARR_DELAY','ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
 MODEL_cheat_FEATURES_QUANTITATIVE = ['ARR_DELAY','CRS_DEP_TIME','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
@@ -640,7 +643,7 @@ class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
                     print('Adding those column with 0 values to the DataFrme...')
                     # Create columns with 0 for the above categories, in order to preserve same matrix shape between train et test set
                     zeros_dict = dict.fromkeys(diff_columns, 0)
-                    df_encoded.assign(**zeros_dict)
+                    df_encoded = df_encoded.assign(**zeros_dict)
 
             print('type of df : ' + str(type(df_encoded)))
             return(df_encoded)
@@ -1086,6 +1089,15 @@ preparation_pipeline_1hotall_minmax = Pipeline([
     ('minmaxscaler', MinMaxScalerMultiple(features_toscale=MODEL_1HOTALL_FEATURES_QUANTITATIVE)),
 ])
 
+
+preparation_pipeline_2feats_stdscale = Pipeline([
+    #('filter_highpercentile', Filter_High_Percentile()),
+    #('hour_extractor', HHMM_to_HH()),
+    #('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()), 
+    
+    ('features_selector', FeaturesSelector(features_toselect=MODEL1_2FEATS)),
+    #('standardscaler', StandardScalerMultiple(features_toscale=MODEL1_2FEATS_QUANTITATIVE)),
+])
 
 
 '''
@@ -2597,7 +2609,7 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 
 # # Cheat model : give access to the model to the ARR_DELAY variable ! it should now learn
 
-# In[174]:
+# In[69]:
 
 
 if (DATA_LOADED == True):
@@ -2608,25 +2620,25 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[175]:
+# In[70]:
 
 
 df = load_data()
 
 
-# In[176]:
+# In[71]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[177]:
+# In[72]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[178]:
+# In[73]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'])
@@ -2638,7 +2650,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[179]:
+# In[74]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -2654,7 +2666,7 @@ evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
 # => RMSE : 41.98  
 # => RMSE without outliers : 26.88
 
-# In[180]:
+# In[75]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
@@ -2663,35 +2675,57 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 # => RMSE on training set : 41.12  
 # => RMSE training set without outliers : 26.89
 
-# In[181]:
+# In[76]:
 
 
 lin_reg.coef_
 
 
-# In[182]:
+# In[77]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[183]:
+# In[78]:
 
 
 df_train_transformed.shape
 
 
-# In[184]:
+# In[79]:
 
 
 df_train_transformed
 
 
-# In[185]:
+# In[80]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
+
+
+# In[81]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[82]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on test set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
 
 
 # # Random forest without polynomial feature
@@ -3276,6 +3310,305 @@ df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transfor
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# # New try with 3 quantitative features including DEP_DELAY
+
+# In[25]:
+
+
+if (DATA_LOADED == True):
+    del df
+    del df_train
+    del df_test
+    del df_train_transformed
+    del df_test_transformed
+
+
+# In[18]:
+
+
+df = load_data()
+
+
+# In[19]:
+
+
+df
+
+
+# In[20]:
+
+
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+
+
+# In[21]:
+
+
+df, df_train, df_test = custom_train_test_split_sample_random(df)
+
+
+# In[22]:
+
+
+#df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+
+
+# In[23]:
+
+
+#df_train_transformed = preparation_pipeline_2feats_stdscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+df_train_transformed = preparation_pipeline_2feats_stdscale.fit_transform(df_train)
+df_test_transformed = preparation_pipeline_2feats_stdscale.transform(df_test)
+DATA_LOADED = True
+df_test_transformed.shape
+
+
+# In[24]:
+
+
+for feat_name in df_train_transformed.columns:
+    if (feat_name in MODEL1_2FEATS_QUANTITATIVE):
+        fig = plt.figure()
+        fig.suptitle(feat_name)
+        plt.hist(df_train_transformed[feat_name], bins=50)
+        plt.plot()
+
+
+# ## Linear regression
+
+# In[145]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+
+print("Evaluation on test set :")
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# In[146]:
+
+
+plt.hist(df_test_predictions, bins=50)
+
+
+# In[147]:
+
+
+plt.hist(df_test[MODEL1_LABEL], bins=50)
+
+
+# In[148]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on test set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
+
+
+# In[149]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test[model1_label] - df_test_predictions, df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[150]:
+
+
+df_train_predictions = lin_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.01)
+
+
+# In[151]:
+
+
+lin_reg.coef_
+
+
+# In[152]:
+
+
+coef_feature_importances = (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+
+
+# In[153]:
+
+
+coef_feature_importances.sum()
+
+
+# In[154]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : coef_feature_importances})
+
+
+# In[155]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# ## Random forest
+
+# In[25]:
+
+
+get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(n_estimators=200, max_depth=500, n_jobs=-1, random_state=42)\n    random_reg.fit(df_train_transformed, df_train[model1_label])')
+
+
+# In[26]:
+
+
+print("Evaluation on test set :")
+evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
+
+
+# => n_estimators=10, max_depth=10 : RMSE = 26.489032357237143  
+# => n_estimators=100, max_depth=10 : RMSE = 26.452279766206914  
+# => n_estimators=100, max_depth=100 : RMSE train = 9.763346955508453, RMSE test = 25.84449542291657  
+# => n_estimators=200, max_depth=500 : RMSE = 7.860925700806144, RMSE test = 13.495462963277213  
+
+# In[27]:
+
+
+df_test_predictions = random_reg.predict(df_test_transformed)
+
+
+# In[28]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+
+# In[29]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test[model1_label] - df_test_predictions, df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[30]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[31]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on training set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[32]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / instance numbers on training set')
+    plt.xlabel("Instance number")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.01)
+
+
+# In[33]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[34]:
+
+
+df_train_transformed.columns
+
+
+# In[35]:
+
+
+pd.set_option('display.max_rows', 200)
+
+
+# In[36]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
+
+
+# In[37]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# In[38]:
+
+
+random_reg.feature_importances_
+
+
+# In[39]:
+
+
+random_reg.feature_importances_.cumsum()
+
+
+# In[ ]:
+
+
+
 
 
 # # Annex : unused code
