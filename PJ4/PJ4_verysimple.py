@@ -5,7 +5,7 @@
 
 # # Global variables and functions used in the notebook
 
-# In[1]:
+# In[2]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -78,14 +78,14 @@ import statsmodels.api as sm
 from scipy import stats
 
 
-# In[2]:
+# In[3]:
 
 
 def qgrid_show(df):
     display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
 
 
-# In[3]:
+# In[4]:
 
 
 def load_data():
@@ -100,7 +100,7 @@ def load_data():
     return(df)
 
 
-# In[4]:
+# In[5]:
 
 
 def custom_train_test_split_sample(df):
@@ -129,7 +129,7 @@ def custom_train_test_split_sample(df):
     return df, df_train, df_test
 
 
-# In[5]:
+# In[6]:
 
 
 def custom_train_test_split_sample_random(df):
@@ -153,7 +153,7 @@ def custom_train_test_split_sample_random(df):
     return df, df_train, df_test
 
 
-# In[6]:
+# In[7]:
 
 
 def print_column_information(df, column_name):
@@ -166,7 +166,7 @@ def print_column_information(df, column_name):
     print('\n')
 
 
-# In[7]:
+# In[8]:
 
 
 def display_percent_complete(df):
@@ -176,7 +176,7 @@ def display_percent_complete(df):
     display(not_na_df)
 
 
-# In[8]:
+# In[9]:
 
 
 def identify_features(df):
@@ -202,7 +202,7 @@ def identify_features(df):
     return all_features, model1_features, model1_label, quantitative_features, qualitative_features
 
 
-# In[9]:
+# In[10]:
 
 
 def save_or_load_search_params(grid_search, save_file_suffix):
@@ -237,7 +237,7 @@ def save_or_load_search_params(grid_search, save_file_suffix):
             return(grid_search, df_grid_search_results)
 
 
-# In[10]:
+# In[11]:
 
 
 def evaluate_model(model, X_test, Y_test):
@@ -248,17 +248,39 @@ def evaluate_model(model, X_test, Y_test):
     
 
 
-# In[11]:
+# In[12]:
 
 
-def evaluate_model_MAE(model, X_test, Y_test):
+def evaluate_model_MAE(model, X_test, Y_test, percentage, threshold):
     Y_predict = model.predict(X_test)
     mae = mean_absolute_error(Y_test, Y_predict)
     print(f'MAE : {mae}')
     
+    Y_AE = np.abs(Y_predict- Y_test)
+    
+    
 
 
-# In[12]:
+# In[13]:
+
+
+'''
+This function returns the % of absolute errors of the model that are < threshold, percent of the time
+'''
+
+def evaluate_model_percent_threshold(model, X_test, Y_test, percent, threshold):
+    Y_predict = model.predict(X_test)
+    
+    Y_AE = np.abs(Y_predict- Y_test)
+    Y_AE_best = Y_AE[Y_AE <= Y_AE.quantile(percent)] # Take percent best error values (eliminate errors > Y_AE.quantile(percent))
+    
+    error_percent_threshold = (len(Y_AE_best[Y_AE_best < threshold]) / len(Y_AE_best)) * 100
+    
+    return (error_percent_threshold)
+    
+
+
+# In[14]:
 
 
 def minibatch_generate_indexes(df_train_transformed, step_size):
@@ -275,7 +297,7 @@ def minibatch_generate_indexes(df_train_transformed, step_size):
     yield((left_index + step_size, final_index))
 
 
-# In[13]:
+# In[15]:
 
 
 def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, evaluation_method='RMSE'):
@@ -320,13 +342,13 @@ def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, eva
          plt.ylabel("MAE", fontsize=14)  
 
 
-# In[14]:
+# In[16]:
 
 
 #minibatches = minibatch_generate_indexes(df_train_transformed)
 
 
-# In[15]:
+# In[17]:
 
 
 def reset_data():
@@ -357,7 +379,7 @@ def reset_data_old():
     return df, df_train, df_test, df_train_transformed, df_test_transformed
 
 
-# In[16]:
+# In[18]:
 
 
 from IPython.display import display, Markdown
@@ -379,7 +401,7 @@ def display_freq_table(df, col_names):
         display(tab)
 
 
-# In[17]:
+# In[19]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -877,26 +899,26 @@ preparation_pipeline_2feats_stdscale = Pipeline([
 
 # # Data generation
 
-# In[18]:
+# In[20]:
 
 
 np.random.randn(NB_SAMPLES, 1).max()
 
 
-# In[19]:
+# In[21]:
 
 
 X_quant = 2 * np.random.rand(NB_SAMPLES, 1)
 y = 4 + 3 * X_quant + np.random.randn(NB_SAMPLES, 1)
 
 
-# In[20]:
+# In[22]:
 
 
 y.max()
 
 
-# In[21]:
+# In[23]:
 
 
 plt.plot(X_quant, y, "b.")
@@ -907,37 +929,37 @@ plt.title('Generated data plot')
 plt.show()
 
 
-# In[22]:
+# In[24]:
 
 
 df_y = pd.DataFrame(data=y)
 
 
-# In[23]:
+# In[25]:
 
 
 y_qual = pd.cut(df_y.loc[:, 0], bins=range(0,15), right=True).astype(str).rename('X_qual')
 
 
-# In[24]:
+# In[26]:
 
 
 y_qual
 
 
-# In[25]:
+# In[27]:
 
 
 #pd.concat([df, y_qual], axis=1, names=['a', 'b'])
 
 
-# In[26]:
+# In[28]:
 
 
 df = pd.DataFrame(data={'X_quant' : X_quant[:, 0], 'X_qual' : y_qual, 'label': y[:, 0]})
 
 
-# In[27]:
+# In[29]:
 
 
 df
@@ -945,7 +967,7 @@ df
 
 # # Data transformation
 
-# In[28]:
+# In[30]:
 
 
 ALL_FEATURES = ['X_quant', 'X_qual', 'label']
@@ -956,13 +978,13 @@ MODEL1_LABEL = 'label'
 MODEL1_FEATURES = ALL_FEATURES
 
 
-# In[29]:
+# In[31]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[30]:
+# In[32]:
 
 
 preparation_pipeline_2feats_stdscale = Pipeline([
@@ -974,19 +996,19 @@ preparation_pipeline_2feats_stdscale = Pipeline([
 ])
 
 
-# In[31]:
+# In[33]:
 
 
 df, df_train, df_test = custom_train_test_split_sample_random(df)
 
 
-# In[32]:
+# In[34]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[33]:
+# In[35]:
 
 
 df_train_transformed = preparation_pipeline_2feats_stdscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=qualitative_features)
@@ -996,7 +1018,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[34]:
+# In[36]:
 
 
 for feat_name in df_train_transformed.columns:
@@ -1007,13 +1029,13 @@ for feat_name in df_train_transformed.columns:
         plt.plot()
 
 
-# In[35]:
+# In[37]:
 
 
 df_train_transformed
 
 
-# In[36]:
+# In[38]:
 
 
 df_test_transformed
@@ -1021,7 +1043,7 @@ df_test_transformed
 
 # ## Linear regression
 
-# In[37]:
+# In[39]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -1041,25 +1063,25 @@ print("Evaluation on training set :")
 evaluate_model(lin_reg, df_train_transformed, df_train[MODEL1_LABEL])
 
 
-# In[38]:
+# In[40]:
 
 
 df_train_transformed[['X_quant']]
 
 
-# In[39]:
+# In[41]:
 
 
 plt.hist(df_test_predictions, bins=50)
 
 
-# In[40]:
+# In[42]:
 
 
 plt.hist(df_test[MODEL1_LABEL], bins=50)
 
 
-# In[41]:
+# In[43]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1070,7 +1092,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[MODEL1_LABEL], df_test_predictions, color='coral', alpha=1)
 
 
-# In[42]:
+# In[44]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1081,7 +1103,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test_predictions, df_test[MODEL1_LABEL] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[43]:
+# In[45]:
 
 
 df_train_predictions = lin_reg.predict(df_train_transformed)
@@ -1094,7 +1116,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[MODEL1_LABEL], df_train_predictions, color='coral', alpha=1)
 
 
-# In[44]:
+# In[46]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1103,31 +1125,31 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# In[45]:
+# In[47]:
 
 
 lin_reg.coef_
 
 
-# In[46]:
+# In[48]:
 
 
 coef_feature_importances = (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[47]:
+# In[49]:
 
 
 coef_feature_importances.sum()
 
 
-# In[48]:
+# In[50]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : coef_feature_importances})
 
 
-# In[49]:
+# In[51]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
@@ -1135,13 +1157,13 @@ pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending
 
 # ## Random forest
 
-# In[50]:
+# In[52]:
 
 
 get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(n_estimators=500, max_depth=500, n_jobs=-1, random_state=42)\n    random_reg.fit(df_train_transformed, df_train[model1_label])')
 
 
-# In[51]:
+# In[53]:
 
 
 from sklearn.model_selection import GridSearchCV
@@ -1161,7 +1183,7 @@ if (RECOMPUTE_GRIDSEARCH == True):
 
 # ### Basic random forest evaluation
 
-# In[52]:
+# In[54]:
 
 
 print("Evaluation on test set :")
@@ -1173,19 +1195,37 @@ print("Evaluation on training set :")
 evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
 
 
-# In[53]:
+# In[137]:
+
+
+error_90p_02 = evaluate_model_percent_threshold(random_reg, df_test_transformed, df_test[model1_label], 0.9, 0.1)
+
+
+# In[140]:
+
+
+print(f'{error_90p_02}% predictions have error below 0.1,  90% of the time')
+
+
+# In[58]:
+
+
+Y_AE.plot.hist(bins=50)
+
+
+# In[59]:
 
 
 df_test_predictions = random_reg.predict(df_test_transformed)
 
 
-# In[54]:
+# In[60]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
 
 
-# In[55]:
+# In[61]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1196,7 +1236,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[56]:
+# In[62]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1207,7 +1247,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[57]:
+# In[63]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1218,7 +1258,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[58]:
+# In[64]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1229,7 +1269,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.01)
 
 
-# In[59]:
+# In[65]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
@@ -1242,7 +1282,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
 
 
-# In[60]:
+# In[66]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1251,37 +1291,37 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# In[61]:
+# In[67]:
 
 
 pd.set_option('display.max_rows', 200)
 
 
-# In[62]:
+# In[68]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
 
 
-# In[63]:
+# In[69]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
 
 
-# In[64]:
+# In[70]:
 
 
 random_reg.feature_importances_
 
 
-# In[65]:
+# In[71]:
 
 
 random_reg.feature_importances_.cumsum()
 
 
-# In[66]:
+# In[72]:
 
 
 df[df['X_qual'].isnull()]
@@ -1289,7 +1329,7 @@ df[df['X_qual'].isnull()]
 
 # ### Best random forest evaluation
 
-# In[67]:
+# In[73]:
 
 
 if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
@@ -1298,20 +1338,20 @@ if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
 grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'basicdata_20200411')
 
 
-# In[68]:
+# In[74]:
 
 
 grid_search.best_estimator_
 
 
-# In[69]:
+# In[75]:
 
 
 pd.set_option('display.max_rows', 1000)
 df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
 
 
-# In[70]:
+# In[76]:
 
 
 print("Evaluation on test set :")
@@ -1323,19 +1363,19 @@ print("Evaluation on training set :")
 evaluate_model(grid_search.best_estimator_, df_train_transformed, df_train[model1_label])
 
 
-# In[71]:
+# In[ ]:
 
 
 df_test_predictions = grid_search.best_estimator_.predict(df_test_transformed)
 
 
-# In[72]:
+# In[ ]:
 
 
 df_train_predictions = grid_search.best_estimator_.predict(df_train_transformed)
 
 
-# In[73]:
+# In[ ]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1346,7 +1386,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[74]:
+# In[ ]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1357,7 +1397,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[75]:
+# In[ ]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1368,7 +1408,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[76]:
+# In[ ]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1379,7 +1419,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.01)
 
 
-# In[77]:
+# In[ ]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
@@ -1392,7 +1432,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
 
 
-# In[78]:
+# In[ ]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1401,40 +1441,52 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plot_learning_curves(grid_search.best_estimator_, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# In[79]:
+# In[ ]:
 
 
 pd.set_option('display.max_rows', 200)
 
 
-# In[80]:
+# In[ ]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : grid_search.best_estimator_.feature_importances_})
 
 
-# In[81]:
+# In[ ]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
 
 
-# In[82]:
+# In[ ]:
 
 
 grid_search.best_estimator_.feature_importances_
 
 
-# In[83]:
+# In[ ]:
 
 
 grid_search.best_estimator_.feature_importances_.cumsum()
 
 
-# In[84]:
+# In[ ]:
 
 
 df[df['X_qual'].isnull()]
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:

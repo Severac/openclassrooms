@@ -845,20 +845,20 @@ df['HOUR_SCHEDULED'] = df['CRS_DEP_TIME'].str.slice(start=0,stop=2, step=1)
 df['HOUR_SCHEDULED'] = df['HOUR_SCHEDULED'].astype(str)
 
 
-# In[ ]:
+# In[75]:
 
 
 # Create dictionary containing sum of flights for each tuple (date, origin airport)
 dict_date_hour_airport_nbflights = df[['FL_DATE', 'HOUR_SCHEDULED', 'ORIGIN']].groupby(['FL_DATE', 'HOUR_SCHEDULED', 'ORIGIN']).size().to_dict()
 
 
-# In[ ]:
+# In[76]:
 
 
 len(dict_date_hour_airport_nbflights)
 
 
-# In[ ]:
+# In[77]:
 
 
 def map_date_hour_airport_to_nbflights(date_val, hour_val, airport_val):
@@ -867,7 +867,7 @@ def map_date_hour_airport_to_nbflights(date_val, hour_val, airport_val):
     
 
 
-# In[ ]:
+# In[78]:
 
 
 # Then for each row, we apply the dictionary and create a new column with its vales
@@ -875,7 +875,7 @@ progbar = tqdm(range(len(df)))
 df['NBFLIGHTS_FORDAYHOUR_FORAIRPORT'] = df[['FL_DATE', 'HOUR_SCHEDULED', 'ORIGIN']].apply(lambda row : map_date_hour_airport_to_nbflights(row.FL_DATE, row.HOUR_SCHEDULED, row.ORIGIN), axis=1)
 
 
-# In[ ]:
+# In[79]:
 
 
 fig, ax = plt.subplots()
@@ -884,6 +884,27 @@ ax.legend(["Mean number of flights"])
 
 
 # => No correlation between mear delay per origin airport and mean number of flights per airport per day hour
+
+# In[123]:
+
+
+fig, ax = plt.subplots(figsize=(16, 10))
+
+plt.title('Delay by number of flights / hour in the airport')
+plt.ylabel("Delay in minutes")
+plt.xlabel("Number of flights / hour in the airport")
+
+mean_delay = df['ARR_DELAY'].mean()
+
+nbflights_80p = df.shape[0]*0.8
+min_flights_per_hour_80p = df['NBFLIGHTS_FORDAYHOUR_FORAIRPORT'].sort_values(ascending=False).reset_index().loc[int(np.floor(nbflights_80p))]['NBFLIGHTS_FORDAYHOUR_FORAIRPORT']
+
+plt.axhline(mean_delay, color='red', linestyle='--', label=f'Mean delay : ({mean_delay:.2f} minutes)')
+plt.axvline(min_flights_per_hour_80p, color='green', linestyle='--', label=f"80% of flights have flights/hour > ({min_flights_per_hour_80p:.0f})")
+
+ax.scatter(df['NBFLIGHTS_FORDAYHOUR_FORAIRPORT'], df['ARR_DELAY'], alpha=0.1)
+plt.legend()
+
 
 # ## Identification of quantitative and qualitative features
 

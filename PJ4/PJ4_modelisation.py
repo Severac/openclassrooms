@@ -26,10 +26,17 @@ from pandas.plotting import scatter_matrix
 
 from sklearn.model_selection import StratifiedShuffleSplit
 
+from sklearn.model_selection import GridSearchCV
+
+# Final model evaluation measures, for customer :
+# EVALUATION_PERCENT of the time, prediction errors will be below EVALUATION_THRESHOLD minutes
+EVALUATION_PERCENT = 0.9  # 90% of the time
+EVALUATION_THRESHOLD = 5
+
 SAMPLED_DATA = True  # If True : data is sampled (NB_SAMPLES instances only) for faster testing purposes
-NB_SAMPLES = 800000
-#NB_SAMPLES = 2000000
-LEARNING_CURVE_STEP_SIZE = 50000 # Change that when you change NB_SAMPLES size
+NB_SAMPLES = 80000
+#NB_SAMPLES = 800000
+LEARNING_CURVE_STEP_SIZE = int(NB_SAMPLES / 10) # Change that when you change NB_SAMPLES size
 
 DATA_PATH = os.path.join("datasets", "transats")
 DATA_PATH = os.path.join(DATA_PATH, "out")
@@ -58,8 +65,12 @@ MODEL_1HOTALL_FEATURES = ['DISTANCE', 'CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAY_FORA
 MODEL_1HOTALL_FEATURES_QUANTITATIVE = ['DISTANCE', 'CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAY_FORAIRPORT', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT']
 # For later : maybe not include CRS_ELAPSED_TIME because close to DISTANCE
 
-MODEL1_2FEATS = ['DISTANCE', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'DEP_DELAY']
-MODEL1_2FEATS_QUANTITATIVE = ['DISTANCE', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'DEP_DELAY']
+MODEL1_3FEATS = ['DISTANCE', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'DEP_DELAY']
+MODEL1_3FEATS_QUANTITATIVE = ['DISTANCE', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'DEP_DELAY']
+
+MODEL1_2FEATS = ['DISTANCE', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT']
+MODEL1_2FEATS_QUANTITATIVE = ['DISTANCE', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT']
+
 
 
 MODEL_cheat_FEATURES = ['ARR_DELAY','ORIGIN','CRS_DEP_TIME','MONTH','DAY_OF_MONTH','DAY_OF_WEEK','UNIQUE_CARRIER','DEST','CRS_ARR_TIME','DISTANCE','CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'NBFLIGHTS_FORDAY_FORAIRPORT']
@@ -75,8 +86,8 @@ sns.set()
 ####### Paramètres pour sauver et restaurer les modèles :
 import pickle
 ####### Paramètres à changer par l'utilisateur selon son besoin :
-RECOMPUTE_GRIDSEARCH = False  # CAUTION : computation is several hours long
-SAVE_GRID_RESULTS = False # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
+RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
+SAVE_GRID_RESULTS = True # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
 LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
                           # Grid search results are loaded with full samples (SAMPLED_DATA must be False)
 
@@ -289,6 +300,44 @@ def evaluate_model_MAE(model, X_test, Y_test):
 # In[12]:
 
 
+'''
+This function returns the % of absolute errors of the model that are < threshold, percent of the time
+'''
+
+def evaluate_model_percent_threshold(model, X_test, Y_test, percent, threshold):
+    Y_predict = model.predict(X_test)
+    
+    Y_AE = np.abs(Y_predict- Y_test)
+    Y_AE_best = Y_AE[Y_AE <= Y_AE.quantile(percent)] # Take percent best error values (eliminate errors > Y_AE.quantile(percent))
+    
+    error_percent_threshold = (len(Y_AE_best[Y_AE_best < threshold]) / len(Y_AE_best)) * 100
+    
+    return (error_percent_threshold)
+    
+
+
+# In[13]:
+
+
+'''
+This function returns the maximum absolute error of the model, percent of the time
+'''
+
+def evaluate_model_percent_mean(model, X_test, Y_test, percent):
+    Y_predict = model.predict(X_test)
+    
+    Y_AE = np.abs(Y_predict- Y_test)
+    Y_AE_best = Y_AE[Y_AE <= Y_AE.quantile(percent)] # Take percent best error values (eliminate errors > Y_AE.quantile(percent))
+    
+    error_mean = Y_AE_best.mean()
+    
+    return (error_mean)
+    
+
+
+# In[14]:
+
+
 def minibatch_generate_indexes(df_train_transformed, step_size):
     nb_instances = df_train_transformed.shape[0]
     final_index = nb_instances - 1
@@ -303,7 +352,7 @@ def minibatch_generate_indexes(df_train_transformed, step_size):
     yield((left_index + step_size, final_index))
 
 
-# In[13]:
+# In[15]:
 
 
 def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, evaluation_method='RMSE'):
@@ -348,13 +397,13 @@ def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, eva
          plt.ylabel("MAE", fontsize=14)  
 
 
-# In[14]:
+# In[16]:
 
 
 #minibatches = minibatch_generate_indexes(df_train_transformed)
 
 
-# In[15]:
+# In[17]:
 
 
 def reset_data():
@@ -385,10 +434,11 @@ def reset_data_old():
     return df, df_train, df_test, df_train_transformed, df_test_transformed
 
 
-# In[16]:
+# In[18]:
 
 
 from IPython.display import display, Markdown
+import sys
 
 def display_freq_table(df, col_names):
     for col_name in col_names:    
@@ -407,27 +457,63 @@ def display_freq_table(df, col_names):
         display(tab)
 
 
+# In[19]:
+
+
+class redirect_output(object):
+    """context manager for reditrecting stdout/err to files"""
+    
+    """ 
+    Useful to run long code, in order not to loose cell output if you close browser by mistake
+    
+    Usage in a cell :
+    with redirect_output("my_output.txt"):
+        Long code  (example : %run my_script.py )
+        
+    """
+
+    def __init__(self, stdout='', stderr=''):
+        self.stdout = stdout
+        self.stderr = stderr
+
+    def __enter__(self):
+        self.sys_stdout = sys.stdout
+        self.sys_stderr = sys.stderr
+
+        if self.stdout:
+            sys.stdout = open(self.stdout, 'w')
+        if self.stderr:
+            if self.stderr == self.stdout:
+                sys.stderr = sys.stdout
+            else:
+                sys.stderr = open(self.stderr, 'w')
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        sys.stdout = self.sys_stdout
+        sys.stderr = self.sys_stderr
+
+
 # # Data load
 
-# In[16]:
+# In[19]:
 
 
 df = load_data()
 
 
-# In[17]:
+# In[20]:
 
 
 df.shape
 
 
-# In[18]:
+# In[21]:
 
 
 display_percent_complete(df)
 
 
-# In[19]:
+# In[22]:
 
 
 '''
@@ -439,7 +525,7 @@ for column_name in df.columns:
 
 # # Identification of features
 
-# In[20]:
+# In[23]:
 
 
 # Below are feature from dataset that we decided to keep: 
@@ -455,7 +541,7 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 # # Split train set, test set
 
-# In[21]:
+# In[24]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
@@ -473,7 +559,7 @@ if (SAMPLED_DATA == True):
 '''
 
 
-# In[22]:
+# In[25]:
 
 
 df_train
@@ -493,7 +579,7 @@ df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_
 
 # # Features encoding
 
-# In[17]:
+# In[20]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -1099,6 +1185,16 @@ preparation_pipeline_2feats_stdscale = Pipeline([
     #('standardscaler', StandardScalerMultiple(features_toscale=MODEL1_2FEATS_QUANTITATIVE)),
 ])
 
+preparation_pipeline_3feats_stdscale = Pipeline([
+    #('filter_highpercentile', Filter_High_Percentile()),
+    #('hour_extractor', HHMM_to_HH()),
+    #('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()), 
+    
+    ('features_selector', FeaturesSelector(features_toselect=MODEL1_3FEATS)),
+    #('standardscaler', StandardScalerMultiple(features_toscale=MODEL1_2FEATS_QUANTITATIVE)),
+])
+
+
 
 '''
 # Old code that used scikit learn OneHotEncoder (which does not keep DataFrame type) instead of Pandas
@@ -1592,7 +1688,7 @@ naive_rmse
 
 # ### Always mean naive approach
 
-# In[49]:
+# In[66]:
 
 
 from sklearn import dummy
@@ -1600,17 +1696,31 @@ from sklearn import dummy
 dum = dummy.DummyRegressor(strategy='mean')
 
 # Entraînement
-dum.fit(df_train_transformed, df_train[model1_label])
+dum.fit(df_train, df_train[model1_label])
 
 # Prédiction sur le jeu de test
-y_pred_dum = dum.predict(df_test_transformed)
+y_pred_dum = dum.predict(df_test)
 
 # Evaluate
 print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
 print("MAE : {:.2f}".format(np.sqrt(mean_absolute_error(df_test[model1_label], y_pred_dum)) ))
 
 
-# In[63]:
+# In[67]:
+
+
+error_mean = evaluate_model_percent_mean(dum, df_test, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
+
+
+# In[68]:
+
+
+error_90p_5min = evaluate_model_percent_threshold(dum, df_test, df_test[model1_label], EVALUATION_PERCENT, EVALUATION_THRESHOLD)
+print(f'{error_90p_5min : .2f}% predictions have error below {EVALUATION_THRESHOLD} min, {EVALUATION_PERCENT*100}% of the time')
+
+
+# In[27]:
 
 
 plt.scatter(df_test[model1_label], y_pred_dum, color='coral')
@@ -1834,7 +1944,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[254]:
+# In[21]:
 
 
 if (DATA_LOADED == True):
@@ -1845,31 +1955,32 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[255]:
+# In[21]:
 
 
 df = load_data()
 
 
-# In[256]:
+# In[22]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[257]:
+# In[23]:
 
 
-df, df_train, df_test = custom_train_test_split_sample_random(df)
+#df, df_train, df_test = custom_train_test_split_sample_random(df)
+df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[258]:
+# In[24]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[259]:
+# In[25]:
 
 
 df_train_transformed = preparation_pipeline_meansort_stdscale.fit_transform(df_train)
@@ -1878,61 +1989,61 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[260]:
+# In[26]:
 
 
 df_train
 
 
-# In[261]:
+# In[27]:
 
 
 df_train_transformed
 
 
-# In[171]:
+# In[28]:
 
 
 df_train_transformed.shape[1]
 
 
-# In[172]:
+# In[29]:
 
 
 len(MODEL1_GOUPBYMEAN_FEATURES)
 
 
-# In[173]:
+# In[30]:
 
 
 df_train_transformed.shape[1]
 
 
-# In[226]:
+# In[31]:
 
 
 df_train[df_train['CRS_DEP_TIME'] < 200]
 
 
-# In[227]:
+# In[32]:
 
 
 df['CRS_DEP_TIME']
 
 
-# In[239]:
+# In[33]:
 
 
 df_train['CRS_DEP_TIME']
 
 
-# In[224]:
+# In[34]:
 
 
 plt.hist(df_train['CRS_DEP_TIME'], bins=50)
 
 
-# In[174]:
+# In[35]:
 
 
 for feat_name in df_train_transformed.columns:
@@ -1942,61 +2053,62 @@ for feat_name in df_train_transformed.columns:
     plt.plot()
 
 
-# In[175]:
+# In[36]:
 
 
 abs(df_train['ARR_DELAY'].min())
 
 
-# In[176]:
+# In[37]:
 
 
 (df_train['ARR_DELAY'] + abs(df_train['ARR_DELAY'].min())).hist(bins=50)
 
 
-# In[177]:
+# In[38]:
 
 
 df_train['ARR_DELAY'].hist(bins=50)
 
 
-# In[178]:
+# In[39]:
 
 
 df_train['ARR_DELAY'].hist(bins=50, log=True)
 
 
-# In[179]:
+# In[40]:
 
 
 df_test['ARR_DELAY'].hist(bins=50)
 
 
-# In[199]:
+# In[41]:
 
 
 df_train_labels = df_train[model1_label]
+df_test_labels = df_test[model1_label]
 
 
-# In[200]:
+# In[42]:
 
 
 df_train_labels_positive = df_train[model1_label] + abs(df_train[model1_label].min()) + 1
 
 
-# In[201]:
+# In[43]:
 
 
 pt = preprocessing.PowerTransformer(method='box-cox', standardize=False)
 
 
-# In[202]:
+# In[44]:
 
 
 df_train_labels_positive_log = pt.fit_transform(df_train_labels_positive.to_numpy().reshape(-1, 1))
 
 
-# In[203]:
+# In[45]:
 
 
 #df_train_labels_positive_log_inverse = pt.inverse_transform(df_train_labels_positive_log) -1 - abs(df_train['ARR_DELAY'].min())
@@ -2004,7 +2116,7 @@ df_train_labels_positive_log = pt.fit_transform(df_train_labels_positive.to_nump
 
 # ## With scaling of labels
 
-# In[204]:
+# In[46]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -2017,20 +2129,28 @@ df_train_predictions_positive_log = lin_reg.predict(df_train_transformed)
 df_train_predictions_positive = pt.inverse_transform(df_train_predictions_positive_log)
 df_train_predictions = df_train_predictions_positive -1 - abs(df_train['ARR_DELAY'].min())
 
-mse = mean_squared_error(df_labels, df_train_predictions)
+df_test_predictions_positive_log = lin_reg.predict(df_test_transformed)
+df_test_predictions_positive = pt.inverse_transform(df_test_predictions_positive_log)
+df_test_predictions = df_test_predictions_positive -1 - abs(df_test['ARR_DELAY'].min())
+
+mse = mean_squared_error(df_train_labels, df_train_predictions)
 rmse = np.sqrt(mse)
 print(f'RMSE on training set : {rmse}')
+
+mse = mean_squared_error(df_test_labels, df_test_predictions)
+rmse = np.sqrt(mse)
+print(f'RMSE on test set : {rmse}')
 
 
 # => Log scaling of labels does not seem to make a difference. Result is even worse  (28.4 instead of 27)
 
-# In[205]:
+# In[47]:
 
 
 plt.hist(df_train_predictions_positive_log, bins=50)
 
 
-# In[206]:
+# In[48]:
 
 
 plt.hist(df_train_predictions, bins=50)
@@ -2038,7 +2158,7 @@ plt.hist(df_train_predictions, bins=50)
 
 # ## Without scaling of labels
 
-# In[228]:
+# In[49]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -2049,13 +2169,13 @@ lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 df_test_predictions = lin_reg.predict(df_test_transformed)
 
-print("Evaluation on test set :")
-evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+mse = mean_squared_error(df_train_labels, df_train_predictions)
+rmse = np.sqrt(mse)
+print(f'RMSE on training set : {rmse}')
 
-print('\n')
-
-print("Evaluation on training set :")
-evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+mse = mean_squared_error(df_test_labels, df_test_predictions)
+rmse = np.sqrt(mse)
+print(f'RMSE on test set : {rmse}')
 
 
 # => Evaluation on test set :  
@@ -2077,7 +2197,21 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 # En remettant ORIGIN => passage à 27.14  
 # En remettant UNIQUE_CARRIER => passage à 27.08
 
-# In[192]:
+# In[50]:
+
+
+error_percent_threshold = evaluate_model_percent_threshold(lin_reg, df_test_transformed, df_test[model1_label], EVALUATION_PERCENT, 20)
+print(f'{error_percent_threshold : .2f}% predictions have error below {EVALUATION_THRESHOLD} min, {EVALUATION_PERCENT*100}% of the time')
+
+
+# In[51]:
+
+
+error_mean = evaluate_model_percent_mean(lin_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
+
+
+# In[52]:
 
 
 plt.hist(df_train_predictions, bins=50)
@@ -2085,13 +2219,13 @@ plt.hist(df_train_predictions, bins=50)
 
 # => RMSE on training set : 41.35267146874754 (close to RMSE on test set => under fitting)
 
-# In[191]:
+# In[53]:
 
 
 plt.hist(df_test_predictions, bins=50)
 
 
-# In[200]:
+# In[54]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -2102,7 +2236,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
 
 
-# In[230]:
+# In[55]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -2113,7 +2247,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label] - df_test_predictions, df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[201]:
+# In[56]:
 
 
 df_train_predictions = lin_reg.predict(df_train_transformed)
@@ -2126,13 +2260,13 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
 
 
-# In[141]:
+# In[57]:
 
 
 lin_reg.coef_
 
 
-# In[202]:
+# In[58]:
 
 
 # Feature importances :
@@ -2146,22 +2280,278 @@ lin_reg.coef_
 # => NBFLIGHTS_FORDAY_FORAIRPORT removed from MODEL1_GOUPBYMEAN_FEATURES  
 # => ORIGIN and UNIQUE_CARRIER kept   
 
-# In[ ]:
+# In[59]:
 
 
 df_train_transformed.shape
 
 
-# In[ ]:
+# In[60]:
 
 
 df_train_transformed
 
 
-# In[ ]:
+# In[61]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
+
+
+# ## Ramdom forest
+
+# In[62]:
+
+
+get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(n_estimators=100, max_depth=100, n_jobs=-1, random_state=42)\n    random_reg.fit(df_train_transformed, df_train[model1_label])')
+
+
+# In[63]:
+
+
+print("Evaluation on test set :")
+evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
+
+
+# With shuffle split by ARR_DELAY strategy and 80000 samples :  
+# RMSE : 27.779707360544677  
+# 
+# Evaluation on training set:  
+# RMSE : 10.27032737489414  
+
+# In[64]:
+
+
+error_mean = evaluate_model_percent_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
+
+
+# => ~ 10 min with 80000 lines  
+# => 9.75 min with 800000 lines
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[65]:
+
+
+df_test_predictions = random_reg.predict(df_test_transformed)
+
+
+# In[66]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+
+# In[67]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[68]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / actual values on test set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[69]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on training set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[70]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / instance numbers on training set')
+    plt.xlabel("Instance number")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[71]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Predicted - actual / CRS_ELAPSED_TIME values on test set')
+    plt.xlabel("CRS_ELAPSED_TIME")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[72]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[73]:
+
+
+df_train_transformed.columns
+
+
+# In[74]:
+
+
+pd.set_option('display.max_rows', 200)
+
+
+# In[75]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
+
+
+# In[76]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# In[77]:
+
+
+random_reg.feature_importances_
+
+
+# In[78]:
+
+
+random_reg.feature_importances_.cumsum()
+
+
+# In[ ]:
+
+
+
+
+
+# => feature importance : 
+
+# In[79]:
+
+
+random_reg.estimators_[0]
+
+
+# In[80]:
+
+
+'''
+from sklearn.tree import export_graphviz
+export_graphviz(random_reg.estimators_[0], out_file="tree.dot", rounded=True, filled=True)
+'''
+
+
+# In[81]:
+
+
+LEARNING_CURVE_STEP_SIZE
+
+
+# In[82]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    #df_test_predictions = random_reg.predict(df_test_transformed)
+    #evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+    plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], int(LEARNING_CURVE_STEP_SIZE))
+
+
+# ## Random forest: Grid Search of parameters
+
+# In[83]:
+
+
+df_train_transformed.columns
+
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\n#with redirect_output("gridsearch_output_randomforest_mse_20200416.txt"):\nif (RECOMPUTE_GRIDSEARCH == True):\n    random_reg = RandomForestRegressor(n_jobs=-1, random_state=42)\n\n    param_grid = {\n            \'n_estimators\':  [10, 100, 200, 500, 1000],\n            \'max_depth\': [10, 100, 200, 500, 1000],\n            \'max_features\': [2, 4, 8, 12],\n            \'max_leaf_nodes\': [2, 10, 100, None],\n            #\'criterion\': [\'mse\', \'mae\'],\n            \'criterion\': [\'mse\'],\n            \'n_jobs\': [-1],\n            \'random_state\': [42],\n        }\n\n    grid_search = GridSearchCV(random_reg, param_grid, cv=5, verbose=2, error_score=np.nan, scoring=\'neg_mean_squared_error\')\n    grid_search.fit(df_train_transformed, df_train[model1_label])')
+
+
+# In[ ]:
+
+
+if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
+    grid_search = None
+    
+grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'randomforest_meansort_80000samples_20200414')
+
+
+# In[ ]:
+
+
+grid_search.best_estimator_
+
+
+# In[ ]:
+
+
+pd.set_option('display.max_rows', 1000)
+df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
+
+
+# In[ ]:
+
+
+print("Evaluation on test set :")
+evaluate_model(grid_search.best_estimator_, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(grid_search.best_estimator_, df_train_transformed, df_train[model1_label])
 
 
 # ## Polynomial regression degree 2
@@ -2371,7 +2761,7 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 
 # # New try with 1 hot encode of : 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'
 
-# In[59]:
+# In[19]:
 
 
 if (DATA_LOADED == True):
@@ -2382,25 +2772,25 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[18]:
+# In[20]:
 
 
 df = load_data()
 
 
-# In[19]:
+# In[21]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[20]:
+# In[ ]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[21]:
+# In[ ]:
 
 
 df_train_transformed = preparation_pipeline_meansort.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'])
@@ -2412,7 +2802,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[22]:
+# In[ ]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -2892,7 +3282,7 @@ plt.hist(df_test[model1_label], bins=50)
 
 # # New try with 1 hot encode of : 'ORIGIN', 'CARRIER', 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_DEP_TIME' (scheduled dep hour)
 
-# In[18]:
+# In[26]:
 
 
 if (DATA_LOADED == True):
@@ -2903,37 +3293,38 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[19]:
+# In[27]:
 
 
 df = load_data()
 
 
-# In[20]:
+# In[28]:
 
 
 df
 
 
-# In[21]:
+# In[29]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[22]:
+# In[30]:
 
 
-df, df_train, df_test = custom_train_test_split_sample_random(df)
+#df, df_train, df_test = custom_train_test_split_sample_random(df)
+df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[23]:
+# In[31]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[24]:
+# In[32]:
 
 
 df_train_transformed = preparation_pipeline_1hotall_minmax.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER', 'CRS_DEP_TIME'])
@@ -2975,6 +3366,35 @@ print("Evaluation on training set :")
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 
+# => With 80000 samples and train_test_split simple random (without stratify on ARR_DELAY ):  
+# Evaluation on test set :  
+# RMSE : 27.143078661756135  
+# 
+# 
+# Evaluation on training set :  
+# RMSE : 27.053691910444368  
+# 
+# 
+# Same with stratify split on ARR_DELAY :
+# Evaluation on test set :  
+# RMSE : 26.972141699472907  
+# 
+# 
+# Evaluation on training set :  
+# RMSE : 26.873648666466085  
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
 # In[27]:
 
 
@@ -3006,6 +3426,17 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # In[30]:
 
 
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / actual values on test set')
+    plt.xlabel("Actual")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[31]:
+
+
 df_train_predictions = lin_reg.predict(df_train_transformed)
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3016,31 +3447,60 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
 
 
-# In[31]:
-
-
-lin_reg.coef_
-
-
 # In[32]:
 
 
-coef_feature_importances = (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+df_test_transformed.columns
 
 
 # In[33]:
 
 
-coef_feature_importances.sum()
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Predicted - actual / CRS_ELAPSED_TIME values on test set')
+    plt.xlabel("CRS_ELAPSED_TIME")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
 # In[34]:
 
 
-df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : coef_feature_importances})
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    for column_name in df_test_transformed.columns:
+        fig = plt.figure()
+        fig.suptitle('Comparison Predicted - actual / values of one feature on test set')
+        plt.xlabel(column_name)
+        plt.ylabel("Actual - Predicted")
+        plt.scatter(df_test_transformed[column_name], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
 # In[35]:
+
+
+lin_reg.coef_
+
+
+# In[36]:
+
+
+coef_feature_importances = (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+
+
+# In[37]:
+
+
+coef_feature_importances.sum()
+
+
+# In[38]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : coef_feature_importances})
+
+
+# In[39]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
@@ -3048,13 +3508,13 @@ pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending
 
 # ## Random forest
 
-# In[36]:
+# In[40]:
 
 
 get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(n_estimators=100, max_depth=100, n_jobs=-1, random_state=42)\n    random_reg.fit(df_train_transformed, df_train[model1_label])')
 
 
-# In[37]:
+# In[41]:
 
 
 print("Evaluation on test set :")
@@ -3066,23 +3526,45 @@ print("Evaluation on training set :")
 evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
 
 
+# With random split strategy :
+# 
+# Evaluation on test set :  
+# RMSE : 27.067602891326597  
+# 
+# Evaluation on training set :  
+# RMSE : 10.126836763135943  
+# 
+# With shuffle split by ARR_DELAY strategy :  
+# Evaluation on test set :  
+# RMSE : 27.16789238410523  
+# 
+# 
+# Evaluation on training set :  
+# RMSE : 10.072030081721588  
+
+# In[ ]:
+
+
+
+
+
 # => n_estimators=10, max_depth=10 : RMSE = 26.489032357237143  
 # => n_estimators=100, max_depth=10 : RMSE = 26.452279766206914  
 # => n_estimators=100, max_depth=100 : RMSE train = 9.763346955508453, RMSE test = 25.84449542291657
 
-# In[38]:
+# In[42]:
 
 
 df_test_predictions = random_reg.predict(df_test_transformed)
 
 
-# In[39]:
+# In[43]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
 
 
-# In[40]:
+# In[44]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3093,18 +3575,18 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[41]:
+# In[45]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
     fig = plt.figure()
-    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    fig.suptitle('Comparison Actual - predicted / actual values on test set')
     plt.xlabel("Actual label")
     plt.ylabel("Actual label - Predicted label")
     plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[42]:
+# In[46]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3115,7 +3597,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[43]:
+# In[47]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3126,7 +3608,18 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[44]:
+# In[48]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Predicted - actual / CRS_ELAPSED_TIME values on test set')
+    plt.xlabel("CRS_ELAPSED_TIME")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[49]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
@@ -3139,37 +3632,37 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
 
 
-# In[45]:
+# In[50]:
 
 
 df_train_transformed.columns
 
 
-# In[46]:
+# In[51]:
 
 
 pd.set_option('display.max_rows', 200)
 
 
-# In[47]:
+# In[52]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
 
 
-# In[48]:
+# In[53]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
 
 
-# In[49]:
+# In[54]:
 
 
 random_reg.feature_importances_
 
 
-# In[50]:
+# In[55]:
 
 
 random_reg.feature_importances_.cumsum()
@@ -3183,13 +3676,13 @@ random_reg.feature_importances_.cumsum()
 
 # => feature importance : 
 
-# In[51]:
+# In[56]:
 
 
 random_reg.estimators_[0]
 
 
-# In[52]:
+# In[57]:
 
 
 '''
@@ -3204,19 +3697,55 @@ export_graphviz(random_reg.estimators_[0], out_file="tree.dot", rounded=True, fi
 LEARNING_CURVE_STEP_SIZE
 
 
-# In[54]:
+# In[142]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
     #df_test_predictions = random_reg.predict(df_test_transformed)
     #evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
-    plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE*5)
+    plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], int(LEARNING_CURVE_STEP_SIZE))
+
+
+# ### Parameter search and cross validation
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nwith redirect_output("gridsearch_output_randomforest_mse_20200416.txt"):\n    if (RECOMPUTE_GRIDSEARCH == True):\n        random_reg = RandomForestRegressor(n_jobs=-1, random_state=42)\n        \n        param_grid = {\n                \'n_estimators\':  [10, 100, 200, 500, 1000],\n                \'max_depth\': [10, 100, 200, 500, 1000],\n                \'max_features\': [2, 5, 50, 137],\n                \'max_leaf_nodes\': [2, 10, 100, None],\n                #\'criterion\': [\'mse\', \'mae\'],\n                \'criterion\': [\'mse\'],\n                \'n_jobs\': [-1],\n                \'random_state\': [42],\n            }\n\n        grid_search = GridSearchCV(random_reg, param_grid, cv=5, verbose=2, error_score=np.nan, scoring=\'neg_mean_squared_error\')\n        grid_search.fit(df_train_transformed, df_train[model1_label])')
 
 
 # In[ ]:
 
 
+if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
+    grid_search = None
+    
+grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'randomforest_20200414')
 
+
+# In[ ]:
+
+
+grid_search.best_estimator_
+
+
+# In[ ]:
+
+
+pd.set_option('display.max_rows', 1000)
+df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
+
+
+# In[ ]:
+
+
+print("Evaluation on test set :")
+evaluate_model(grid_search.best_estimator_, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(grid_search.best_estimator_, df_train_transformed, df_train[model1_label])
 
 
 # ## Linear regression with degree 8 polynomial
@@ -3314,7 +3843,7 @@ pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending
 
 # # New try with 3 quantitative features including DEP_DELAY
 
-# In[55]:
+# In[42]:
 
 
 if (DATA_LOADED == True):
@@ -3325,51 +3854,51 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[18]:
+# In[43]:
 
 
 df = load_data()
 
 
-# In[19]:
+# In[44]:
 
 
 df
 
 
-# In[20]:
+# In[45]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[21]:
+# In[46]:
 
 
 df, df_train, df_test = custom_train_test_split_sample_random(df)
 
 
-# In[22]:
+# In[47]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[23]:
+# In[48]:
 
 
-#df_train_transformed = preparation_pipeline_2feats_stdscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
-df_train_transformed = preparation_pipeline_2feats_stdscale.fit_transform(df_train)
-df_test_transformed = preparation_pipeline_2feats_stdscale.transform(df_test)
+#df_train_transformed = preparation_pipeline_3feats_stdscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+df_train_transformed = preparation_pipeline_3feats_stdscale.fit_transform(df_train)
+df_test_transformed = preparation_pipeline_3feats_stdscale.transform(df_test)
 DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[24]:
+# In[49]:
 
 
 for feat_name in df_train_transformed.columns:
-    if (feat_name in MODEL1_2FEATS_QUANTITATIVE):
+    if (feat_name in MODEL1_3FEATS_QUANTITATIVE):
         fig = plt.figure()
         fig.suptitle(feat_name)
         plt.hist(df_train_transformed[feat_name], bins=50)
@@ -3378,7 +3907,7 @@ for feat_name in df_train_transformed.columns:
 
 # ## Linear regression
 
-# In[52]:
+# In[50]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -3398,19 +3927,19 @@ print("Evaluation on training set :")
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 
-# In[53]:
+# In[51]:
 
 
 plt.hist(df_test_predictions, bins=50)
 
 
-# In[54]:
+# In[52]:
 
 
 plt.hist(df_test[MODEL1_LABEL], bins=50)
 
 
-# In[55]:
+# In[53]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3421,7 +3950,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
 
 
-# In[29]:
+# In[54]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3432,7 +3961,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[30]:
+# In[55]:
 
 
 df_train_predictions = lin_reg.predict(df_train_transformed)
@@ -3445,31 +3974,43 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.01)
 
 
-# In[31]:
+# In[56]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    for column_name in df_test_transformed.columns:
+        fig = plt.figure()
+        fig.suptitle('Comparison Predicted - actual / values of one feature on test set')
+        plt.xlabel(column_name)
+        plt.ylabel("Actual - Predicted")
+        plt.scatter(df_test_transformed[column_name], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[57]:
 
 
 lin_reg.coef_
 
 
-# In[32]:
+# In[58]:
 
 
 coef_feature_importances = (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[33]:
+# In[59]:
 
 
 coef_feature_importances.sum()
 
 
-# In[34]:
+# In[60]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : coef_feature_importances})
 
 
-# In[35]:
+# In[61]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
@@ -3601,6 +4142,319 @@ random_reg.feature_importances_.cumsum()
 
 
 # In[51]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
+
+
+# In[ ]:
+
+
+
+
+
+# # New try with 2 quantitative features, not including DEP_DELAY
+
+# In[64]:
+
+
+if (DATA_LOADED == True):
+    del df
+    del df_train
+    del df_test
+    del df_train_transformed
+    del df_test_transformed
+
+
+# In[65]:
+
+
+df = load_data()
+
+
+# In[66]:
+
+
+df
+
+
+# In[67]:
+
+
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+
+
+# In[68]:
+
+
+df, df_train, df_test = custom_train_test_split_sample_random(df)
+
+
+# In[69]:
+
+
+#df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+
+
+# In[70]:
+
+
+#df_train_transformed = preparation_pipeline_2feats_stdscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+df_train_transformed = preparation_pipeline_2feats_stdscale.fit_transform(df_train)
+df_test_transformed = preparation_pipeline_2feats_stdscale.transform(df_test)
+DATA_LOADED = True
+df_test_transformed.shape
+
+
+# In[71]:
+
+
+for feat_name in df_train_transformed.columns:
+    if (feat_name in MODEL1_2FEATS_QUANTITATIVE):
+        fig = plt.figure()
+        fig.suptitle(feat_name)
+        plt.hist(df_train_transformed[feat_name], bins=50)
+        plt.plot()
+
+
+# ## Linear regression
+
+# In[72]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+
+print("Evaluation on test set :")
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# In[73]:
+
+
+plt.hist(df_test_predictions, bins=50)
+
+
+# In[74]:
+
+
+plt.hist(df_test[MODEL1_LABEL], bins=50)
+
+
+# In[75]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on test set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
+
+
+# In[76]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[77]:
+
+
+df_train_predictions = lin_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.01)
+
+
+# In[78]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    for column_name in df_test_transformed.columns:
+        fig = plt.figure()
+        fig.suptitle('Comparison Predicted - actual / values of one feature on test set')
+        plt.xlabel(column_name)
+        plt.ylabel("Actual - Predicted")
+        plt.scatter(df_test_transformed[column_name], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[79]:
+
+
+lin_reg.coef_
+
+
+# In[80]:
+
+
+coef_feature_importances = (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+
+
+# In[81]:
+
+
+coef_feature_importances.sum()
+
+
+# In[82]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : coef_feature_importances})
+
+
+# In[83]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# ## Random forest
+
+# In[84]:
+
+
+get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(n_estimators=200, max_depth=500, n_jobs=-1, random_state=42)\n    random_reg.fit(df_train_transformed, df_train[model1_label])')
+
+
+# In[85]:
+
+
+print("Evaluation on test set :")
+evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
+
+
+# In[86]:
+
+
+df_test_predictions = random_reg.predict(df_test_transformed)
+
+
+# In[87]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+
+# In[88]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[89]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / actual values on test set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[90]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / actual values on training set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[91]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / instance numbers on training set')
+    plt.xlabel("Instance number")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.01)
+
+
+# In[92]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[93]:
+
+
+df_train_transformed.columns
+
+
+# In[94]:
+
+
+pd.set_option('display.max_rows', 200)
+
+
+# In[95]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
+
+
+# In[96]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# In[97]:
+
+
+random_reg.feature_importances_
+
+
+# In[98]:
+
+
+random_reg.feature_importances_.cumsum()
+
+
+# In[99]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
