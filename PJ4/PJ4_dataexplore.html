@@ -13124,6 +13124,7 @@ div#notebook {
 
 <span class="c1">### For progress bar :</span>
 <span class="kn">from</span> <span class="nn">tqdm</span> <span class="k">import</span> <span class="n">tqdm_notebook</span> <span class="k">as</span> <span class="n">tqdm</span>
+                                        
 </pre></div>
 
     </div>
@@ -18183,7 +18184,7 @@ dtype: bool</pre>
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>=&gt; We see that DEP_DELAY_NEW is the same as DEP_DELAY when DEP_DELAY &gt;=0,  and that DEP_DELAY_NEW is 0 when DEP_DELAY is &lt; 0
-=&gt; We'll not keep DEP_DELAY_NEW since we're not interested in predicting negative delays  (= planes that arrive before schedule)</p>
+=&gt; We'll not keep DEP_DELAY_NEW since we're also interested in predicting negative delays  (= planes that arrive before schedule)</p>
 
 </div>
 </div>
@@ -22398,10 +22399,10 @@ DIVERTED                 0.999999 =&gt; Not kept for now.  May be useful to pred
 
  
  
-<div id="63e2386b-93e7-4ca6-b959-346a97857f67"></div>
+<div id="2760df82-09e1-424a-b6ce-8a76a5d255e0"></div>
 <div class="output_subarea output_widget_view ">
 <script type="text/javascript">
-var element = $('#63e2386b-93e7-4ca6-b959-346a97857f67');
+var element = $('#2760df82-09e1-424a-b6ce-8a76a5d255e0');
 </script>
 <script type="application/vnd.jupyter.widget-view+json">
 {"model_id": "7be9b3febbef425aa8089cd50ca07c19", "version_major": 2, "version_minor": 0}
@@ -22654,10 +22655,10 @@ var element = $('#63e2386b-93e7-4ca6-b959-346a97857f67');
 
  
  
-<div id="4c695d8e-4b45-47ea-afcc-86c38a54d5d4"></div>
+<div id="6c796ce1-03b4-43d9-b9c7-6b5327380ed1"></div>
 <div class="output_subarea output_widget_view ">
 <script type="text/javascript">
-var element = $('#4c695d8e-4b45-47ea-afcc-86c38a54d5d4');
+var element = $('#6c796ce1-03b4-43d9-b9c7-6b5327380ed1');
 </script>
 <script type="application/vnd.jupyter.widget-view+json">
 {"model_id": "3cbecb2806ed4ee383b03f3a0dbc5d15", "version_major": 2, "version_minor": 0}
@@ -34679,26 +34680,6 @@ dtype: int64</pre>
 
 </div>
 
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Cercle-des-corr&#233;lations-et-premi&#232;re-r&#233;duction-de-dimensionalit&#233;-des-variables-num&#233;riques">Cercle des corr&#233;lations et premi&#232;re r&#233;duction de dimensionalit&#233; des variables num&#233;riques<a class="anchor-link" href="#Cercle-des-corr&#233;lations-et-premi&#232;re-r&#233;duction-de-dimensionalit&#233;-des-variables-num&#233;riques">&#182;</a></h1>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[116]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#common_functions.display_projections(df.head(10000), quantitative_features)</span>
-</pre></div>
-
-    </div>
 </div>
 </div>
 

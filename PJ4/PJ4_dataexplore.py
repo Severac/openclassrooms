@@ -44,6 +44,7 @@ sns.set()
 
 ### For progress bar :
 from tqdm import tqdm_notebook as tqdm
+                                        
 
 
 # In[2]:
@@ -448,7 +449,7 @@ df[df['DEP_DELAY'] > 0].loc[[3376972]]
 
 
 # => We see that DEP_DELAY_NEW is the same as DEP_DELAY when DEP_DELAY >=0,  and that DEP_DELAY_NEW is 0 when DEP_DELAY is < 0
-# => We'll not keep DEP_DELAY_NEW since we're not interested in predicting negative delays  (= planes that arrive before schedule)
+# => We'll not keep DEP_DELAY_NEW since we're also interested in predicting negative delays  (= planes that arrive before schedule)
 
 # In[45]:
 
@@ -1235,14 +1236,6 @@ plt.title('Corrélation entre les valeurs numériques')
 sns.heatmap(corr_matrix[quantitative_features].loc[quantitative_features], 
         xticklabels=corr_matrix[quantitative_features].loc[quantitative_features].columns,
         yticklabels=corr_matrix[quantitative_features].loc[quantitative_features].columns, cmap='coolwarm', center=0.20)
-
-
-# # Cercle des corrélations et première réduction de dimensionalité des variables numériques
-
-# In[116]:
-
-
-#common_functions.display_projections(df.head(10000), quantitative_features)
 
 
 # In[117]:

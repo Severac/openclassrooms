@@ -36,6 +36,7 @@ EVALUATION_THRESHOLD = 5
 SAMPLED_DATA = True  # If True : data is sampled (NB_SAMPLES instances only) for faster testing purposes
 NB_SAMPLES = 80000
 #NB_SAMPLES = 800000
+#NB_SAMPLES = 500000
 LEARNING_CURVE_STEP_SIZE = int(NB_SAMPLES / 10) # Change that when you change NB_SAMPLES size
 
 DATA_PATH = os.path.join("datasets", "transats")
@@ -65,6 +66,11 @@ MODEL_1HOTALL_FEATURES = ['DISTANCE', 'CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAY_FORA
 MODEL_1HOTALL_FEATURES_QUANTITATIVE = ['DISTANCE', 'CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAY_FORAIRPORT', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT']
 # For later : maybe not include CRS_ELAPSED_TIME because close to DISTANCE
 
+
+MODEL_GROUPBYMEAN2_FEATURES = ['DISTANCE', 'CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAY_FORAIRPORT', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER', 'CRS_DEP_TIME']
+MODEL_GROUPBYMEAN2_FEATURES_QUANTITATIVE = ['DISTANCE', 'CRS_ELAPSED_TIME', 'NBFLIGHTS_FORDAY_FORAIRPORT', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER', 'CRS_DEP_TIME']
+
+
 MODEL1_3FEATS = ['DISTANCE', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'DEP_DELAY']
 MODEL1_3FEATS_QUANTITATIVE = ['DISTANCE', 'NBFLIGHTS_FORDAYHOUR_FORAIRPORT', 'DEP_DELAY']
 
@@ -86,9 +92,9 @@ sns.set()
 ####### Paramètres pour sauver et restaurer les modèles :
 import pickle
 ####### Paramètres à changer par l'utilisateur selon son besoin :
-RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
-SAVE_GRID_RESULTS = True # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
-LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
+RECOMPUTE_GRIDSEARCH = False  # CAUTION : computation is several hours long
+SAVE_GRID_RESULTS = False # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
+LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
                           # Grid search results are loaded with full samples (SAMPLED_DATA must be False)
 
 #GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
@@ -142,6 +148,18 @@ def load_data():
 # In[4]:
 
 
+def load_data_with_outliers():
+    # hhmm timed features formatted
+    feats_hhmm = ['CRS_DEP_TIME',  'CRS_ARR_TIME']
+
+    df = pd.read_csv(DATA_PATH_FILE_INPUT, sep=',', header=0, encoding='utf-8', low_memory=False, parse_dates=feats_hhmm)   
+        
+    return(df)
+
+
+# In[5]:
+
+
 def custom_train_test_split_sample(df):
     from sklearn.model_selection import train_test_split
     
@@ -168,7 +186,7 @@ def custom_train_test_split_sample(df):
     return df, df_train, df_test
 
 
-# In[5]:
+# In[6]:
 
 
 def custom_train_test_split_sample_random(df):
@@ -192,7 +210,7 @@ def custom_train_test_split_sample_random(df):
     return df, df_train, df_test
 
 
-# In[6]:
+# In[7]:
 
 
 def print_column_information(df, column_name):
@@ -205,7 +223,7 @@ def print_column_information(df, column_name):
     print('\n')
 
 
-# In[7]:
+# In[8]:
 
 
 def display_percent_complete(df):
@@ -215,7 +233,7 @@ def display_percent_complete(df):
     display(not_na_df)
 
 
-# In[8]:
+# In[9]:
 
 
 def identify_features(df):
@@ -241,7 +259,7 @@ def identify_features(df):
     return all_features, model1_features, model1_label, quantitative_features, qualitative_features
 
 
-# In[9]:
+# In[10]:
 
 
 def save_or_load_search_params(grid_search, save_file_suffix):
@@ -276,7 +294,7 @@ def save_or_load_search_params(grid_search, save_file_suffix):
             return(grid_search, df_grid_search_results)
 
 
-# In[10]:
+# In[11]:
 
 
 def evaluate_model(model, X_test, Y_test):
@@ -287,7 +305,7 @@ def evaluate_model(model, X_test, Y_test):
     
 
 
-# In[11]:
+# In[12]:
 
 
 def evaluate_model_MAE(model, X_test, Y_test):
@@ -297,7 +315,7 @@ def evaluate_model_MAE(model, X_test, Y_test):
     
 
 
-# In[12]:
+# In[13]:
 
 
 '''
@@ -316,7 +334,7 @@ def evaluate_model_percent_threshold(model, X_test, Y_test, percent, threshold):
     
 
 
-# In[13]:
+# In[14]:
 
 
 '''
@@ -335,7 +353,7 @@ def evaluate_model_percent_mean(model, X_test, Y_test, percent):
     
 
 
-# In[14]:
+# In[15]:
 
 
 def minibatch_generate_indexes(df_train_transformed, step_size):
@@ -352,7 +370,7 @@ def minibatch_generate_indexes(df_train_transformed, step_size):
     yield((left_index + step_size, final_index))
 
 
-# In[15]:
+# In[16]:
 
 
 def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, evaluation_method='RMSE'):
@@ -397,13 +415,13 @@ def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, eva
          plt.ylabel("MAE", fontsize=14)  
 
 
-# In[16]:
+# In[17]:
 
 
 #minibatches = minibatch_generate_indexes(df_train_transformed)
 
 
-# In[17]:
+# In[18]:
 
 
 def reset_data():
@@ -434,7 +452,7 @@ def reset_data_old():
     return df, df_train, df_test, df_train_transformed, df_test_transformed
 
 
-# In[18]:
+# In[19]:
 
 
 from IPython.display import display, Markdown
@@ -457,7 +475,7 @@ def display_freq_table(df, col_names):
         display(tab)
 
 
-# In[19]:
+# In[20]:
 
 
 class redirect_output(object):
@@ -493,27 +511,64 @@ class redirect_output(object):
         sys.stderr = self.sys_stderr
 
 
+# # First naive model
+
+# In[22]:
+
+
+df = load_data_with_outliers()
+df, df_train, df_test = custom_train_test_split_sample_random(df)
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+
+
+# In[23]:
+
+
+from sklearn import dummy
+
+dum = dummy.DummyRegressor(strategy='mean')
+
+# Entraînement
+dum.fit(df_train, df_train[model1_label])
+
+# Prédiction sur le jeu de test
+y_pred_dum = dum.predict(df_test)
+
+# Evaluate
+print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
+print("MAE : {:.2f}".format(np.sqrt(mean_absolute_error(df_test[model1_label], y_pred_dum)) ))
+
+error_mean = evaluate_model_percent_mean(dum, df_test, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
+
+
+# In[24]:
+
+
+del df, df_train, df_test
+
+
 # # Data load
 
-# In[19]:
+# In[25]:
 
 
 df = load_data()
 
 
-# In[20]:
+# In[26]:
 
 
 df.shape
 
 
-# In[21]:
+# In[27]:
 
 
 display_percent_complete(df)
 
 
-# In[22]:
+# In[28]:
 
 
 '''
@@ -525,7 +580,7 @@ for column_name in df.columns:
 
 # # Identification of features
 
-# In[23]:
+# In[29]:
 
 
 # Below are feature from dataset that we decided to keep: 
@@ -541,7 +596,7 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 # # Split train set, test set
 
-# In[24]:
+# In[30]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df)
@@ -559,19 +614,19 @@ if (SAMPLED_DATA == True):
 '''
 
 
-# In[25]:
+# In[31]:
 
 
 df_train
 
 
-# In[23]:
+# In[32]:
 
 
 df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True)
 
 
-# In[24]:
+# In[33]:
 
 
 df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_values(by='ARR_DELAY', ascending=True).plot()
@@ -579,7 +634,7 @@ df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_
 
 # # Features encoding
 
-# In[20]:
+# In[34]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -1164,15 +1219,30 @@ preparation_pipeline_meansort_stdscale = Pipeline([
 ])
 
 
+# Temporary modification :  HHMM_To_Minutes instead of HHMM_to_HH and CRS_DEP_TIME in quantitative MODEL_1HOTALL_FEATURES_QUANTITATIVE
+
 # To defined features to 1hot encode, pass fit_transform parameter below:  
 # categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER', 'CRS_DEP_TIME']
 preparation_pipeline_1hotall_minmax = Pipeline([
     ('filter_highpercentile', Filter_High_Percentile()),
     ('hour_extractor', HHMM_to_HH()),
+    #('data_converter', HHMM_to_Minutes()),
     ('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()), 
     
     ('features_selector', FeaturesSelector(features_toselect=MODEL_1HOTALL_FEATURES)),
     ('minmaxscaler', MinMaxScalerMultiple(features_toscale=MODEL_1HOTALL_FEATURES_QUANTITATIVE)),
+])
+
+
+preparation_pipeline_meansort2_stdscale = Pipeline([
+    ('filter_highpercentile', Filter_High_Percentile()),
+    ('hour_extractor', HHMM_to_HH()),
+    ('numericalEncoder', Aggregate_then_GroupByMean_then_Sort_numericalEncoder()),
+    #('data_converter', HHMM_to_Minutes()),
+    #('categoricalfeatures_1hotencoder', CategoricalFeatures1HotEncoder()), 
+    
+    ('features_selector', FeaturesSelector(features_toselect=MODEL_GROUPBYMEAN2_FEATURES)),
+    ('standardscaler', StandardScalerMultiple(features_toscale=MODEL_GROUPBYMEAN2_FEATURES)),
 ])
 
 
@@ -1214,99 +1284,69 @@ ColumnTransformer([
 '''
 
 
-# In[34]:
+# In[35]:
 
 
 df
 
 
-# In[48]:
-
-
-np.power(df[['MONTH']], 2).rename(columns={'MONTH' : 'MONTH2'})
-
-
-# In[40]:
-
-
-df[['MONTH']].rename(columns={'MONTH' : 'MONTH2'})
-
-
-# In[46]:
-
-
-(df.loc[:, 'MONTH'].rename(columns={'MONTH' : 'MONTH2'}))
-
-
-# In[ ]:
-
-
-np.power(df.loc[:, column_name], n_degree + 1).rename(columns={column_name : 'bla'})]
-
-
-# In[20]:
-
-
-df
-
-
-# In[26]:
+# In[41]:
 
 
 df_train_transformed = preparation_pipeline.fit_transform(df_train)
 
 
-# In[27]:
+# In[42]:
 
 
 df_train_transformed
 
 
-# In[28]:
+# In[43]:
 
 
 df_train_transformed.shape
 
 
-# In[29]:
+# In[44]:
 
 
 df_train_transformed.info()
 
 
-# In[30]:
+# In[45]:
 
 
 #df_train_transformed = prediction_pipeline.fit_transform(df_train_transformed)  # Used if standard scale not commented out
 df_train_transformed = prediction_pipeline_without_sparse.fit_transform(df_train_transformed)
 
 
-# In[31]:
+# In[46]:
 
 
 df_train_transformed.shape
 
 
-# In[32]:
+# In[47]:
 
 
 from scipy import sparse
 sparse.issparse(df_train_transformed)
 
 
-# In[33]:
+# In[48]:
 
 
 #pd.DataFrame.sparse.from_spmatrix(df_train_transformed)
 
 
-# In[34]:
+# In[49]:
 
 
 pd.set_option('display.max_columns', 400)
 
 
-# In[35]:
+# In[50]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
@@ -1314,7 +1354,7 @@ all_features, model1_features, model1_label, quantitative_features, qualitative_
 
 # # Test set encoding
 
-# In[36]:
+# In[51]:
 
 
 df_test_transformed = preparation_pipeline.transform(df_test)
@@ -1324,25 +1364,25 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[37]:
+# In[64]:
 
 
 df_train_transformed
 
 
-# In[38]:
+# In[53]:
 
 
 df_test[model1_label]
 
 
-# In[39]:
+# In[54]:
 
 
 df_test.index
 
 
-# In[40]:
+# In[55]:
 
 
 df.loc[df_test.index, model1_label]
@@ -1350,13 +1390,13 @@ df.loc[df_test.index, model1_label]
 
 # # Linear regression
 
-# In[41]:
+# In[56]:
 
 
 df_train[model1_label].shape
 
 
-# In[42]:
+# In[57]:
 
 
 # Add bias :
@@ -1364,7 +1404,7 @@ df_train_transformed = np.c_[np.ones((len(df_train_transformed), 1)), df_train_t
 df_test_transformed = np.c_[np.ones((len(df_test_transformed), 1)), df_test_transformed]  # add x0 = 1 to each instance
 
 
-# In[43]:
+# In[58]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1373,45 +1413,35 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[46]:
+# In[60]:
 
 
+'''
 lin_reg = linear_model.SGDRegressor(alpha=0,max_iter=200)
 lin_reg.fit(df_train_transformed, df_train[model1_label])
+'''
 
 
-# In[92]:
-
-
-df_train.iloc[25, :]
-
-
-# In[93]:
-
-
-df_train.iloc[25, :]
-
-
-# In[94]:
-
-
-df
-
-
-# In[95]:
-
-
-df_train.iloc[50, :]
-
-
-# In[45]:
+# In[61]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
     df_test_predictions = lin_reg.predict(df_test_transformed)
-    lin_mse = mean_squared_error(df_test[model1_label], df_test_predictions)
-    lin_rmse = np.sqrt(lin_mse)
-    print(lin_rmse)
+    
+    #lin_mse = mean_squared_error(df_test[model1_label], df_test_predictions)
+    #lin_rmse = np.sqrt(lin_mse)
+    #print(lin_rmse)
+    
+    print("Evaluation on test set :")
+    evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+    print('\n')
+
+    print("Evaluation on training set :")
+    evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+    error_mean = evaluate_model_percent_mean(lin_reg, df_test_transformed, df_test[model1_label], 0.8)
+    print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
 
 
 # => 42.17  (42.16679389006135)  
@@ -1419,18 +1449,28 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # => 26.998703285632104 with TransformedTargetRegressor  
 # => 26.99870280932372 without standardscale  
 # => 27.00905767522797 with SGDRegressor ((alpha=0,max_iter=200) and standarscale
+# 
+# 
+# With 80000 lines :   
+# Evaluation on test set :   
+# RMSE : 27.03778899779597   
+# 
+# 
+# Evaluation on training set :   
+# RMSE : 26.990456780220008   
+# Mean prediction error 90.0% of the time :  10.01   
 
-# In[51]:
+# In[66]:
 
 
-print("Evaluation on training set :")
-evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+df_train_predictions = lin_reg.predict(df_train_transformed)
+df_test_predictions = lin_reg.predict(df_test_transformed)
 
 
-# In[52]:
+# In[68]:
 
 
-df_train_transformed.shape[0]
+plt.hist(df_test_predictions, bins=50)
 
 
 # In[53]:
@@ -1439,19 +1479,19 @@ df_train_transformed.shape[0]
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# In[54]:
+# In[71]:
 
 
 df_train
 
 
-# In[56]:
+# In[72]:
 
 
 df_train[[model1_label]]
 
 
-# In[51]:
+# In[73]:
 
 
 lin_reg.coef_
@@ -1486,7 +1526,7 @@ lin_reg.coef_
 #          9.46369559,  -0.27437885,  -1.82963879,   0.47213692,
 #         -2.5256052 ,  -2.053249  ,  -1.04523965])
 
-# In[46]:
+# In[74]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -1497,19 +1537,19 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
 
 
-# In[44]:
+# In[75]:
 
 
 df_train_transformed
 
 
-# In[47]:
+# In[76]:
 
 
 plt.hist(df_test_predictions, bins=50)
 
 
-# In[48]:
+# In[77]:
 
 
 plt.hist(df_test[model1_label], bins=50)
@@ -1521,13 +1561,13 @@ plt.hist(df_test[model1_label], bins=50)
 df_train_predictions = lin_reg.predict(df_train_transformed)
 
 
-# In[70]:
+# In[79]:
 
 
 plt.hist(df_train_predictions, bins=50)
 
 
-# In[ ]:
+# In[80]:
 
 
 from sklearn.model_selection import cross_validate
@@ -1535,7 +1575,7 @@ from sklearn.model_selection import cross_validate
 #scores = cross_validate(lin_reg, df_train_transformed, df_train[model1_label], scoring='neg_root_mean_squared_error', cv=5)
 
 
-# In[48]:
+# In[81]:
 
 
 #scores['test_score'].mean()
@@ -1543,7 +1583,7 @@ from sklearn.model_selection import cross_validate
 
 # # ElasticNET regression
 
-# In[49]:
+# In[82]:
 
 
 from sklearn.model_selection import ShuffleSplit
@@ -1552,13 +1592,13 @@ from sklearn.model_selection import ShuffleSplit
 shuffled_split_train = ShuffleSplit(n_splits=5, test_size=0.2, random_state=42)
 
 
-# In[50]:
+# In[83]:
 
 
 from sklearn.linear_model import ElasticNet
 
 
-# In[51]:
+# In[84]:
 
 
 from sklearn.model_selection import GridSearchCV
@@ -1570,7 +1610,7 @@ grid_search = GridSearchCV(eNet, param_grid = {"max_iter": [1, 5, 10],
                       "l1_ratio": np.arange(0.0, 1.0, 0.4)},cv=shuffled_split_train, scoring='neg_mean_squared_error', error_score=np.nan, verbose=2)
 
 
-# In[52]:
+# In[85]:
 
 
 '''
@@ -1584,28 +1624,28 @@ grid_search = GridSearchCV(eNet, param_grid = {"max_iter": [1, 5, 10],
 '''
 
 
-# In[53]:
+# In[86]:
 
 
 if (RECOMPUTE_GRIDSEARCH == True):
     grid_search.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[54]:
+# In[87]:
 
 
 if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
     grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'eNet_20200319')
 
 
-# In[55]:
+# In[88]:
 
 
 if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
     df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
 
 
-# In[56]:
+# In[89]:
 
 
 np.sqrt(1741.47)
@@ -1613,14 +1653,14 @@ np.sqrt(1741.47)
 
 # => 41.73092378560532
 
-# In[57]:
+# In[91]:
 
 
 if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
     grid_search.best_estimator_
 
 
-# In[58]:
+# In[92]:
 
 
 if ((EXECUTE_INTERMEDIATE_MODELS == True) and (LOAD_GRID_RESULTS == True)):
@@ -1705,6 +1745,8 @@ y_pred_dum = dum.predict(df_test)
 print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
 print("MAE : {:.2f}".format(np.sqrt(mean_absolute_error(df_test[model1_label], y_pred_dum)) ))
 
+
+# RMSE of naive approach was 42 before removing outliers
 
 # In[67]:
 
@@ -1944,7 +1986,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[21]:
+# In[267]:
 
 
 if (DATA_LOADED == True):
@@ -2001,43 +2043,43 @@ df_train
 df_train_transformed
 
 
-# In[28]:
+# In[227]:
 
 
 df_train_transformed.shape[1]
 
 
-# In[29]:
+# In[228]:
 
 
 len(MODEL1_GOUPBYMEAN_FEATURES)
 
 
-# In[30]:
+# In[229]:
 
 
 df_train_transformed.shape[1]
 
 
-# In[31]:
+# In[230]:
 
 
 df_train[df_train['CRS_DEP_TIME'] < 200]
 
 
-# In[32]:
+# In[231]:
 
 
 df['CRS_DEP_TIME']
 
 
-# In[33]:
+# In[232]:
 
 
 df_train['CRS_DEP_TIME']
 
 
-# In[34]:
+# In[233]:
 
 
 plt.hist(df_train['CRS_DEP_TIME'], bins=50)
@@ -2298,7 +2340,7 @@ df_train_transformed
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# ## Ramdom forest
+# ## Random forest
 
 # In[62]:
 
@@ -2306,7 +2348,26 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(n_estimators=100, max_depth=100, n_jobs=-1, random_state=42)\n    random_reg.fit(df_train_transformed, df_train[model1_label])')
 
 
-# In[63]:
+# In[ ]:
+
+
+# Model obtained via GridSearch :
+#%%time
+from sklearn.ensemble import RandomForestRegressor
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):    
+    random_reg = RandomForestRegressor(bootstrap=True, criterion='mse', max_depth=1000,
+                          max_features=4, max_leaf_nodes=None,
+                          min_impurity_decrease=0.0, min_impurity_split=None,
+                          min_samples_leaf=1, min_samples_split=2,
+                          min_weight_fraction_leaf=0.0, n_estimators=500, n_jobs=-1,
+                          oob_score=False, random_state=42, verbose=0,
+                          warm_start=False)
+    
+    random_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[ ]:
 
 
 print("Evaluation on test set :")
@@ -2318,11 +2379,12 @@ print("Evaluation on training set :")
 evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
 
 
-# With shuffle split by ARR_DELAY strategy and 80000 samples :  
-# RMSE : 27.779707360544677  
+# With parameters before GridSearch optimisation :
+#     With shuffle split by ARR_DELAY strategy and 80000 samples :  
+#     RMSE : 27.779707360544677  
 # 
-# Evaluation on training set:  
-# RMSE : 10.27032737489414  
+#     Evaluation on training set:  
+#     RMSE : 10.27032737489414  
 
 # In[64]:
 
@@ -2333,24 +2395,6 @@ print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mea
 
 # => ~ 10 min with 80000 lines  
 # => 9.75 min with 800000 lines
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
 
 # In[65]:
 
@@ -2435,34 +2479,47 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # In[73]:
 
 
-df_train_transformed.columns
+df_test_predictions = random_reg.predict(df_test_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on test set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
 
 
 # In[74]:
 
 
-pd.set_option('display.max_rows', 200)
+df_train_transformed.columns
 
 
 # In[75]:
 
 
-df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
+pd.set_option('display.max_rows', 200)
 
 
 # In[76]:
 
 
-pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
 
 
 # In[77]:
 
 
-random_reg.feature_importances_
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
 
 
 # In[78]:
+
+
+random_reg.feature_importances_
+
+
+# In[79]:
 
 
 random_reg.feature_importances_.cumsum()
@@ -2476,13 +2533,13 @@ random_reg.feature_importances_.cumsum()
 
 # => feature importance : 
 
-# In[79]:
+# In[80]:
 
 
 random_reg.estimators_[0]
 
 
-# In[80]:
+# In[81]:
 
 
 '''
@@ -2491,7 +2548,7 @@ export_graphviz(random_reg.estimators_[0], out_file="tree.dot", rounded=True, fi
 '''
 
 
-# In[81]:
+# In[82]:
 
 
 LEARNING_CURVE_STEP_SIZE
@@ -2508,19 +2565,144 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # ## Random forest: Grid Search of parameters
 
-# In[83]:
+# In[274]:
 
 
 df_train_transformed.columns
 
 
-# In[ ]:
+# In[45]:
 
 
 get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\n#with redirect_output("gridsearch_output_randomforest_mse_20200416.txt"):\nif (RECOMPUTE_GRIDSEARCH == True):\n    random_reg = RandomForestRegressor(n_jobs=-1, random_state=42)\n\n    param_grid = {\n            \'n_estimators\':  [10, 100, 200, 500, 1000],\n            \'max_depth\': [10, 100, 200, 500, 1000],\n            \'max_features\': [2, 4, 8, 12],\n            \'max_leaf_nodes\': [2, 10, 100, None],\n            #\'criterion\': [\'mse\', \'mae\'],\n            \'criterion\': [\'mse\'],\n            \'n_jobs\': [-1],\n            \'random_state\': [42],\n        }\n\n    grid_search = GridSearchCV(random_reg, param_grid, cv=5, verbose=2, error_score=np.nan, scoring=\'neg_mean_squared_error\')\n    grid_search.fit(df_train_transformed, df_train[model1_label])')
 
 
-# In[ ]:
+# [CV] criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=500, n_jobs=-1, random_state=42 
+# 
+# /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/model_selection/_validation.py:547: FitFailedWarning: Estimator fit failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+# joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker. The exit codes of the workers are {SIGKILL(-9)}
+# 
+#   FitFailedWarning)
+# 
+# [CV]  criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=500, n_jobs=-1, random_state=42, total=  18.8s
+# [CV] criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=500, n_jobs=-1, random_state=42 
+# 
+# exception calling callback for <Future at 0x7f4b6817e6d0 state=finished raised TerminatedWorkerError>
+# Traceback (most recent call last):
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/_base.py", line 625, in _invoke_callbacks
+#     callback(self)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 309, in __call__
+#     self.parallel.dispatch_next()
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 731, in dispatch_next
+#     if not self.dispatch_one_batch(self._original_iterator):
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 759, in dispatch_one_batch
+#     self._dispatch(tasks)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 716, in _dispatch
+#     job = self._backend.apply_async(batch, callback=cb)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/_parallel_backends.py", line 510, in apply_async
+#     future = self._workers.submit(SafeFunction(func))
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/reusable_executor.py", line 151, in submit
+#     fn, *args, **kwargs)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/process_executor.py", line 1022, in submit
+#     raise self._flags.broken
+# joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker. The exit codes of the workers are {SIGKILL(-9)}
+# /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/model_selection/_validation.py:547: FitFailedWarning: Estimator fit failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+# joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker. The exit codes of the workers are {SIGKILL(-9)}
+# 
+#   FitFailedWarning)
+# 
+# [CV]  criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=500, n_jobs=-1, random_state=42, total=  19.9s
+# [CV] criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=1000, n_jobs=-1, random_state=42 
+# 
+# exception calling callback for <Future at 0x7f4b682b7b10 state=finished raised TerminatedWorkerError>
+# Traceback (most recent call last):
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/_base.py", line 625, in _invoke_callbacks
+#     callback(self)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 309, in __call__
+#     self.parallel.dispatch_next()
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 731, in dispatch_next
+#     if not self.dispatch_one_batch(self._original_iterator):
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 759, in dispatch_one_batch
+#     self._dispatch(tasks)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 716, in _dispatch
+#     job = self._backend.apply_async(batch, callback=cb)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/_parallel_backends.py", line 510, in apply_async
+#     future = self._workers.submit(SafeFunction(func))
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/reusable_executor.py", line 151, in submit
+#     fn, *args, **kwargs)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/process_executor.py", line 1022, in submit
+#     raise self._flags.broken
+# joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker. The exit codes of the workers are {SIGKILL(-9)}
+# /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/model_selection/_validation.py:547: FitFailedWarning: Estimator fit failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+# joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker. The exit codes of the workers are {SIGKILL(-9)}
+# 
+#   FitFailedWarning)
+# 
+# [CV]  criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=1000, n_jobs=-1, random_state=42, total=  45.4s
+# [CV] criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=1000, n_jobs=-1, random_state=42 
+# 
+# exception calling callback for <Future at 0x7f4b6343a490 state=finished raised TerminatedWorkerError>
+# Traceback (most recent call last):
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/_base.py", line 625, in _invoke_callbacks
+#     callback(self)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 309, in __call__
+#     self.parallel.dispatch_next()
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 731, in dispatch_next
+#     if not self.dispatch_one_batch(self._original_iterator):
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 759, in dispatch_one_batch
+#     self._dispatch(tasks)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 716, in _dispatch
+#     job = self._backend.apply_async(batch, callback=cb)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/_parallel_backends.py", line 510, in apply_async
+#     future = self._workers.submit(SafeFunction(func))
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/reusable_executor.py", line 151, in submit
+#     fn, *args, **kwargs)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/process_executor.py", line 1022, in submit
+#     raise self._flags.broken
+# joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker. The exit codes of the workers are {SIGKILL(-9)}
+# /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/model_selection/_validation.py:547: FitFailedWarning: Estimator fit failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+# joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker. The exit codes of the workers are {SIGKILL(-9)}
+# 
+#   FitFailedWarning)
+# 
+# [CV]  criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=1000, n_jobs=-1, random_state=42, total=   8.0s
+# [CV] criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=1000, n_jobs=-1, random_state=42 
+# 
+# exception calling callback for <Future at 0x7f4b67f74dd0 state=finished raised TerminatedWorkerError>
+# Traceback (most recent call last):
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/_base.py", line 625, in _invoke_callbacks
+#     callback(self)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 309, in __call__
+#     self.parallel.dispatch_next()
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 731, in dispatch_next
+#     if not self.dispatch_one_batch(self._original_iterator):
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 759, in dispatch_one_batch
+#     self._dispatch(tasks)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/parallel.py", line 716, in _dispatch
+#     job = self._backend.apply_async(batch, callback=cb)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/_parallel_backends.py", line 510, in apply_async
+#     future = self._workers.submit(SafeFunction(func))
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/reusable_executor.py", line 151, in submit
+#     fn, *args, **kwargs)
+#   File "/home/francois/anaconda3/lib/python3.7/site-packages/joblib/externals/loky/process_executor.py", line 1022, in submit
+#     raise self._flags.broken
+# joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker. The exit codes of the workers are {SIGKILL(-9)}
+# /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/model_selection/_validation.py:547: FitFailedWarning: Estimator fit failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+# joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker. The exit codes of the workers are {SIGKILL(-9)}
+# 
+#   FitFailedWarning)
+# 
+# 
+# [CV] criterion=mse, max_depth=1000, max_features=12, max_leaf_nodes=None, n_estimators=1000, n_jobs=-1, random_state=42 
+# 
+# /home/francois/anaconda3/lib/python3.7/site-packages/sklearn/model_selection/_validation.py:547: FitFailedWarning: Estimator fit failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+# joblib.externals.loky.process_executor.TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the worker. The exit codes of the workers are {SIGKILL(-9)}
+# 
+#   FitFailedWarning)
+# [Parallel(n_jobs=1)]: Done 2000 out of 2000 | elapsed: 404.9min finished
+# 
+
+# In[46]:
 
 
 if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
@@ -2529,20 +2711,20 @@ if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
 grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'randomforest_meansort_80000samples_20200414')
 
 
-# In[ ]:
+# In[47]:
 
 
 grid_search.best_estimator_
 
 
-# In[ ]:
+# In[48]:
 
 
 pd.set_option('display.max_rows', 1000)
 df_grid_search_results.sort_values(by='mean_test_score', ascending=False)
 
 
-# In[ ]:
+# In[49]:
 
 
 print("Evaluation on test set :")
@@ -2552,6 +2734,623 @@ print('\n')
 
 print("Evaluation on training set :")
 evaluate_model(grid_search.best_estimator_, df_train_transformed, df_train[model1_label])
+
+
+# ## Random forest: additionnal Grid Search of parameters
+# We had a memory error on those runs : we'll need to launch them again  
+# [CV] criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=500, n_jobs=-1, random_state=42     
+# [CV] criterion=mse, max_depth=1000, max_features=4, max_leaf_nodes=None, n_estimators=1000, n_jobs=-1, random_state=42   
+# 
+
+# In[89]:
+
+
+get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\n#with redirect_output("gridsearch_output_randomforest_mse_20200416.txt"):\nif (RECOMPUTE_GRIDSEARCH == True):\n    random_reg = RandomForestRegressor(n_jobs=-1, random_state=42)\n\n    param_grid = {\n            \'n_estimators\':  [500],\n            \'max_depth\': [1000],\n            \'max_features\': [4],\n            \'max_leaf_nodes\': [None],\n            #\'criterion\': [\'mse\', \'mae\'],\n            \'criterion\': [\'mse\'],\n            \'n_jobs\': [-1],\n            \'random_state\': [42],\n        }\n\n    grid_search2 = GridSearchCV(random_reg, param_grid, cv=5, verbose=2, error_score=np.nan, scoring=\'neg_mean_squared_error\')\n    grid_search2.fit(df_train_transformed, df_train[model1_label])')
+
+
+# In[90]:
+
+
+if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
+    grid_search2 = None
+    
+grid_search2, df_grid_search_results2 = save_or_load_search_params(grid_search2, 'randomforest_meansort_80000samples_run2_20200414')
+
+
+# In[91]:
+
+
+grid_search2.best_estimator_
+
+
+# In[92]:
+
+
+pd.set_option('display.max_rows', 1000)
+df_grid_search_results2.sort_values(by='mean_test_score', ascending=False)
+
+
+# ## Evaluation of Grid Search best estimator
+# RandomForestRegressor(bootstrap=True, criterion='mse', max_depth=10,  
+#                       max_features=4, max_leaf_nodes=None,  
+#                       min_impurity_decrease=0.0, min_impurity_split=None,  
+#                       min_samples_leaf=1, min_samples_split=2,  
+#                       min_weight_fraction_leaf=0.0, n_estimators=1000,  
+#                       n_jobs=-1, oob_score=False, random_state=42, verbose=0,  
+#                       warm_start=False)  
+
+# In[278]:
+
+
+random_reg = grid_search.best_estimator_
+
+
+# In[279]:
+
+
+print("Evaluation on test set :")
+evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
+
+error_mean = evaluate_model_percent_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
+
+
+# Model before Grid Search :
+# => ~ 10 min with 80000 lines  
+# => 9.75 min with 800000 lines
+# 
+# Grid search best estimator :  
+# => Mean prediction error 90.0% of the time :  9.92   with 80000 lines
+# 
+
+# In[280]:
+
+
+df_test_predictions = random_reg.predict(df_test_transformed)
+
+
+# In[281]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+
+# In[282]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[283]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / actual values on test set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[284]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on training set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[285]:
+
+
+df_train_residuals = df_train[model1_label] - df_train_predictions
+max_residual = df_train_residuals.abs().max()
+sample_weights = (max_residual - df_train_residuals.abs()) / max_residual
+
+
+# In[286]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on training set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_train[model1_label],sample_weights, color='blue', alpha=0.1)
+
+
+# In[287]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / instance numbers on training set')
+    plt.xlabel("Instance number")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[288]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Predicted - actual / CRS_ELAPSED_TIME values on test set')
+    plt.xlabel("CRS_ELAPSED_TIME")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[289]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[290]:
+
+
+df_test_predictions = random_reg.predict(df_test_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on test set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
+
+
+# In[291]:
+
+
+df_train_transformed.columns
+
+
+# In[292]:
+
+
+pd.set_option('display.max_rows', 200)
+
+
+# In[293]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
+
+
+# In[294]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# In[254]:
+
+
+random_reg.feature_importances_
+
+
+# In[197]:
+
+
+random_reg.feature_importances_.cumsum()
+
+
+# In[ ]:
+
+
+
+
+
+# => feature importance : 
+
+# In[198]:
+
+
+random_reg.estimators_[0]
+
+
+# In[199]:
+
+
+'''
+from sklearn.tree import export_graphviz
+export_graphviz(random_reg.estimators_[0], out_file="tree.dot", rounded=True, filled=True)
+'''
+
+
+# In[200]:
+
+
+LEARNING_CURVE_STEP_SIZE
+
+
+# In[108]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    #df_test_predictions = random_reg.predict(df_test_transformed)
+    #evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+    plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], int(LEARNING_CURVE_STEP_SIZE))
+
+
+# ## Boosting
+
+# In[27]:
+
+
+from sklearn.ensemble import GradientBoostingRegressor
+
+boost_reg = GradientBoostingRegressor(loss='ls', learning_rate=0.1, n_estimators=10, subsample=0.1, min_samples_split=2, min_samples_leaf=1, min_weight_fraction_leaf=0.0, max_depth=10, init=None, random_state=42, max_features=4, alpha=0.9, verbose=0, max_leaf_nodes=None, warm_start=False)
+
+boost_reg.fit(df_train_transformed, df_train[model1_label])
+
+
+# In[28]:
+
+
+print("Evaluation on test set :")
+evaluate_model(boost_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(boost_reg, df_train_transformed, df_train[model1_label])
+
+
+# In[29]:
+
+
+error_mean = evaluate_model_percent_mean(boost_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
+
+
+# With boosting, all data :  
+# Mean prediction error 90.0% of the time :  9.88
+
+# In[30]:
+
+
+df_test_predictions = boost_reg.predict(df_test_transformed)
+
+
+# In[31]:
+
+
+df_train_predictions = boost_reg.predict(df_train_transformed)
+
+
+# In[32]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[33]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / actual values on test set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[34]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on training set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[35]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / instance numbers on training set')
+    plt.xlabel("Instance number")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[36]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Predicted - actual / CRS_ELAPSED_TIME values on test set')
+    plt.xlabel("CRS_ELAPSED_TIME")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[38]:
+
+
+df_train_predictions = boost_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[39]:
+
+
+df_test_predictions = boost_reg.predict(df_test_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on test set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
+
+
+# In[40]:
+
+
+df_train_transformed.columns
+
+
+# In[41]:
+
+
+pd.set_option('display.max_rows', 200)
+
+
+# In[43]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : boost_reg.feature_importances_})
+
+
+# In[44]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# ## Random forest with weighted optimisation (suppress training instances)
+
+# In[201]:
+
+
+WEIGHT_THRESHOLD = 0.8
+df_train_transformed = df_train_transformed[sample_weights > WEIGHT_THRESHOLD]
+
+
+# In[202]:
+
+
+df_train = df_train[sample_weights > WEIGHT_THRESHOLD]
+
+
+# In[203]:
+
+
+sample_weights_haircut = sample_weights[sample_weights > WEIGHT_THRESHOLD]
+
+
+# In[204]:
+
+
+get_ipython().run_cell_magic('time', '', "from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(bootstrap=True, criterion='mse', max_depth=10,\n                      max_features=4, max_leaf_nodes=None,\n                      min_impurity_decrease=0.0, min_impurity_split=None,\n                      min_samples_leaf=1, min_samples_split=2,\n                      min_weight_fraction_leaf=0.0, n_estimators=1000,\n                      n_jobs=-1, oob_score=False, random_state=42, verbose=0,\n                      warm_start=False)\n    random_reg.fit(df_train_transformed, df_train[model1_label], sample_weights_haircut)")
+
+
+# In[205]:
+
+
+print("Evaluation on test set :")
+evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
+
+
+# With weight threshold of 0.7 :  
+# Evaluation on test set :  
+# RMSE : 27.505904323162397  
+# 
+# 
+# Evaluation on training set :  
+# RMSE : 15.105634267719225  
+# 
+# With weight threshold of 0.9 :  
+# Evaluation on test set :  
+# RMSE : 27.34542651549861  
+# 
+# 
+# Evaluation on training set :  
+# RMSE : 8.161417508179818  
+# 
+# With weight threshold of 0.8 :  
+# Evaluation on test set :  
+# RMSE : 27.691875273334873  
+# 
+# 
+# Evaluation on training set :  
+# RMSE : 12.758479277575331  
+
+# In[206]:
+
+
+error_mean = evaluate_model_percent_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
+
+
+# => ~ 10 min with 80000 lines  
+# => 9.75 min with 800000 lines
+# 
+# With sample weight optimisation : 
+# Mean prediction error 90.0% of the time :  9.02
+# 
+# With weight threshold of 0.7 :  
+# Mean prediction error 90.0% of the time :  8.13    
+# 
+# With weight threshold of 0.9 :  
+# Mean prediction error 90.0% of the time :  8.35  
+# 
+# With weight threshold of 0.8 :  
+# Mean prediction error 90.0% of the time :  7.90
+
+# In[207]:
+
+
+df_test_predictions = random_reg.predict(df_test_transformed)
+
+
+# In[208]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+
+# In[209]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[210]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / actual values on test set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[211]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on training set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[212]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / instance numbers on training set')
+    plt.xlabel("Instance number")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[213]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Predicted - actual / CRS_ELAPSED_TIME values on test set')
+    plt.xlabel("CRS_ELAPSED_TIME")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[214]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[215]:
+
+
+df_test_predictions = random_reg.predict(df_test_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on test set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
+
+
+# In[67]:
+
+
+df_train_transformed.columns
+
+
+# In[68]:
+
+
+pd.set_option('display.max_rows', 200)
+
+
+# In[69]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
+
+
+# In[70]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# In[ ]:
+
+
+
 
 
 # ## Polynomial regression degree 2
@@ -2761,7 +3560,7 @@ plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_trai
 
 # # New try with 1 hot encode of : 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK'
 
-# In[19]:
+# In[46]:
 
 
 if (DATA_LOADED == True):
@@ -2772,13 +3571,13 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[20]:
+# In[47]:
 
 
 df = load_data()
 
 
-# In[21]:
+# In[48]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
@@ -3282,7 +4081,7 @@ plt.hist(df_test[model1_label], bins=50)
 
 # # New try with 1 hot encode of : 'ORIGIN', 'CARRIER', 'MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'CRS_DEP_TIME' (scheduled dep hour)
 
-# In[26]:
+# In[79]:
 
 
 if (DATA_LOADED == True):
@@ -3293,47 +4092,48 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[27]:
+# In[80]:
 
 
 df = load_data()
 
 
-# In[28]:
+# In[81]:
 
 
 df
 
 
-# In[29]:
+# In[82]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[30]:
+# In[83]:
 
 
 #df, df_train, df_test = custom_train_test_split_sample_random(df)
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[31]:
+# In[84]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[32]:
+# In[85]:
 
 
 df_train_transformed = preparation_pipeline_1hotall_minmax.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER', 'CRS_DEP_TIME'])
+#df_train_transformed = preparation_pipeline_1hotall_minmax.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER'])
 df_test_transformed = preparation_pipeline_1hotall_minmax.transform(df_test)
 DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[25]:
+# In[86]:
 
 
 for feat_name in df_train_transformed.columns:
@@ -3346,7 +4146,7 @@ for feat_name in df_train_transformed.columns:
 
 # ## Linear regression
 
-# In[26]:
+# In[87]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -3395,13 +4195,13 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 
 
-# In[27]:
+# In[88]:
 
 
 plt.hist(df_test_predictions, bins=50)
 
 
-# In[28]:
+# In[89]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3412,7 +4212,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
 
 
-# In[29]:
+# In[90]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3423,7 +4223,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[30]:
+# In[91]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3434,7 +4234,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[31]:
+# In[92]:
 
 
 df_train_predictions = lin_reg.predict(df_train_transformed)
@@ -3447,13 +4247,13 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
 
 
-# In[32]:
+# In[93]:
 
 
 df_test_transformed.columns
 
 
-# In[33]:
+# In[94]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3464,7 +4264,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[34]:
+# In[95]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3476,31 +4276,31 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
         plt.scatter(df_test_transformed[column_name], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[35]:
+# In[96]:
 
 
 lin_reg.coef_
 
 
-# In[36]:
+# In[97]:
 
 
 coef_feature_importances = (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[37]:
+# In[98]:
 
 
 coef_feature_importances.sum()
 
 
-# In[38]:
+# In[99]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : coef_feature_importances})
 
 
-# In[39]:
+# In[100]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
@@ -3508,13 +4308,13 @@ pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending
 
 # ## Random forest
 
-# In[40]:
+# In[101]:
 
 
-get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(n_estimators=100, max_depth=100, n_jobs=-1, random_state=42)\n    random_reg.fit(df_train_transformed, df_train[model1_label])')
+get_ipython().run_cell_magic('time', '', "from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    #Old Random Fores before having done cross validation (done in group + mean sort encoding part)\n    #random_reg = RandomForestRegressor(n_estimators=100, max_depth=100, n_jobs=-1, random_state=42)\n    \n    random_reg = RandomForestRegressor(bootstrap=True, criterion='mse', max_depth=10,\n                      max_features=4, max_leaf_nodes=None,\n                      min_impurity_decrease=0.0, min_impurity_split=None,\n                      min_samples_leaf=1, min_samples_split=2,\n                      min_weight_fraction_leaf=0.0, n_estimators=1000,\n                      n_jobs=-1, oob_score=False, random_state=42, verbose=0,\n                      warm_start=False)\n    \n    random_reg.fit(df_train_transformed, df_train[model1_label])")
 
 
-# In[41]:
+# In[102]:
 
 
 print("Evaluation on test set :")
@@ -3525,46 +4325,53 @@ print('\n')
 print("Evaluation on training set :")
 evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
 
+error_mean = evaluate_model_percent_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
 
-# With random split strategy :
+
+# With old random forest (without cross validation)
 # 
-# Evaluation on test set :  
-# RMSE : 27.067602891326597  
+#     With random split strategy :
 # 
-# Evaluation on training set :  
-# RMSE : 10.126836763135943  
+#     Evaluation on test set :  
+#     RMSE : 27.067602891326597  
 # 
-# With shuffle split by ARR_DELAY strategy :  
-# Evaluation on test set :  
-# RMSE : 27.16789238410523  
+#     Evaluation on training set :  
+#     RMSE : 10.126836763135943  
+# 
+#     With shuffle split by ARR_DELAY strategy :  
+#     Evaluation on test set :  
+#     RMSE : 27.16789238410523  
 # 
 # 
-# Evaluation on training set :  
-# RMSE : 10.072030081721588  
+#     Evaluation on training set :  
+#     RMSE : 10.072030081721588  
+#     
+# With new random forest (after cross validation):  
+#     With shuffle split by ARR_DELAY strategy :    
+#     
+#     Evaluation on test set :
+#     RMSE : 27.2916161530929
+# 
+# 
+#     Evaluation on training set :
+#     RMSE : 27.00703718949282
+#     
+#     Mean prediction error 90.0% of the time :  10.22
 
-# In[ ]:
-
-
-
-
-
-# => n_estimators=10, max_depth=10 : RMSE = 26.489032357237143  
-# => n_estimators=100, max_depth=10 : RMSE = 26.452279766206914  
-# => n_estimators=100, max_depth=100 : RMSE train = 9.763346955508453, RMSE test = 25.84449542291657
-
-# In[42]:
+# In[103]:
 
 
 df_test_predictions = random_reg.predict(df_test_transformed)
 
 
-# In[43]:
+# In[104]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
 
 
-# In[44]:
+# In[105]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3575,7 +4382,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[45]:
+# In[106]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3586,7 +4393,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[46]:
+# In[107]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3597,7 +4404,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[47]:
+# In[108]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3608,7 +4415,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[48]:
+# In[109]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3619,7 +4426,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[49]:
+# In[110]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
@@ -3632,31 +4439,31 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
 
 
-# In[50]:
+# In[111]:
 
 
 df_train_transformed.columns
 
 
-# In[51]:
+# In[112]:
 
 
 pd.set_option('display.max_rows', 200)
 
 
-# In[52]:
+# In[113]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
 
 
-# In[53]:
+# In[114]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
 
 
-# In[54]:
+# In[115]:
 
 
 random_reg.feature_importances_
@@ -3711,16 +4518,16 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # In[ ]:
 
 
-get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\nwith redirect_output("gridsearch_output_randomforest_mse_20200416.txt"):\n    if (RECOMPUTE_GRIDSEARCH == True):\n        random_reg = RandomForestRegressor(n_jobs=-1, random_state=42)\n        \n        param_grid = {\n                \'n_estimators\':  [10, 100, 200, 500, 1000],\n                \'max_depth\': [10, 100, 200, 500, 1000],\n                \'max_features\': [2, 5, 50, 137],\n                \'max_leaf_nodes\': [2, 10, 100, None],\n                #\'criterion\': [\'mse\', \'mae\'],\n                \'criterion\': [\'mse\'],\n                \'n_jobs\': [-1],\n                \'random_state\': [42],\n            }\n\n        grid_search = GridSearchCV(random_reg, param_grid, cv=5, verbose=2, error_score=np.nan, scoring=\'neg_mean_squared_error\')\n        grid_search.fit(df_train_transformed, df_train[model1_label])')
+get_ipython().run_cell_magic('time', '', "from sklearn.ensemble import RandomForestRegressor\n\nif (RECOMPUTE_GRIDSEARCH == True):\n    random_reg = RandomForestRegressor(n_jobs=-1, random_state=42)\n\n    param_grid = {\n            'n_estimators':  [10, 100, 200, 500, 1000],\n            'max_depth': [10, 100, 200, 500, 1000],\n            'max_features': [2, 5, 50, 137],\n            'max_leaf_nodes': [2, 10, 100, None],\n            #'criterion': ['mse', 'mae'],\n            'criterion': ['mse'],\n            'n_jobs': [-1],\n            'random_state': [42],\n        }\n\n    grid_search = GridSearchCV(random_reg, param_grid, cv=5, verbose=2, error_score=np.nan, scoring='neg_mean_squared_error')\n    grid_search.fit(df_train_transformed, df_train[model1_label])")
 
 
-# In[ ]:
+# In[1]:
 
 
 if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
     grid_search = None
     
-grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'randomforest_20200414')
+grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'randomforest_1hot_80000samples_20200418')
 
 
 # In[ ]:
@@ -3839,6 +4646,407 @@ df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transfor
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# # New try with same features as above, but with mean sort / group by mean encoding
+
+# In[35]:
+
+
+if (DATA_LOADED == True):
+    del df
+    del df_train
+    del df_test
+    del df_train_transformed
+    del df_test_transformed
+
+
+# In[36]:
+
+
+df = load_data()
+
+
+# In[37]:
+
+
+df
+
+
+# In[38]:
+
+
+all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
+
+
+# In[39]:
+
+
+#df, df_train, df_test = custom_train_test_split_sample_random(df)
+df, df_train, df_test = custom_train_test_split_sample(df)
+
+
+# In[40]:
+
+
+#df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
+
+
+# In[41]:
+
+
+df_train_transformed = preparation_pipeline_meansort2_stdscale.fit_transform(df_train)
+#df_train_transformed = preparation_pipeline_1hotall_minmax.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=['MONTH', 'DAY_OF_MONTH', 'DAY_OF_WEEK', 'ORIGIN', 'UNIQUE_CARRIER'])
+df_test_transformed = preparation_pipeline_meansort2_stdscale.transform(df_test)
+DATA_LOADED = True
+df_test_transformed.shape
+
+
+# In[43]:
+
+
+for feat_name in df_train_transformed.columns:
+    if (feat_name in MODEL_GROUPBYMEAN2_FEATURES_QUANTITATIVE):
+        fig = plt.figure()
+        fig.suptitle(feat_name)
+        plt.hist(df_train_transformed[feat_name], bins=50)
+        plt.plot()
+
+
+# ## Linear regression
+
+# In[44]:
+
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+
+lin_reg.fit(df_train_transformed, df_train[model1_label])
+
+df_test_predictions = lin_reg.predict(df_test_transformed)
+
+print("Evaluation on test set :")
+evaluate_model(lin_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# => With new random forest (after cross validation), 80000 samples and train_test_split stratified on ARR_DELAY :
+# Evaluation on test set :  
+# RMSE : 27.181240312137405  
+# 
+# Evaluation on training set :  
+# RMSE : 27.131737354138156  
+
+# In[45]:
+
+
+plt.hist(df_test_predictions, bins=50)
+
+
+# In[46]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on test set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
+
+
+# In[47]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[48]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / actual values on test set')
+    plt.xlabel("Actual")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[49]:
+
+
+df_train_predictions = lin_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[50]:
+
+
+df_test_transformed.columns
+
+
+# In[51]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Predicted - actual / CRS_ELAPSED_TIME values on test set')
+    plt.xlabel("CRS_ELAPSED_TIME")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[52]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    for column_name in df_test_transformed.columns:
+        fig = plt.figure()
+        fig.suptitle('Comparison Predicted - actual / values of one feature on test set')
+        plt.xlabel(column_name)
+        plt.ylabel("Actual - Predicted")
+        plt.scatter(df_test_transformed[column_name], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[53]:
+
+
+lin_reg.coef_
+
+
+# In[54]:
+
+
+coef_feature_importances = (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
+
+
+# In[55]:
+
+
+coef_feature_importances.sum()
+
+
+# In[56]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : coef_feature_importances})
+
+
+# In[57]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# ## Random forest
+
+# In[58]:
+
+
+get_ipython().run_cell_magic('time', '', "from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    #Old Random Fores before having done cross validation (done in group + mean sort encoding part)\n    #random_reg = RandomForestRegressor(n_estimators=100, max_depth=100, n_jobs=-1, random_state=42)\n    \n    random_reg = RandomForestRegressor(bootstrap=True, criterion='mse', max_depth=10,\n                      max_features=4, max_leaf_nodes=None,\n                      min_impurity_decrease=0.0, min_impurity_split=None,\n                      min_samples_leaf=1, min_samples_split=2,\n                      min_weight_fraction_leaf=0.0, n_estimators=1000,\n                      n_jobs=-1, oob_score=False, random_state=42, verbose=0,\n                      warm_start=False)\n    \n    random_reg.fit(df_train_transformed, df_train[model1_label])")
+
+
+# In[60]:
+
+
+print("Evaluation on test set :")
+evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+
+print('\n')
+
+print("Evaluation on training set :")
+evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
+
+error_mean = evaluate_model_percent_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
+
+
+# With new random forest (after cross validation):  
+#     With shuffle split by ARR_DELAY strategy :    
+#     
+# Evaluation on test set :  
+# RMSE : 26.727603337896312  
+# 
+# 
+# Evaluation on training set :  
+# RMSE : 25.28427960714828  
+# 
+# Mean prediction error 90.0% of the time :  9.89
+# 
+
+# In[ ]:
+
+
+
+
+
+# In[61]:
+
+
+df_test_predictions = random_reg.predict(df_test_transformed)
+
+
+# In[62]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+
+# In[63]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on test set')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[64]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / actual values on test set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[65]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / predicted values on training set')
+    plt.xlabel("Actual label")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[66]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Actual - predicted / instance numbers on training set')
+    plt.xlabel("Instance number")
+    plt.ylabel("Actual label - Predicted label")
+    plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
+
+
+# In[67]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Comparison Predicted - actual / CRS_ELAPSED_TIME values on test set')
+    plt.xlabel("CRS_ELAPSED_TIME")
+    plt.ylabel("Actual - Predicted")
+    plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
+
+
+# In[68]:
+
+
+df_train_predictions = random_reg.predict(df_train_transformed)
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    fig = plt.figure()
+    fig.suptitle('Random forest : Comparison actual values / predict values on training set')
+    plt.ylabel("Predicted")
+    plt.xlabel("Actual")
+    plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
+
+
+# In[69]:
+
+
+df_train_transformed.columns
+
+
+# In[70]:
+
+
+pd.set_option('display.max_rows', 200)
+
+
+# In[71]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
+
+
+# In[72]:
+
+
+pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+
+
+# In[73]:
+
+
+random_reg.feature_importances_
+
+
+# In[74]:
+
+
+random_reg.feature_importances_.cumsum()
+
+
+# In[ ]:
+
+
+
+
+
+# => feature importance : 
+
+# In[75]:
+
+
+random_reg.estimators_[0]
+
+
+# In[76]:
+
+
+'''
+from sklearn.tree import export_graphviz
+export_graphviz(random_reg.estimators_[0], out_file="tree.dot", rounded=True, filled=True)
+'''
+
+
+# In[77]:
+
+
+LEARNING_CURVE_STEP_SIZE
+
+
+# In[78]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+    #df_test_predictions = random_reg.predict(df_test_transformed)
+    #evaluate_model(random_reg, df_test_transformed, df_test[model1_label])
+    plot_learning_curves(random_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], int(LEARNING_CURVE_STEP_SIZE))
 
 
 # # New try with 3 quantitative features including DEP_DELAY
@@ -4635,6 +5843,34 @@ stratified_split_train = StratifiedShuffleSplit(n_splits=5, test_size=0.2, rando
 # 
 # polynomial_reg.fit(df_train_transformed, df_train[model1_label])
 # '''
+
+# %%time
+# from sklearn.ensemble import RandomForestRegressor
+# 
+# if (EXECUTE_INTERMEDIATE_MODELS == True):
+#     random_reg = RandomForestRegressor(bootstrap=True, criterion='mse', max_depth=10,
+#                       max_features=4, max_leaf_nodes=None,
+#                       min_impurity_decrease=0.0, min_impurity_split=None,
+#                       min_samples_leaf=1, min_samples_split=2,
+#                       min_weight_fraction_leaf=0.0, n_estimators=1000,
+#                       n_jobs=-1, oob_score=False, random_state=42, verbose=0,
+#                       warm_start=False)
+#     
+#     for i in range(10):
+#         print(f'Training {i}')
+#         df_train_residuals = df_train[model1_label] - df_train_predictions
+#         max_residual = df_train_residuals.abs().max()
+#         sample_weights = (max_residual - df_train_residuals.abs()) / max_residual
+#         
+#         df_train_residuals_mean = df_train_residuals.mean()
+#         print(f'Mean of residuals : {df_train_residuals_mean}')
+#         
+#         random_reg.fit(df_train_transformed, df_train[model1_label], sample_weights)
+# 
+#         df_train_predictions = random_reg.predict(df_train_transformed)
+# 
+# 
+# 
 
 # for feat_indice in range(df_train_transformed.shape[1]):
 #     fig = plt.figure()
