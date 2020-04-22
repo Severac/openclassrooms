@@ -350,6 +350,20 @@ def evaluate_model_percent_mean(model, X_test, Y_test, percent):
     error_mean = Y_AE_best.mean()
     
     return (error_mean)
+
+'''
+This function returns the maximum absolute error of the model, 1 - percent of the time
+'''
+
+def evaluate_model_percent_worst_mean(model, X_test, Y_test, percent):
+    Y_predict = model.predict(X_test)
+    
+    Y_AE = np.abs(Y_predict- Y_test)
+    Y_AE_worst = Y_AE[Y_AE > Y_AE.quantile(percent)] # Take percent worst error values (eliminate errors > Y_AE.quantile(percent))
+    
+    error_mean_worst = Y_AE_worst.mean()
+    
+    return (error_mean_worst)
     
 
 
@@ -513,7 +527,7 @@ class redirect_output(object):
 
 # # First naive model
 
-# In[44]:
+# In[21]:
 
 
 df = load_data_with_outliers()
@@ -521,7 +535,7 @@ df, df_train, df_test = custom_train_test_split_sample_random(df)
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[45]:
+# In[22]:
 
 
 from sklearn import dummy
@@ -538,7 +552,7 @@ y_pred_dum = dum.predict(df_test)
 print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
 print("MAE : {:.2f}".format(np.sqrt(mean_absolute_error(df_test[model1_label], y_pred_dum)) ))
 
-error_mean = evaluate_model_percent_mean(dum, df_test, df_test[model1_label], 0.8)
+error_mean = evaluate_model_percent_mean(dum, df_test, df_test[model1_label], 0.9)
 print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
 
 
@@ -1991,7 +2005,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[169]:
+# In[69]:
 
 
 if (DATA_LOADED == True):
@@ -2002,32 +2016,32 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[170]:
+# In[70]:
 
 
 df = load_data()
 
 
-# In[171]:
+# In[71]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[172]:
+# In[72]:
 
 
 #df, df_train, df_test = custom_train_test_split_sample_random(df)
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[173]:
+# In[73]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[174]:
+# In[74]:
 
 
 df_train_transformed = preparation_pipeline_meansort_stdscale.fit_transform(df_train)
@@ -2036,19 +2050,19 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[175]:
+# In[75]:
 
 
 df_train
 
 
-# In[140]:
+# In[76]:
 
 
 df_train_transformed
 
 
-# In[122]:
+# In[77]:
 
 
 df_train_transformed.shape[1]
@@ -2637,7 +2651,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 df_train_transformed.columns
 
 
-# In[45]:
+# In[78]:
 
 
 get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\n#with redirect_output("gridsearch_output_randomforest_mse_20200416.txt"):\nif (RECOMPUTE_GRIDSEARCH == True):\n    random_reg = RandomForestRegressor(n_jobs=-1, random_state=42)\n\n    param_grid = {\n            \'n_estimators\':  [10, 100, 200, 500, 1000],\n            \'max_depth\': [10, 100, 200, 500, 1000],\n            \'max_features\': [2, 4, 8, 12],\n            \'max_leaf_nodes\': [2, 10, 100, None],\n            #\'criterion\': [\'mse\', \'mae\'],\n            \'criterion\': [\'mse\'],\n            \'n_jobs\': [-1],\n            \'random_state\': [42],\n        }\n\n    grid_search = GridSearchCV(random_reg, param_grid, cv=5, verbose=2, error_score=np.nan, scoring=\'neg_mean_squared_error\')\n    grid_search.fit(df_train_transformed, df_train[model1_label])')
@@ -2768,7 +2782,7 @@ get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomFor
 # [Parallel(n_jobs=1)]: Done 2000 out of 2000 | elapsed: 404.9min finished
 # 
 
-# In[176]:
+# In[79]:
 
 
 if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
@@ -2777,7 +2791,7 @@ if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
 grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'randomforest_meansort_80000samples_20200414')
 
 
-# In[177]:
+# In[80]:
 
 
 grid_search.best_estimator_
@@ -2845,13 +2859,13 @@ df_grid_search_results2.sort_values(by='mean_test_score', ascending=False)
 #                       n_jobs=-1, oob_score=False, random_state=42, verbose=0,  
 #                       warm_start=False)  
 
-# In[178]:
+# In[81]:
 
 
 random_reg = grid_search.best_estimator_
 
 
-# In[179]:
+# In[82]:
 
 
 print("Evaluation on test set :")
@@ -2865,6 +2879,9 @@ evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
 error_mean = evaluate_model_percent_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
 print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
 
+error_mean_worst = evaluate_model_percent_worst_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {100 - (EVALUATION_PERCENT)*100}% of the time : {error_mean_worst : .2f}')
+
 
 # Model before Grid Search :
 # => ~ 10 min with 80000 lines  
@@ -2874,13 +2891,13 @@ print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mea
 # => Mean prediction error 90.0% of the time :  9.92   with 80000 lines
 # 
 
-# In[180]:
+# In[33]:
 
 
 df_test_predictions = random_reg.predict(df_test_transformed)
 
 
-# In[181]:
+# In[34]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
@@ -2919,7 +2936,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[285]:
+# In[35]:
 
 
 df_train_residuals = df_train[model1_label] - df_train_predictions
@@ -2927,7 +2944,7 @@ max_residual = df_train_residuals.abs().max()
 sample_weights = (max_residual - df_train_residuals.abs()) / max_residual
 
 
-# In[286]:
+# In[36]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -2936,6 +2953,22 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.xlabel("Actual label")
     plt.ylabel("Actual label - Predicted label")
     plt.scatter(df_train[model1_label],sample_weights, color='blue', alpha=0.1)
+
+
+# In[37]:
+
+
+if (EXECUTE_INTERMEDIATE_MODELS == True):
+
+    g = sns.jointplot(x=df_train[model1_label], y=sample_weights, kind='hex', color='blue', height=10)
+    #sns.jointplot(x=df_test[model1_label], y=df_test_predictions, alpha=0.01)
+
+    g.set_axis_labels("Actual label", "Weighted instance value")
+    plt.subplots_adjust(top=0.9)
+    plt.suptitle('Random forest : weighted values based on residuals', fontsize = 16)
+    
+    plt.savefig('linreg_residuals_weighted_training_set.png', dpi=400)
+    
 
 
 # In[287]:
@@ -2986,28 +3019,39 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
 
 
-# In[291]:
+# In[38]:
 
 
 df_train_transformed.columns
 
 
-# In[292]:
+# In[39]:
 
 
 pd.set_option('display.max_rows', 200)
 
 
-# In[293]:
+# In[40]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
 
 
-# In[294]:
+# In[53]:
 
 
-pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
+df_feature_importances_global = pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].rename(columns={'Feature importance' : 'Cumulated feature importance'}).sort_values(by='Cumulated feature importance', ascending=False).cumsum()], axis=1)
+
+
+# In[54]:
+
+
+#df.style.set_properties(**{'text-align': 'center'})
+
+df_feature_importances_global.style.format({
+    'Feature importance': '{:,.2%}'.format,
+    'Cumulated feature importance': '{:,.2%}'.format,
+})
 
 
 # In[254]:
@@ -3213,32 +3257,32 @@ pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending
 
 # ## Random forest with weighted optimisation (suppress training instances)
 
-# In[201]:
+# In[56]:
 
 
 WEIGHT_THRESHOLD = 0.8
 df_train_transformed = df_train_transformed[sample_weights > WEIGHT_THRESHOLD]
 
 
-# In[202]:
+# In[57]:
 
 
 df_train = df_train[sample_weights > WEIGHT_THRESHOLD]
 
 
-# In[203]:
+# In[58]:
 
 
 sample_weights_haircut = sample_weights[sample_weights > WEIGHT_THRESHOLD]
 
 
-# In[204]:
+# In[59]:
 
 
 get_ipython().run_cell_magic('time', '', "from sklearn.ensemble import RandomForestRegressor\n\nif (EXECUTE_INTERMEDIATE_MODELS == True):\n    random_reg = RandomForestRegressor(bootstrap=True, criterion='mse', max_depth=10,\n                      max_features=4, max_leaf_nodes=None,\n                      min_impurity_decrease=0.0, min_impurity_split=None,\n                      min_samples_leaf=1, min_samples_split=2,\n                      min_weight_fraction_leaf=0.0, n_estimators=1000,\n                      n_jobs=-1, oob_score=False, random_state=42, verbose=0,\n                      warm_start=False)\n    random_reg.fit(df_train_transformed, df_train[model1_label], sample_weights_haircut)")
 
 
-# In[205]:
+# In[60]:
 
 
 print("Evaluation on test set :")
@@ -3274,7 +3318,7 @@ evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
 # Evaluation on training set :  
 # RMSE : 12.758479277575331  
 
-# In[206]:
+# In[61]:
 
 
 error_mean = evaluate_model_percent_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
@@ -3295,6 +3339,13 @@ print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mea
 # 
 # With weight threshold of 0.8 :  
 # Mean prediction error 90.0% of the time :  7.90
+
+# In[68]:
+
+
+error_mean_worst = evaluate_model_percent_worst_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {100 - (EVALUATION_PERCENT)*100}% of the time : {error_mean_worst : .2f}')
+
 
 # In[207]:
 
@@ -3421,7 +3472,7 @@ pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending
 
 # ## Polynomial regression degree 3
 
-# In[141]:
+# In[28]:
 
 
 poly = PolynomialFeatures(degree=3)
@@ -3430,19 +3481,19 @@ df_train_transformed = poly.transform(df_train_transformed)
 df_test_transformed = poly.transform(df_test_transformed)
 
 
-# In[142]:
+# In[29]:
 
 
 poly.n_output_features_
 
 
-# In[143]:
+# In[30]:
 
 
 df_train_transformed.shape
 
 
-# In[144]:
+# In[31]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3450,7 +3501,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     lin_reg.fit(df_train_transformed, df_train[model1_label])
 
 
-# In[145]:
+# In[32]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3461,7 +3512,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # => RMSE on test set 80000 instances degree 2 :26.962742760959262  
 # => RMSE on test set 80000 instances degree 3: 26.973373855188367
 
-# In[146]:
+# In[33]:
 
 
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
@@ -3471,7 +3522,7 @@ evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 # => RMSE on training set 80000 instances degree 2 : 26.962742760959262
 # => RMSE on trainings et with 80000 instances degree 3 :  RMSE : 26.64926940350148
 
-# In[147]:
+# In[34]:
 
 
 print('\n')
@@ -3480,7 +3531,7 @@ error_mean = evaluate_model_percent_mean(lin_reg, df_train_transformed, df_train
 print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
 
 
-# In[148]:
+# In[35]:
 
 
 print('\n')
@@ -3489,33 +3540,33 @@ error_mean_test = evaluate_model_percent_mean(lin_reg, df_test_transformed, df_t
 print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean_test: .2f}')
 
 
-# In[69]:
+# In[36]:
 
 
 plot_learning_curves(lin_reg, df_train_transformed, df_test_transformed, df_train[model1_label], df_test[model1_label], LEARNING_CURVE_STEP_SIZE)
 
 
-# In[70]:
+# In[37]:
 
 
 # Feature importances :
 (abs(lin_reg.coef_) / (abs(lin_reg.coef_).sum()))
 
 
-# In[71]:
+# In[38]:
 
 
 df_train_transformed[:,0].shape
 
 
-# In[149]:
+# In[39]:
 
 
 df_train_predictions =  lin_reg.predict(df_train_transformed)
 df_test_predictions =  lin_reg.predict(df_test_transformed)
 
 
-# In[152]:
+# In[40]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3531,7 +3582,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     
 
 
-# In[151]:
+# In[51]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -4777,7 +4828,7 @@ pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending
 
 # # New try with same features as above, but with mean sort / group by mean encoding
 
-# In[137]:
+# In[183]:
 
 
 if (DATA_LOADED == True):
@@ -4788,38 +4839,38 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[138]:
+# In[184]:
 
 
 df = load_data()
 
 
-# In[139]:
+# In[185]:
 
 
 df
 
 
-# In[140]:
+# In[186]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[ ]:
+# In[187]:
 
 
 #df, df_train, df_test = custom_train_test_split_sample_random(df)
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[ ]:
+# In[188]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[ ]:
+# In[189]:
 
 
 df_train_transformed = preparation_pipeline_meansort2_stdscale.fit_transform(df_train)
@@ -4829,7 +4880,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[ ]:
+# In[190]:
 
 
 for feat_name in df_train_transformed.columns:
@@ -4842,7 +4893,7 @@ for feat_name in df_train_transformed.columns:
 
 # ## Linear regression
 
-# In[ ]:
+# In[191]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -5266,7 +5317,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # # New try with 3 quantitative features including DEP_DELAY
 
-# In[42]:
+# In[23]:
 
 
 if (DATA_LOADED == True):
@@ -5277,37 +5328,37 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[43]:
+# In[22]:
 
 
 df = load_data()
 
 
-# In[44]:
+# In[23]:
 
 
 df
 
 
-# In[45]:
+# In[24]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[46]:
+# In[25]:
 
 
 df, df_train, df_test = custom_train_test_split_sample_random(df)
 
 
-# In[47]:
+# In[26]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[48]:
+# In[27]:
 
 
 #df_train_transformed = preparation_pipeline_3feats_stdscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
@@ -5317,7 +5368,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[49]:
+# In[28]:
 
 
 for feat_name in df_train_transformed.columns:
@@ -5330,7 +5381,7 @@ for feat_name in df_train_transformed.columns:
 
 # ## Linear regression
 
-# In[50]:
+# In[29]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -5348,6 +5399,16 @@ print('\n')
 
 print("Evaluation on training set :")
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
+
+
+# In[31]:
+
+
+error_mean = evaluate_model_percent_mean(lin_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
+
+error_mean_worst = evaluate_model_percent_worst_mean(lin_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {100 - (EVALUATION_PERCENT)*100}% of the time : {error_mean_worst : .2f}')
 
 
 # In[51]:
