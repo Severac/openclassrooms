@@ -1,6 +1,8 @@
 import streamlit as st
 import pickle
 
+from PIL import Image
+
 from functions import *
 
 #import pandas as pd
@@ -33,25 +35,25 @@ def load_model(pickled_file=API_MODEL_PICKLE_FILE):
 
 _max_width_()
 
-st.title('Openclassrooms training projet 4 : predicting flight delays') 
+st.title('Openclassrooms training projet 4 : predicting flight delays (François BOYER)') 
+
+image = Image.open('plane_image.jpg')
+st.image(image,
+         width=300)
+         #use_column_width=True)
 
 st.sidebar.title('Flight characteristics')
 crs_dep_time = st.sidebar.text_input('Scheduled Departure time (HHMM)', '1000')
 crs_arr_time = st.sidebar.text_input('Scheduled Arrival time (HHMM)', '1800')
 
-#crs_elapsed_time = st.sidebar.text_input('Scheduled Elapsed time (minutes)', '')
+
 crs_elapsed_time = st.sidebar.number_input('Scheduled Elapsed time (minutes)', value=60, step=10)
-#day_of_month = st.number_input('Day of Month', format='%f', step=1)
-#day_of_month = st.sidebar.number_input('Day of Month (1-31)', value=1, step=1)
 day_of_month = st.sidebar.selectbox('Day of Month (1-31)', range(1,32))
-#day_of_week = st.sidebar.number_input('Day of week (1-7)', value=1, step=1)
 day_of_week = st.sidebar.selectbox('Day of week (1-7)', range(1,8))
 distance = st.sidebar.number_input('Distance (miles)', value=1000, step=100)
-
-#month = st.sidebar.number_input('Month (1-12)', value=1)
 month = st.sidebar.selectbox('Month (1-12)', range(1,13))
 
-origin = st.sidebar.selectbox('Origin airport', ('BOS', 'JFK', 'LAX', 'DFW', 'OKC', 'OGG', 'HNL', 'SFO', 'ORD',
+origin_list = ['BOS', 'JFK', 'LAX', 'DFW', 'OKC', 'OGG', 'HNL', 'SFO', 'ORD',
        'MIA', 'IAH', 'DTW', 'SEA', 'MSP', 'LGA', 'ATL', 'LAS', 'CLT',
        'DCA', 'SAN', 'COS', 'PDX', 'TUS', 'SJC', 'DEN', 'PHX', 'SNA',
        'MCO', 'AUS', 'STL', 'KOA', 'MEM', 'SLC', 'PHL', 'LIH', 'MCI',
@@ -85,8 +87,11 @@ origin = st.sidebar.selectbox('Origin airport', ('BOS', 'JFK', 'LAX', 'DFW', 'OK
        'LRD', 'ACT', 'LAW', 'GRI', 'GGG', 'MLU', 'SPS', 'SJT', 'FSM',
        'SAF', 'MEI', 'PIB', 'GRK', 'HOB', 'JLN', 'ABI', 'EWN', 'CSG',
        'ELM', 'ABY', 'GTR', 'GST', 'AKN', 'DLG', 'BPT', 'BLI', 'TYR',
-       'PGD', 'MMH'))
-dest = st.sidebar.selectbox('Destination airport', ('JFK', 'LAX', 'HNL', 'DFW', 'OGG', 'SFO', 'LAS', 'BOS', 'MIA',
+       'PGD', 'MMH']
+
+origin_list.sort()
+
+dest_list = ['JFK', 'LAX', 'HNL', 'DFW', 'OGG', 'SFO', 'LAS', 'BOS', 'MIA',
        'MCO', 'ORD', 'DTW', 'SEA', 'LGA', 'SJC', 'CLT', 'DCA', 'PDX',
        'SLC', 'SAN', 'STL', 'PHX', 'EWR', 'AUS', 'SAT', 'BWI', 'MSP',
        'TPA', 'IAH', 'KOA', 'MEM', 'DEN', 'LIH', 'MCI', 'MSY', 'SNA',
@@ -120,16 +125,22 @@ dest = st.sidebar.selectbox('Destination airport', ('JFK', 'LAX', 'HNL', 'DFW', 
        'LRD', 'MLU', 'FSM', 'SAF', 'LCH', 'MEI', 'PIB', 'SPS', 'GRK',
        'ERI', 'HOB', 'ABI', 'JLN', 'CSG', 'DHN', 'GTR', 'ELM', 'VLD',
        'BQK', 'EWN', 'ABY', 'GST', 'DLG', 'AKN', 'BPT', 'BLI', 'TYR',
-       'PGD', 'MMH'))
-carrier = st.sidebar.selectbox('Flight company', ('AA', 'AS', 'B6', 'DL', 'F9', 'HA', 'EV', 'NK', 'OO', 'UA', 'VX',
-       'WN'))
+       'PGD', 'MMH']
+
+dest_list.sort()
+
+carrier_list = ['AA', 'AS', 'B6', 'DL', 'F9', 'HA', 'EV', 'NK', 'OO', 'UA', 'VX',
+       'WN']
+carrier_list.sort()
+
+origin = st.sidebar.selectbox('Origin airport', (origin_list))
+dest = st.sidebar.selectbox('Destination airport', (dest_list))
+carrier = st.sidebar.selectbox('Flight company', (carrier_list))
 
 
 nbflights_forday_forairport = st.sidebar.number_input('Mean number of flights within the day, in the airport',  value=200,step=1)
 nbflights_fordayhour_forairport = st.sidebar.number_input('Mean number of flights per hour within the day, in the airport',  value=200,step=1)
 
-
-#model = load_model(API_MODEL_PICKLE_FILE)
 model = load_model(API_MODEL_PICKLE_FILE)
 
 #st.write(model['dataprep'])
@@ -159,3 +170,5 @@ if (debug_mode == True):
     st.header('Transformed data passed to the model')
     if (crs_arr_time != '' and crs_dep_time != '' and crs_elapsed_time != 0):
         st.table(df_transformed)
+        
+

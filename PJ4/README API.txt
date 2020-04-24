@@ -1,3 +1,42 @@
+URL of user interface (hosted on AWS) : 
+http://3.20.50.249:8501/
+
+To install the UI :
+
+Run an AWS EC2 instance (Ubuntu)
+
+Create a directory streamlit_OC_PJ4 and upload following files on it :
+- UI.py
+- functions.py
+- API_model_PJ4.pickle
+- plane_image.jpg
+
+Connected as ssh and run commands :
+
+sudo apt-get update
+wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+bash ~/miniconda.sh -b -p ~/miniconda
+echo "PATH=$PATH:$HOME/miniconda/bin" >> ~/.bashrc
+source ~/.bashrc
+
+pip install streamlit
+pip install plotly_express
+
+sudo apt-get install tmux
+tmux new -s StreamSession
+cd streamlit_OC_PJ4
+streamlit run UI.py
+
+Exit TMUX session with : Ctrl + B  then D (streamlit will continue to run in the background after your disconnect)
+
+To reattach to the session, in order to stop or relaunch streamlit :
+tmux attach -t StreamSession
+
+
+
+
+Note :
+
 Values to have positive delay prediction:
 
 ORIGIN                                OAK
