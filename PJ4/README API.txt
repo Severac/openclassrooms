@@ -9,7 +9,7 @@ Create a directory streamlit_OC_PJ4 and upload following files on it :
 - UI.py
 - functions.py
 - API_model_PJ4.pickle
-- plane_image.jpg
+- plane_image.png
 
 Connected as ssh and run commands :
 

@@ -5,7 +5,7 @@
 
 # # Global variables and functions used in the notebook
 
-# In[32]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -132,14 +132,14 @@ SAVE_API_MODEL = True # If True : API model ill be saved
 API_MODEL_PICKLE_FILE = 'API_model_PJ4.pickle'
 
 
-# In[33]:
+# In[2]:
 
 
 def qgrid_show(df):
     display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
 
 
-# In[34]:
+# In[3]:
 
 
 def load_data():
@@ -154,7 +154,7 @@ def load_data():
     return(df)
 
 
-# In[35]:
+# In[4]:
 
 
 def load_data_with_outliers():
@@ -166,7 +166,7 @@ def load_data_with_outliers():
     return(df)
 
 
-# In[36]:
+# In[5]:
 
 
 def custom_train_test_split_sample(df):
@@ -195,7 +195,7 @@ def custom_train_test_split_sample(df):
     return df, df_train, df_test
 
 
-# In[37]:
+# In[6]:
 
 
 def custom_train_test_split_sample_random(df):
@@ -219,7 +219,7 @@ def custom_train_test_split_sample_random(df):
     return df, df_train, df_test
 
 
-# In[38]:
+# In[7]:
 
 
 def print_column_information(df, column_name):
@@ -232,7 +232,7 @@ def print_column_information(df, column_name):
     print('\n')
 
 
-# In[39]:
+# In[8]:
 
 
 def display_percent_complete(df):
@@ -242,7 +242,7 @@ def display_percent_complete(df):
     display(not_na_df)
 
 
-# In[40]:
+# In[9]:
 
 
 def identify_features(df):
@@ -268,7 +268,7 @@ def identify_features(df):
     return all_features, model1_features, model1_label, quantitative_features, qualitative_features
 
 
-# In[41]:
+# In[10]:
 
 
 def save_or_load_search_params(grid_search, save_file_suffix):
@@ -303,7 +303,7 @@ def save_or_load_search_params(grid_search, save_file_suffix):
             return(grid_search, df_grid_search_results)
 
 
-# In[42]:
+# In[11]:
 
 
 def evaluate_model(model, X_test, Y_test):
@@ -314,7 +314,7 @@ def evaluate_model(model, X_test, Y_test):
     
 
 
-# In[43]:
+# In[12]:
 
 
 def evaluate_model_MAE(model, X_test, Y_test):
@@ -324,7 +324,7 @@ def evaluate_model_MAE(model, X_test, Y_test):
     
 
 
-# In[44]:
+# In[13]:
 
 
 '''
@@ -343,7 +343,7 @@ def evaluate_model_percent_threshold(model, X_test, Y_test, percent, threshold):
     
 
 
-# In[45]:
+# In[14]:
 
 
 '''
@@ -376,7 +376,7 @@ def evaluate_model_percent_worst_mean(model, X_test, Y_test, percent):
     
 
 
-# In[46]:
+# In[15]:
 
 
 def minibatch_generate_indexes(df_train_transformed, step_size):
@@ -393,7 +393,7 @@ def minibatch_generate_indexes(df_train_transformed, step_size):
     yield((left_index + step_size, final_index))
 
 
-# In[47]:
+# In[16]:
 
 
 def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, evaluation_method='RMSE'):
@@ -438,13 +438,13 @@ def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, eva
          plt.ylabel("MAE", fontsize=14)  
 
 
-# In[48]:
+# In[17]:
 
 
 #minibatches = minibatch_generate_indexes(df_train_transformed)
 
 
-# In[49]:
+# In[18]:
 
 
 def reset_data():
@@ -475,7 +475,7 @@ def reset_data_old():
     return df, df_train, df_test, df_train_transformed, df_test_transformed
 
 
-# In[50]:
+# In[19]:
 
 
 from IPython.display import display, Markdown
@@ -498,7 +498,7 @@ def display_freq_table(df, col_names):
         display(tab)
 
 
-# In[51]:
+# In[20]:
 
 
 class redirect_output(object):
@@ -657,7 +657,7 @@ df_train[['ARR_DELAY', 'UNIQUE_CARRIER']].groupby('UNIQUE_CARRIER').mean().sort_
 
 # # Features encoding
 
-# In[52]:
+# In[21]:
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -3490,108 +3490,6 @@ pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending
 
 # Tests
 
-# In[136]:
-
-
-pd.options.display.max_rows = None
-
-
-# In[125]:
-
-
-df.loc[4681469, :]
-
-
-# In[127]:
-
-
-df.loc[4681469, :][model1_label]
-
-
-# In[130]:
-
-
-df_test.loc[4681469, :]
-
-
-# In[122]:
-
-
-df_test
-
-
-# In[149]:
-
-
-realdf_test_predictions = pd.DataFrame(df_test_predictions, columns=['Predicted ARR delay'])
-
-
-# In[158]:
-
-
-realdf_test_predictions[['Predicted ARR delay']]
-
-
-# In[155]:
-
-
-realdf_test_predictions
-
-
-# In[173]:
-
-
-df_test.reset_index()
-
-
-# In[170]:
-
-
-df_test.reset
-
-
-# In[174]:
-
-
-realdf_test_predictions.reset_index()
-
-
-# In[179]:
-
-
-pd.concat([df_test.reset_index(), realdf_test_predictions.reset_index()], axis=1)
-
-
-# In[180]:
-
-
-df.loc[2494819, :]
-
-
-# In[176]:
-
-
-df_test
-
-
-# In[153]:
-
-
-df_test.shape
-
-
-# In[119]:
-
-
-df_test_predictions[df_test_predictions > 0]
-
-
-# In[146]:
-
-
-df_test_predictions[0:100]
-
-
 # # Save API model files for user interface
 
 # In[107]:
@@ -3604,6 +3502,26 @@ if (SAVE_API_MODEL == True):
     
     with open(API_MODEL_PICKLE_FILE, 'wb') as f:
         pickle.dump(API_model, f, pickle.HIGHEST_PROTOCOL)        
+
+
+# ## Printing values to test the API
+
+# In[149]:
+
+
+realdf_test_predictions = pd.DataFrame(df_test_predictions, columns=['Predicted ARR delay'])
+
+
+# In[179]:
+
+
+pd.concat([df_test.reset_index(), realdf_test_predictions.reset_index()], axis=1)
+
+
+# In[180]:
+
+
+df.loc[2494819, :]
 
 
 # ## Polynomial regression degree 3
@@ -5481,7 +5399,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 
 # # New try with 3 quantitative features including DEP_DELAY
 
-# In[205]:
+# In[181]:
 
 
 if (DATA_LOADED == True):
@@ -5492,37 +5410,37 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[206]:
+# In[22]:
 
 
 df = load_data()
 
 
-# In[207]:
+# In[23]:
 
 
 df
 
 
-# In[208]:
+# In[24]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[209]:
+# In[25]:
 
 
 df, df_train, df_test = custom_train_test_split_sample_random(df)
 
 
-# In[210]:
+# In[26]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[211]:
+# In[27]:
 
 
 #df_train_transformed = preparation_pipeline_3feats_stdscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
@@ -5532,7 +5450,7 @@ DATA_LOADED = True
 df_test_transformed.shape
 
 
-# In[212]:
+# In[28]:
 
 
 for feat_name in df_train_transformed.columns:
@@ -5545,7 +5463,7 @@ for feat_name in df_train_transformed.columns:
 
 # ## Linear regression
 
-# In[213]:
+# In[29]:
 
 
 from sklearn.linear_model import LinearRegression
@@ -5565,7 +5483,7 @@ print("Evaluation on training set :")
 evaluate_model(lin_reg, df_train_transformed, df_train[model1_label])
 
 
-# In[214]:
+# In[30]:
 
 
 error_mean = evaluate_model_percent_mean(lin_reg, df_test_transformed, df_test[model1_label], 0.8)
@@ -5696,15 +5614,30 @@ df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transfor
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
 
 
+# In[31]:
+
+
+#if (EXECUTE_INTERMEDIATE_MODELS == True):
+
+g = sns.jointplot(x=df_test[model1_label], y=df_test_predictions, kind='hex', color='blue', height=10)
+#sns.jointplot(x=df_test[model1_label], y=df_test_predictions, alpha=0.01)
+
+g.set_axis_labels("Actual", "Predicted")
+plt.subplots_adjust(top=0.9)
+plt.suptitle('Model with departure delay : comparison actual values / predict values on test set', fontsize = 16)
+
+plt.savefig('linreg_model2_actual_vs_predicted_test_set.png', dpi=400)
+
+
 # ## Random forest
 
-# In[228]:
+# In[32]:
 
 
 get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomForestRegressor\n\n#if (EXECUTE_INTERMEDIATE_MODELS == True):\nrandom_reg = RandomForestRegressor(n_estimators=200, max_depth=500, n_jobs=-1, random_state=42)\nrandom_reg.fit(df_train_transformed, df_train[model1_label])')
 
 
-# In[229]:
+# In[33]:
 
 
 print("Evaluation on test set :")
@@ -5716,19 +5649,29 @@ print("Evaluation on training set :")
 evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
 
 
-# In[230]:
+# In[48]:
+
+
+error_mean = evaluate_model_percent_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
+
+error_mean_worst = evaluate_model_percent_worst_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
+print(f'Mean prediction error {100 - (EVALUATION_PERCENT)*100}% of the time : {error_mean_worst : .2f}')
+
+
+# In[34]:
 
 
 df_test_predictions = random_reg.predict(df_test_transformed)
 
 
-# In[231]:
+# In[35]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
 
 
-# In[232]:
+# In[36]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -5739,7 +5682,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[233]:
+# In[37]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -5750,7 +5693,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[234]:
+# In[38]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -5761,7 +5704,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[235]:
+# In[39]:
 
 
 if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -5772,7 +5715,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.01)
 
 
-# In[236]:
+# In[40]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
@@ -5785,40 +5728,70 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
     plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
 
 
-# In[237]:
+# In[41]:
 
 
 df_train_transformed.columns
 
 
-# In[238]:
+# In[42]:
 
 
 pd.set_option('display.max_rows', 200)
 
 
-# In[239]:
+# In[43]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
 
 
-# In[240]:
+# In[44]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
 
 
-# In[241]:
+# In[49]:
+
+
+df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
+
+df_feature_importances_global = pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].rename(columns={'Feature importance' : 'Cumulated feature importance'}).sort_values(by='Cumulated feature importance', ascending=False).cumsum()], axis=1)
+
+#df.style.set_properties(**{'text-align': 'center'})
+
+df_feature_importances_global.style.format({
+    'Feature importance': '{:,.2%}'.format,
+    'Cumulated feature importance': '{:,.2%}'.format,
+})
+
+
+# In[45]:
 
 
 random_reg.feature_importances_
 
 
-# In[242]:
+# In[46]:
 
 
 random_reg.feature_importances_.cumsum()
+
+
+# In[47]:
+
+
+#if (EXECUTE_INTERMEDIATE_MODELS == True):
+
+g = sns.jointplot(x=df_test[model1_label], y=df_test_predictions, kind='hex', color='blue', height=10)
+#sns.jointplot(x=df_test[model1_label], y=df_test_predictions, alpha=0.01)
+
+g.set_axis_labels("Actual", "Predicted")
+plt.subplots_adjust(top=0.9)
+plt.suptitle('Model 2 with departure delay, random forest : comparison actual values / predict values on test set', fontsize = 16)
+
+plt.savefig('randomreg_model2_actual_vs_predicted_test_set.png', dpi=400)
 
 
 # In[243]:

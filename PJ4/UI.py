@@ -37,9 +37,11 @@ _max_width_()
 
 st.title('Openclassrooms training projet 4 : predicting flight delays (François BOYER)') 
 
-image = Image.open('plane_image.jpg')
+st.write('\n')
+
+image = Image.open('plane_image.png')
 st.image(image,
-         width=300)
+         width=300, format='PNG')
          #use_column_width=True)
 
 st.sidebar.title('Flight characteristics')
