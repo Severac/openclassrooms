@@ -3,7 +3,8 @@ http://3.20.50.249:8501/
 
 To install the UI :
 
-Run an AWS EC2 instance (Ubuntu)
+Run an AWS EC2 instance (Ubuntu) and configure it  
+(add streamlit listen port 8501 on IP filtering.  Configure fixed IP for the instance.  Generate key .PEM file to be able to connect via SSH)
 
 Create a directory streamlit_OC_PJ4 and upload following files on it :
 - UI.py

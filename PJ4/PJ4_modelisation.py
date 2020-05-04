@@ -544,7 +544,7 @@ df, df_train, df_test = custom_train_test_split_sample_random(df)
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[22]:
+# In[27]:
 
 
 from sklearn import dummy
@@ -559,7 +559,7 @@ y_pred_dum = dum.predict(df_test)
 
 # Evaluate
 print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
-print("MAE : {:.2f}".format(np.sqrt(mean_absolute_error(df_test[model1_label], y_pred_dum)) ))
+print("MAE : {:.2f}".format(mean_absolute_error(df_test[model1_label], y_pred_dum) ))
 
 error_mean = evaluate_model_percent_mean(dum, df_test, df_test[model1_label], 0.9)
 print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mean : .2f}')
@@ -1782,7 +1782,7 @@ y_pred_dum = dum.predict(df_test)
 
 # Evaluate
 print("RMSE : {:.2f}".format(np.sqrt(mean_squared_error(df_test[model1_label], y_pred_dum)) ))
-print("MAE : {:.2f}".format(np.sqrt(mean_absolute_error(df_test[model1_label], y_pred_dum)) ))
+print("MAE : {:.2f}".format(mean_absolute_error(df_test[model1_label], y_pred_dum) ))
 
 
 # RMSE : 27.57  
@@ -2031,7 +2031,7 @@ if (EXECUTE_INTERMEDIATE_MODELS == True):
 # # New try with group by + mean + sort encoding of categorical features
 # With preparation_pipeline_meansort instead of preparation_pipeline
 
-# In[53]:
+# In[58]:
 
 
 if (DATA_LOADED == True):
@@ -2042,38 +2042,62 @@ if (DATA_LOADED == True):
     del df_test_transformed
 
 
-# In[54]:
+# In[59]:
 
 
 df = load_data()
 
 
-# In[55]:
+# In[60]:
 
 
 all_features, model1_features, model1_label, quantitative_features, qualitative_features = identify_features(df)
 
 
-# In[56]:
+# In[61]:
 
 
 #df, df_train, df_test = custom_train_test_split_sample_random(df)
 df, df_train, df_test = custom_train_test_split_sample(df)
 
 
-# In[57]:
+# In[62]:
+
+
+df_test
+
+
+# In[63]:
+
+
+df.loc[4681469]
+
+
+# In[25]:
 
 
 #df_train_transformed = preparation_pipeline_meansort_standardscale.fit_transform(df_train, categoricalfeatures_1hotencoder__categorical_features_totransform=None)
 
 
-# In[58]:
+# In[64]:
 
 
 df_train_transformed = preparation_pipeline_meansort_stdscale.fit_transform(df_train)
 df_test_transformed = preparation_pipeline_meansort_stdscale.transform(df_test)
 DATA_LOADED = True
 df_test_transformed.shape
+
+
+# In[65]:
+
+
+df_test
+
+
+# In[66]:
+
+
+df_test_transformed
 
 
 # In[116]:
@@ -2807,7 +2831,7 @@ get_ipython().run_cell_magic('time', '', 'from sklearn.ensemble import RandomFor
 # [Parallel(n_jobs=1)]: Done 2000 out of 2000 | elapsed: 404.9min finished
 # 
 
-# In[60]:
+# In[27]:
 
 
 if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
@@ -2816,13 +2840,13 @@ if ((SAVE_GRID_RESULTS == False) and (LOAD_GRID_RESULTS == True)):
 grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'randomforest_meansort_80000samples_20200414')
 
 
-# In[61]:
+# In[28]:
 
 
 grid_search.best_estimator_
 
 
-# In[184]:
+# In[29]:
 
 
 pd.set_option('display.max_rows', 1000)
@@ -2884,13 +2908,13 @@ df_grid_search_results2.sort_values(by='mean_test_score', ascending=False)
 #                       n_jobs=-1, oob_score=False, random_state=42, verbose=0,  
 #                       warm_start=False)  
 
-# In[62]:
+# In[30]:
 
 
 random_reg = grid_search.best_estimator_
 
 
-# In[63]:
+# In[31]:
 
 
 print("Evaluation on test set :")
@@ -2916,13 +2940,13 @@ print(f'Mean prediction error {100 - (EVALUATION_PERCENT)*100}% of the time : {e
 # => Mean prediction error 90.0% of the time :  9.92   with 80000 lines
 # 
 
-# In[64]:
+# In[32]:
 
 
 df_test_predictions = random_reg.predict(df_test_transformed)
 
 
-# In[65]:
+# In[33]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
@@ -2961,7 +2985,7 @@ plt.ylabel("Actual label - Predicted label")
 plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[69]:
+# In[72]:
 
 
 df_train_residuals = df_train[model1_label] - df_train_predictions
@@ -2969,7 +2993,7 @@ max_residual = df_train_residuals.abs().max()
 sample_weights = (max_residual - df_train_residuals.abs()) / max_residual
 
 
-# In[70]:
+# In[73]:
 
 
 #if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -2980,7 +3004,7 @@ plt.ylabel("Actual label - Predicted label")
 plt.scatter(df_train[model1_label],sample_weights, color='blue', alpha=0.1)
 
 
-# In[71]:
+# In[74]:
 
 
 #if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -2995,7 +3019,7 @@ plt.suptitle('Random forest : weighted values based on residuals', fontsize = 16
 plt.savefig('linreg_residuals_weighted_training_set.png', dpi=400)
 
 
-# In[72]:
+# In[75]:
 
 
 #if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3006,7 +3030,7 @@ plt.ylabel("Actual label - Predicted label")
 plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[73]:
+# In[76]:
 
 
 #if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3017,7 +3041,7 @@ plt.ylabel("Actual - Predicted")
 plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[74]:
+# In[77]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
@@ -3281,32 +3305,32 @@ pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending
 
 # ## Random forest with weighted optimisation (suppress training instances)
 
-# In[87]:
+# In[78]:
 
 
 WEIGHT_THRESHOLD = 0.8
 df_train_transformed = df_train_transformed[sample_weights > WEIGHT_THRESHOLD]
 
 
-# In[88]:
+# In[79]:
 
 
 df_train = df_train[sample_weights > WEIGHT_THRESHOLD]
 
 
-# In[89]:
+# In[80]:
 
 
 sample_weights_haircut = sample_weights[sample_weights > WEIGHT_THRESHOLD]
 
 
-# In[90]:
+# In[81]:
 
 
 get_ipython().run_cell_magic('time', '', "from sklearn.ensemble import RandomForestRegressor\n\n#if (EXECUTE_INTERMEDIATE_MODELS == True):\nrandom_reg = RandomForestRegressor(bootstrap=True, criterion='mse', max_depth=10,\n                  max_features=4, max_leaf_nodes=None,\n                  min_impurity_decrease=0.0, min_impurity_split=None,\n                  min_samples_leaf=1, min_samples_split=2,\n                  min_weight_fraction_leaf=0.0, n_estimators=1000,\n                  n_jobs=-1, oob_score=False, random_state=42, verbose=0,\n                  warm_start=False)\nrandom_reg.fit(df_train_transformed, df_train[model1_label], sample_weights_haircut)")
 
 
-# In[91]:
+# In[82]:
 
 
 print("Evaluation on test set :")
@@ -3342,7 +3366,7 @@ evaluate_model(random_reg, df_train_transformed, df_train[model1_label])
 # Evaluation on training set :  
 # RMSE : 12.758479277575331  
 
-# In[92]:
+# In[83]:
 
 
 error_mean = evaluate_model_percent_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
@@ -3364,26 +3388,26 @@ print(f'Mean prediction error {EVALUATION_PERCENT*100}% of the time : {error_mea
 # With weight threshold of 0.8 :  
 # Mean prediction error 90.0% of the time :  7.90
 
-# In[93]:
+# In[84]:
 
 
 error_mean_worst = evaluate_model_percent_worst_mean(random_reg, df_test_transformed, df_test[model1_label], 0.8)
 print(f'Mean prediction error {100 - (EVALUATION_PERCENT)*100}% of the time : {error_mean_worst : .2f}')
 
 
-# In[94]:
+# In[85]:
 
 
 df_test_predictions = random_reg.predict(df_test_transformed)
 
 
-# In[95]:
+# In[86]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
 
 
-# In[96]:
+# In[87]:
 
 
 #if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3394,7 +3418,7 @@ plt.ylabel("Actual - Predicted")
 plt.scatter(df_test_predictions, df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[97]:
+# In[88]:
 
 
 #if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3405,7 +3429,7 @@ plt.ylabel("Actual label - Predicted label")
 plt.scatter(df_test[model1_label], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[98]:
+# In[89]:
 
 
 #if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3416,7 +3440,7 @@ plt.ylabel("Actual label - Predicted label")
 plt.scatter(df_train[model1_label], df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[99]:
+# In[90]:
 
 
 #if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3427,7 +3451,7 @@ plt.ylabel("Actual label - Predicted label")
 plt.scatter(range(df_train.shape[0]), df_train[model1_label] - df_train_predictions, color='blue', alpha=0.1)
 
 
-# In[100]:
+# In[91]:
 
 
 #if (EXECUTE_INTERMEDIATE_MODELS == True):
@@ -3438,7 +3462,7 @@ plt.ylabel("Actual - Predicted")
 plt.scatter(df_test['CRS_ELAPSED_TIME'], df_test[model1_label] - df_test_predictions, color='blue', alpha=0.1)
 
 
-# In[101]:
+# In[92]:
 
 
 df_train_predictions = random_reg.predict(df_train_transformed)
@@ -3451,7 +3475,7 @@ plt.xlabel("Actual")
 plt.scatter(df_train[model1_label], df_train_predictions, color='coral', alpha=0.1)
 
 
-# In[102]:
+# In[93]:
 
 
 df_test_predictions = random_reg.predict(df_test_transformed)
@@ -3464,25 +3488,25 @@ plt.xlabel("Actual")
 plt.scatter(df_test[model1_label], df_test_predictions, color='coral', alpha=0.1)
 
 
-# In[103]:
+# In[94]:
 
 
 df_train_transformed.columns
 
 
-# In[151]:
+# In[95]:
 
 
 pd.set_option('display.max_rows', 50)
 
 
-# In[105]:
+# In[96]:
 
 
 df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transformed.columns, 'Feature importance' : random_reg.feature_importances_})
 
 
-# In[106]:
+# In[97]:
 
 
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
@@ -3492,7 +3516,7 @@ pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending
 
 # # Save API model files for user interface
 
-# In[107]:
+# In[98]:
 
 
 if (SAVE_API_MODEL == True):    
@@ -3506,16 +3530,52 @@ if (SAVE_API_MODEL == True):
 
 # ## Printing values to test the API
 
-# In[149]:
+# In[99]:
 
 
 realdf_test_predictions = pd.DataFrame(df_test_predictions, columns=['Predicted ARR delay'])
 
 
-# In[179]:
+# In[100]:
 
 
-pd.concat([df_test.reset_index(), realdf_test_predictions.reset_index()], axis=1)
+realdf_test_predictions_with_label = pd.concat([df_test.reset_index(), realdf_test_predictions.reset_index()], axis=1)
+
+
+# In[106]:
+
+
+realdf_test_predictions_with_label[realdf_test_predictions_with_label['Predicted ARR delay'] > 17]
+
+
+# In[102]:
+
+
+df.dtypes
+
+
+# In[103]:
+
+
+df_train.dtypes
+
+
+# In[104]:
+
+
+df_test_predictions.max()
+
+
+# In[105]:
+
+
+df.loc[1876726, :]
+
+
+# In[68]:
+
+
+df_test_transformed.loc[1876726, :]
 
 
 # In[180]:
