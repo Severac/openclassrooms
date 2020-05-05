@@ -11,8 +11,10 @@ get_ipython().run_line_magic('autoreload', '2')
 
 from functions import *
 
+import datetime as dt
 
-# In[32]:
+
+# In[2]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -242,13 +244,13 @@ df[df['CustomerID'].isnull()]
 df.drop(index=df[df['CustomerID'].isnull()].index, axis=0, inplace=True)
 
 
-# In[158]:
+# In[22]:
 
 
 df.reset_index(drop=True, inplace=True)
 
 
-# In[22]:
+# In[23]:
 
 
 df.shape
@@ -256,7 +258,7 @@ df.shape
 
 # ## Check quality of data again (% complete)
 
-# In[23]:
+# In[24]:
 
 
 display_percent_complete(df)
@@ -268,13 +270,13 @@ display_percent_complete(df)
 
 # ### Display cancellations (InvoiceNo starting with C according to dataset description)
 
-# In[35]:
+# In[25]:
 
 
 df[df['InvoiceNo'].str.startswith('C')]
 
 
-# In[64]:
+# In[26]:
 
 
 print('{:.2f}% of orders are cancellations'.format((len(df[df['InvoiceNo'].str.startswith('C')])/df.shape[0])*100))
@@ -282,45 +284,93 @@ print('{:.2f}% of orders are cancellations'.format((len(df[df['InvoiceNo'].str.s
 
 # ### Check all orders from a client that has cancelled 1 order
 
-# In[55]:
+# In[27]:
 
 
 df[df['CustomerID'] == '17548']
 
 
 # => We see that cancelled products appear only on the line with InvoiceNo starting with C  
-# => We can remove cancellations ?
+# => Can we remove cancellations ?
 
-# ### Mean number of orders for clients :
+# ### Mean number of orders and total price for clients :
 
-# In[101]:
+# In[28]:
 
 
 df['CustomerID'].value_counts().mean()
 
 
-# ### Mean number of orders for clients that have cancelled at least 1 order :
+# In[29]:
 
-# In[97]:
+
+df['TotalPrice'] = df['Quantity'] * df['UnitPrice']
+
+
+# In[30]:
+
+
+df[['CustomerID', 'TotalPrice']].groupby('CustomerID').sum().mean()
+
+
+# In[31]:
+
+
+# Mean price must be calculated without taking cancellations into account :
+df[df['InvoiceNo'].str.startswith('C') == False][['CustomerID', 'TotalPrice']].groupby('CustomerID').sum().mean()
+
+
+# ### Mean number of orders and total price for clients that have cancelled at least 1 order :
+
+# In[32]:
 
 
 df[df['CustomerID'].isin(df[df['InvoiceNo'].str.startswith('C')]['CustomerID'].unique())]['CustomerID'].value_counts().mean()
 
 
+# In[33]:
+
+
+# Take cancellations into account
+df[(df['CustomerID'].isin(df[df['InvoiceNo'].str.startswith('C')]['CustomerID'].unique()))    & (df['InvoiceNo'].str.startswith('C') == False)
+  ]['CustomerID'].value_counts().mean()
+
+
+# In[34]:
+
+
+df[df['CustomerID'].isin(df[df['InvoiceNo'].str.startswith('C')]['CustomerID'].unique())][['CustomerID', 'TotalPrice']].groupby('CustomerID').sum().mean()
+
+
+# In[35]:
+
+
+# Take cancellations into account
+df[(df['CustomerID'].isin(df[df['InvoiceNo'].str.startswith('C')]['CustomerID'].unique()))    & (df['InvoiceNo'].str.startswith('C') == False)
+  ][['CustomerID', 'TotalPrice']].groupby('CustomerID').sum().mean()
+
+
+# => Clients that have cancelled at least 1 order earn 2x more value  (4243 / 2048  = 2.07)  
 # => We'll keep this information of cancellations for the model
+
+# In[36]:
+
+
+df_nocancel = df[df['InvoiceNo'].str.startswith('C') == False]
+
 
 # ## Invoice date (min and max values)
 
-# In[24]:
+# In[37]:
 
 
 print('Minimum Invoice Date : ' + str(df['InvoiceDate'].min()))
 print('Maximum Invoice Date : ' + str(df['InvoiceDate'].max()))
 
 
-# ## Comparison of StockCode and Description
+# ## StockCode and Description analysis
 
-# In[25]:
+# In[38]:
 
 
 df[['StockCode', 'Description']].sort_values(by='StockCode')
@@ -328,7 +378,7 @@ df[['StockCode', 'Description']].sort_values(by='StockCode')
 
 # => Description is the text corresponding to StockCode
 
-# In[26]:
+# In[39]:
 
 
 print('Number of unique Description : ' + str(len(df['Description'].unique())))
@@ -337,7 +387,7 @@ print('Number of unique StockCode : ' + str(len(df['StockCode'].unique())))
 
 # => There are more descriptions than stock codes. Are there inconsistencies with some description texts ?
 
-# In[116]:
+# In[40]:
 
 
 progbar = tqdm(range(len(df['StockCode'].unique())))
@@ -352,7 +402,7 @@ for stockcode_id in df['StockCode'].unique():
     progbar.update(1)
 
 
-# In[128]:
+# In[41]:
 
 
 print('=> ' + str(len(stockcodes_defaults)) + ' products do not always have the same description text for each order')
@@ -360,20 +410,22 @@ print('=> ' + str(len(stockcodes_defaults)) + ' products do not always have the 
 
 # Let's explore that : we have some differences due to coma or added words/letters
 
-# In[123]:
+# In[42]:
 
 
 qgrid_show(df[df['StockCode'].isin(stockcodes_defaults)].sort_values(by='StockCode'))
 
 
-# In[148]:
+# In[43]:
 
 
 # Print description that has most occurences for a stock code :
 df[df['StockCode'] == '21232']['Description'].value_counts().sort_values(ascending=False).index[0]
 
 
-# In[150]:
+# ### Assign 1 unique description for each product
+
+# In[44]:
 
 
 progbar = tqdm(range(len(df['StockCode'].unique())))
@@ -387,44 +439,407 @@ for stockcode_id in df['StockCode'].unique():
     progbar.update(1)
 
 
-# In[161]:
+# In[45]:
 
 
 df['DescriptionNormalized'] = df['StockCode'].apply(lambda val : ref_descriptions[val] )
 
 
-# In[163]:
+# In[46]:
 
 
 qgrid_show(df[df['StockCode'].isin(stockcodes_defaults)].sort_values(by='StockCode'))
 
 
-# In[112]:
+# In[47]:
 
 
-len(df[df['StockCode'] == '22733']['Description'].unique())
+print('Number of unique Description : ' + str(len(df['DescriptionNormalized'].unique())))
+print('Number of unique StockCode : ' + str(len(df['StockCode'].unique())))
 
 
-# In[66]:
+# # Add some features
+
+# In[48]:
 
 
-df[df['StockCode'].isna()]
+def get_month(x) : return dt.datetime(x.year,x.month,1)
+df['InvoiceMonth'] = df['InvoiceDate'].apply(get_month)
+#df_nocancel['InvoiceMonth'] = df_nocancel['InvoiceDate'].apply(get_month)
+df_nocancel = df[df['InvoiceNo'].str.startswith('C') == False]
+
+
+# In[49]:
+
+
+df_nocancel
+
+
+# # Quantitative analysis
+
+# ## Customer value analysis
+
+# In[50]:
+
+
+print('Total value (in £) : {:.2f}'.format(df_nocancel['TotalPrice'].sum()))
+
+
+# In[51]:
+
+
+print('Number of clients : ' + str(len(df_nocancel['CustomerID'].unique())))
+
+
+# In[52]:
+
+
+print('Number of products : ' + str(len(df_nocancel['StockCode'].unique())))
+
+
+# In[53]:
+
+
+print('Mean total price per client :')
+df_nocancel[['CustomerID', 'TotalPrice']].groupby('CustomerID').sum().mean()
+
+
+# In[54]:
+
+
+print('Example of orders for 1 client and 1 product :')
+pd.set_option('display.max_rows', 100)
+df_nocancel[(df_nocancel['CustomerID'] == '17850') & (df_nocancel['StockCode'] == '85123A')] 
+
+
+# In[55]:
+
+
+fig = plt.figure()
+fig.suptitle('Distribution of total price')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+plt.hist(df_nocancel['TotalPrice'], bins=50)
+#ax.set_xlim([0,4000])
+plt.ylabel("Number of orders")
+plt.xlabel('Total price of order')
+plt.yscale('log')
+
+
+# In[56]:
+
+
+fig = plt.figure()
+fig.suptitle('Distribution of total price')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+sns.boxplot(df_nocancel['TotalPrice'])
+#ax.set_xlim([0,4000])
+plt.xlabel("TotalPrice of order")
+plt.xscale('log')
+
+
+# In[57]:
+
+
+### Distribution of TotalPrice of customers
+
+
+# In[58]:
+
+
+df_nocancel[['CustomerID', 'TotalPrice']].groupby('CustomerID').sum()['TotalPrice']
+
+
+# In[59]:
+
+
+fig = plt.figure()
+fig.suptitle('Distribution of total price of customers')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+plt.hist(df_nocancel[['CustomerID', 'TotalPrice']].groupby('CustomerID').sum()['TotalPrice'], bins=50)
+#ax.set_xlim([0,4000])
+plt.xlabel('Total price paid by customer')
+plt.ylabel("Number of customers")
+plt.yscale('log')
+
+
+# In[60]:
+
+
+fig = plt.figure()
+fig.suptitle('Distribution of total price of customers')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+sns.distplot(df_nocancel[['CustomerID', 'TotalPrice']].groupby('CustomerID').sum()['TotalPrice'], kde=False, rug=True)
+#ax.set_xlim([0,4000])
+plt.xlabel('Total price paid by customer')
+plt.ylabel("Number of customers")
+plt.yscale('log')
+
+
+# ### Number of customer that represent 80% of value
+
+# In[61]:
+
+
+df_gbcustom = df_nocancel[['CustomerID', 'TotalPrice']].groupby('CustomerID').sum()['TotalPrice']
+df_gbproduct = df_nocancel[['StockCode', 'TotalPrice']].groupby('StockCode').sum()['TotalPrice']
+
+
+# In[62]:
+
+
+value_80p = 0.80*df_gbcustom.sum()
 
 
 # In[63]:
 
 
-df[['StockCode']].sort_values(by='StockCode')
+value_80p
+
+
+# In[64]:
+
+
+print('Number of clients that represent 80% of value : {:d}'      .format(df_gbcustom[df_gbcustom.sort_values(ascending=False).cumsum() < value_80p].sort_values(ascending=False).shape[0]))
+
+
+# In[65]:
+
+
+print('Top 20 earned value customers')
+display(df_gbcustom[df_gbcustom.sort_values(ascending=False).cumsum() < value_80p].sort_values(ascending=False).head(20))
+print('Earn value of top 20 customers : {:.2f} £'.format(df_gbcustom[df_gbcustom.sort_values(ascending=False).cumsum() < value_80p].sort_values(ascending=False).head(20).sum()))
+
+
+# In[66]:
+
+
+len(df_gbcustom.sort_values(ascending=False))
 
 
 # In[67]:
 
 
-df[['StockCode', 'Description']].sort_values(by='StockCode')
+fig = plt.figure()
+fig.suptitle('Earn value by customers')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+plt.scatter(range(0,len(df_gbcustom.sort_values(ascending=False))), df_gbcustom.sort_values(ascending=False))
+ax.set_xlim([0,500])
+plt.xlabel('Customers (ordered by earned value descending)')
+plt.ylabel("Earned value")
+#plt.yscale('log')
 
 
-# In[18]:
+# => Elbow around 200
+
+# In[68]:
 
 
-qgrid_show(df)
+fig = plt.figure()
+fig.suptitle('Earn value by product')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+plt.scatter(range(0,len(df_gbproduct.sort_values(ascending=False))), df_gbproduct.sort_values(ascending=False))
+ax.set_xlim([0,1000])
+plt.xlabel('Products (ordered by earned value descending)')
+plt.ylabel("Earned value")
+#plt.yscale('log')
+
+
+# In[69]:
+
+
+df_nocancel[df_nocancel['StockCode'].isin(df_gbproduct.sort_values(ascending=False).head(800).index)]['TotalPrice'].sum()
+
+
+# In[70]:
+
+
+print('Value earned by top 200 customers represent 50% of total value:')
+df_nocancel[df_nocancel['CustomerID'].isin(df_gbcustom.sort_values(ascending=False).head(200).index)]['TotalPrice'].sum()
+
+
+# In[71]:
+
+
+df_top200 = df_nocancel[df_nocancel['CustomerID'].isin(df_gbcustom.sort_values(ascending=False).head(200).index)]
+
+
+# In[72]:
+
+
+fig = plt.figure()
+fig.suptitle('Total price earned by product on top 200 customers')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+plt.scatter(range(0,len(df_top200['StockCode'].unique())), df_top200[['StockCode', 'TotalPrice']].groupby('StockCode').sum())
+#ax.set_xlim([0,500])
+plt.xlabel('Product id')
+plt.ylabel("Earned value")
+#plt.yscale('log')
+
+
+# ## Value accross time
+
+# In[73]:
+
+
+df_nocancel['InvoiceMonth'].sort_values(ascending=True).unique()
+
+
+# In[74]:
+
+
+df_nocancel[['InvoiceMonth', 'TotalPrice']].sort_values(by='InvoiceMonth', ascending=True).groupby('InvoiceMonth').sum().plot.bar(title='Total amount of orders accross months')
+
+
+# ## Value by country
+
+# In[75]:
+
+
+df_nocancel[['Country', 'TotalPrice']].groupby('Country').sum().sort_values(by='TotalPrice', ascending=False).plot.bar(title='Value by country')
+
+
+# In[76]:
+
+
+df_top200[['Country', 'TotalPrice']].groupby('Country').sum().sort_values(by='TotalPrice', ascending=False).plot.bar(title='Value by country on top 200 customers')
+
+
+# In[77]:
+
+
+df_nocancel[df_nocancel['Country'] != 'United Kingdom']['DescriptionNormalized'].sample(100)
+
+
+# => Other countries than UK represent 10% of earned value. Product descriptions are in English and common to the others  
+# => We can keep country
+
+# # Feature engineering
+
+# ## CustomerID, Quantity, TotalPrice paid
+
+# In[78]:
+
+
+df_clients = df_nocancel[['CustomerID', 'Quantity', 'TotalPrice']].groupby('CustomerID').sum().copy(deep=True)
+
+
+# In[79]:
+
+
+df_clients
+
+
+# ## Country
+
+# In[80]:
+
+
+df_clients = pd.concat([df_clients, df_nocancel[['CustomerID', 'Country']].groupby('CustomerID')['Country'].unique().str[0]], axis=1)
+
+
+# ## Flag clients that have cancelled at least 1 command
+
+# In[81]:
+
+
+df_clients['HasEverCancelled'] = False
+
+
+# In[82]:
+
+
+df_clients.loc[df_clients.index.isin(df[df['InvoiceNo'].str.startswith('C')]['CustomerID'].unique().tolist()), 'HasEverCancelled'] = True
+
+
+# In[83]:
+
+
+df_clients
+
+
+# ## Product description bag of words
+
+# In[84]:
+
+
+#df_nocancel['DescriptionNormalized'].str.lower().str.replace(r'[^\w\s]', '').str.replace(u'\xa0', u'').str.get_dummies(sep=' ').add_prefix('desc_' +'_')
+
+
+# In[85]:
+
+
+df_nocancel.shape
+
+
+# In[86]:
+
+
+df_nocancel['DescriptionNormalized']
+
+
+# In[87]:
+
+
+df_nocancel.head(10)
+
+
+# In[92]:
+
+
+from sklearn.feature_extraction.text import CountVectorizer
+
+vectorizer = CountVectorizer()
+
+matrix_vectorized = vectorizer.fit_transform(df_nocancel['DescriptionNormalized'])
+
+
+# In[93]:
+
+
+# Ordered column names :
+#[k for k, v in sorted(vectorizer.vocabulary_.items(), key=lambda item: item[1])]
+
+
+# In[94]:
+
+
+matrix_vectorized
+
+
+# In[95]:
+
+
+df_vectorized = pd.DataFrame(matrix_vectorized.todense(), columns=vectorizer.get_feature_names())
+
+
+# In[97]:
+
+
+df_nocancel.shape
+
+
+# In[96]:
+
+
+df_vectorized
+
+
+# In[91]:
+
+
+#df_vectorized.todense()
 
