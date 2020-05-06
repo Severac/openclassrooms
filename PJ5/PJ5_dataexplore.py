@@ -10,6 +10,7 @@ get_ipython().run_line_magic('load_ext', 'autoreload')
 get_ipython().run_line_magic('autoreload', '2')
 
 from functions import *
+from display_factorial import *
 
 import datetime as dt
 
@@ -467,6 +468,7 @@ def get_month(x) : return dt.datetime(x.year,x.month,1)
 df['InvoiceMonth'] = df['InvoiceDate'].apply(get_month)
 #df_nocancel['InvoiceMonth'] = df_nocancel['InvoiceDate'].apply(get_month)
 df_nocancel = df[df['InvoiceNo'].str.startswith('C') == False]
+df_nocancel.reset_index(inplace=True)
 
 
 # In[49]:
@@ -776,57 +778,76 @@ df_clients
 # In[84]:
 
 
-#df_nocancel['DescriptionNormalized'].str.lower().str.replace(r'[^\w\s]', '').str.replace(u'\xa0', u'').str.get_dummies(sep=' ').add_prefix('desc_' +'_')
+df_nocancel.shape
 
 
 # In[85]:
 
 
-df_nocancel.shape
+df_nocancel['DescriptionNormalized']
 
 
 # In[86]:
 
 
-df_nocancel['DescriptionNormalized']
+df_nocancel.head(10)
 
 
 # In[87]:
 
 
-df_nocancel.head(10)
-
-
-# In[92]:
-
-
 from sklearn.feature_extraction.text import CountVectorizer
 
-vectorizer = CountVectorizer()
+vectorizer = CountVectorizer(min_df=0.001)
 
 matrix_vectorized = vectorizer.fit_transform(df_nocancel['DescriptionNormalized'])
 
 
-# In[93]:
+# In[88]:
 
 
 # Ordered column names :
 #[k for k, v in sorted(vectorizer.vocabulary_.items(), key=lambda item: item[1])]
 
 
-# In[94]:
+# In[89]:
 
 
 matrix_vectorized
 
 
+# In[90]:
+
+
+bow_features = ['desc_' + str(s) for s in vectorizer.get_feature_names()]
+df_vectorized = pd.DataFrame(matrix_vectorized.todense(), columns=bow_features)
+
+
+# In[91]:
+
+
+df_nocancel.shape
+
+
+# In[92]:
+
+
+df_vectorized
+
+
+# In[93]:
+
+
+df_vectorized.info()
+
+
+# In[94]:
+
+
+#df_vectorized.todense()
+
+
 # In[95]:
-
-
-df_vectorized = pd.DataFrame(matrix_vectorized.todense(), columns=vectorizer.get_feature_names())
-
-
-# In[97]:
 
 
 df_nocancel.shape
@@ -835,11 +856,182 @@ df_nocancel.shape
 # In[96]:
 
 
-df_vectorized
+df_vectorized.shape
 
 
-# In[91]:
+# In[97]:
 
 
-#df_vectorized.todense()
+df_nocancel.index
+
+
+# In[98]:
+
+
+df_nocancel_bow = pd.concat([df_nocancel, df_vectorized], axis=1)
+
+
+# In[99]:
+
+
+df_nocancel_bow.shape
+
+
+# In[100]:
+
+
+df_nocancel.head(2)
+
+
+# ### Add a feature for top 200 products (that earn 50% of value)
+
+# In[101]:
+
+
+df_nocancel[df_nocancel['StockCode'].isin(df_gbproduct.sort_values(ascending=False).head(200).index)]['TotalPrice'].sum()
+
+
+# In[102]:
+
+
+df_nocancel_bow['Top200Value'] = 0
+
+
+# In[103]:
+
+
+df_nocancel_bow.loc[df_nocancel_bow['StockCode'].isin(df_gbproduct.sort_values(ascending=False).head(200).index), 'Top200Value'] = 1
+
+
+# # Representation of products (dimensionality reduction)
+
+# In[104]:
+
+
+other_features = ['TotalPrice', 'Top200Value']
+
+
+# In[105]:
+
+
+ORDER_FEATS = bow_features + other_features
+
+
+# In[106]:
+
+
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScalerMultiple(features_toscale=other_features)
+
+df_nocancel_bow = scaler.fit_transform(df_nocancel_bow)
+
+
+# In[107]:
+
+
+df_nocancel_bow['TotalPrice'].sort_values(ascending=False)
+
+
+# In[108]:
+
+
+df_nocancel_bow['TotalPrice'].quantile(0.50)
+
+
+# In[110]:
+
+
+df_nocancel_bow.head(5)
+
+
+# In[111]:
+
+
+print('Start')
+from sklearn.decomposition import PCA
+
+pca = PCA(n_components=2)
+
+# choix du nombre de composantes à calculer
+n_comp = 6
+
+# import de l'échantillon
+data = df_nocancel_bow
+
+# selection des colonnes à prendre en compte dans l'ACP
+#data_pca = df [numerical_features]
+
+print('Start of reduction jobs')
+#data_pca = df_nocancel_bow[ORDER_FEATS].copy()
+data_pca = df_nocancel_bow[ORDER_FEATS]
+ 
+print('Binarisation of color categories...')
+bins = [-np.inf,df_nocancel_bow['TotalPrice'].quantile(0.25),        df_nocancel_bow['TotalPrice'].quantile(0.50),        df_nocancel_bow['TotalPrice'].quantile(0.75),        df_nocancel_bow['TotalPrice'].quantile(1)]
+
+labels = [0, 1, 2, 3]
+df_score_cat = pd.cut(data_pca['TotalPrice'], bins=bins, labels=labels)
+
+# préparation des données pour l'ACP
+#data_pca = data_pca.dropna()
+
+X = data_pca.values
+#names = data["idCours"] # ou data.index pour avoir les intitulés
+
+#features = data.columns
+features = data_pca.columns
+
+# Centrage et Réduction
+
+#std_scale = preprocessing.StandardScaler().fit(X)
+#X_scaled = std_scale.transform(X)
+X_scaled = X
+
+print('PCA reduction...')
+# Calcul des composantes principales
+pca = decomposition.PCA(n_components=n_comp)
+print('fit...')
+pca.fit(X_scaled)
+
+# Eboulis des valeurs propres
+#display_scree_plot(pca)
+
+# Cercle des corrélations
+pcs = pca.components_
+#plt.figure(figsize=(16,10))
+plt.rcParams["figure.figsize"] = [16,9]
+#display_circles(pcs, n_comp, pca, [(0,1),(2,3),(4,5)], labels = np.array(features))
+
+
+# Projection des individus
+print('Transform...')
+X_projected = pca.transform(X_scaled)
+
+
+# In[112]:
+
+
+print('Display factorial planes')
+display_factorial_planes(X_projected, n_comp, pca, [(0,1),(2,3),(4,5)], illustrative_var=df_score_cat)
+#display_factorial_planes(X_projected, n_comp, pca, [(0,1),(2,3),(4,5)])
+
+plt.show()
+
+
+# In[ ]:
+
+
+
+q1 = df_nocancel_bow['TotalPrice'].quantile(0.25)
+q2 = df_nocancel_bow['TotalPrice'].quantile(0.50)
+q3 = df_nocancel_bow['TotalPrice'].quantile(0.75)
+q4 = df_nocancel_bow['TotalPrice'].quantile(1)
+
+
+# In[ ]:
+
+
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans
+
+clusterer = KMeans(n_clusters=4, random_state=42).fit(X_scaled)
 
