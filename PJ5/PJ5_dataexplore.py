@@ -50,7 +50,7 @@ DATA_URL = DOWNLOAD_ROOT + DATA_FILENAME
 ARCHIVE_PATH_FILE = os.path.join(DATA_PATH, DATA_FILENAME)
 
 
-DOWNLOAD_DATA = True  # A la première exécution du notebook, ou pour rafraîchir les données, mettre cette variable à True
+DOWNLOAD_DATA = False  # A la première exécution du notebook, ou pour rafraîchir les données, mettre cette variable à True
 
 plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
 
@@ -585,34 +585,49 @@ plt.ylabel("Number of customers")
 plt.yscale('log')
 
 
+# In[61]:
+
+
+fig = plt.figure()
+fig.suptitle('Distribution of total price of customers')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+sns.distplot(np.log(1+df_nocancel[['CustomerID', 'TotalPrice']].groupby('CustomerID').sum()['TotalPrice']), kde=False, rug=True)
+#ax.set_xlim([0,4000])
+plt.xlabel('Total price paid by customer')
+plt.ylabel("Number of customers")
+plt.yscale('log')
+
+
 # ### Number of customer that represent 80% of value
 
-# In[61]:
+# In[62]:
 
 
 df_gbcustom = df_nocancel[['CustomerID', 'TotalPrice']].groupby('CustomerID').sum()['TotalPrice']
 df_gbproduct = df_nocancel[['StockCode', 'TotalPrice']].groupby('StockCode').sum()['TotalPrice']
 
 
-# In[62]:
+# In[63]:
 
 
 value_80p = 0.80*df_gbcustom.sum()
 
 
-# In[63]:
+# In[64]:
 
 
 value_80p
 
 
-# In[64]:
+# In[65]:
 
 
 print('Number of clients that represent 80% of value : {:d}'      .format(df_gbcustom[df_gbcustom.sort_values(ascending=False).cumsum() < value_80p].sort_values(ascending=False).shape[0]))
 
 
-# In[65]:
+# In[66]:
 
 
 print('Top 20 earned value customers')
@@ -620,13 +635,13 @@ display(df_gbcustom[df_gbcustom.sort_values(ascending=False).cumsum() < value_80
 print('Earn value of top 20 customers : {:.2f} £'.format(df_gbcustom[df_gbcustom.sort_values(ascending=False).cumsum() < value_80p].sort_values(ascending=False).head(20).sum()))
 
 
-# In[66]:
+# In[67]:
 
 
 len(df_gbcustom.sort_values(ascending=False))
 
 
-# In[67]:
+# In[68]:
 
 
 fig = plt.figure()
@@ -643,7 +658,7 @@ plt.ylabel("Earned value")
 
 # => Elbow around 200
 
-# In[68]:
+# In[69]:
 
 
 fig = plt.figure()
@@ -658,26 +673,26 @@ plt.ylabel("Earned value")
 #plt.yscale('log')
 
 
-# In[69]:
+# In[70]:
 
 
 df_nocancel[df_nocancel['StockCode'].isin(df_gbproduct.sort_values(ascending=False).head(800).index)]['TotalPrice'].sum()
 
 
-# In[70]:
+# In[71]:
 
 
 print('Value earned by top 200 customers represent 50% of total value:')
 df_nocancel[df_nocancel['CustomerID'].isin(df_gbcustom.sort_values(ascending=False).head(200).index)]['TotalPrice'].sum()
 
 
-# In[71]:
+# In[72]:
 
 
 df_top200 = df_nocancel[df_nocancel['CustomerID'].isin(df_gbcustom.sort_values(ascending=False).head(200).index)]
 
 
-# In[72]:
+# In[73]:
 
 
 fig = plt.figure()
@@ -694,13 +709,13 @@ plt.ylabel("Earned value")
 
 # ## Value accross time
 
-# In[73]:
+# In[74]:
 
 
 df_nocancel['InvoiceMonth'].sort_values(ascending=True).unique()
 
 
-# In[74]:
+# In[75]:
 
 
 df_nocancel[['InvoiceMonth', 'TotalPrice']].sort_values(by='InvoiceMonth', ascending=True).groupby('InvoiceMonth').sum().plot.bar(title='Total amount of orders accross months')
@@ -708,38 +723,38 @@ df_nocancel[['InvoiceMonth', 'TotalPrice']].sort_values(by='InvoiceMonth', ascen
 
 # ## Value by country
 
-# In[75]:
+# In[76]:
 
 
 df_nocancel[['Country', 'TotalPrice']].groupby('Country').sum().sort_values(by='TotalPrice', ascending=False).plot.bar(title='Value by country')
 
 
-# In[76]:
+# In[77]:
 
 
 df_top200[['Country', 'TotalPrice']].groupby('Country').sum().sort_values(by='TotalPrice', ascending=False).plot.bar(title='Value by country on top 200 customers')
 
 
-# In[77]:
+# In[78]:
 
 
 df_nocancel[df_nocancel['Country'] != 'United Kingdom']['DescriptionNormalized'].sample(100)
 
 
 # => Other countries than UK represent 10% of earned value. Product descriptions are in English and common to the others  
-# => We can keep country
+# => We can keep orders from all countries, but we will not keep country to avoid unbalance
 
 # # Feature engineering
 
 # ## CustomerID, Quantity, TotalPrice paid
 
-# In[78]:
+# In[79]:
 
 
 df_clients = df_nocancel[['CustomerID', 'Quantity', 'TotalPrice']].groupby('CustomerID').sum().copy(deep=True)
 
 
-# In[79]:
+# In[80]:
 
 
 df_clients
@@ -747,7 +762,7 @@ df_clients
 
 # ## Country
 
-# In[80]:
+# In[81]:
 
 
 df_clients = pd.concat([df_clients, df_nocancel[['CustomerID', 'Country']].groupby('CustomerID')['Country'].unique().str[0]], axis=1)
@@ -755,19 +770,19 @@ df_clients = pd.concat([df_clients, df_nocancel[['CustomerID', 'Country']].group
 
 # ## Flag clients that have cancelled at least 1 command
 
-# In[81]:
+# In[82]:
 
 
 df_clients['HasEverCancelled'] = False
 
 
-# In[82]:
+# In[83]:
 
 
 df_clients.loc[df_clients.index.isin(df[df['InvoiceNo'].str.startswith('C')]['CustomerID'].unique().tolist()), 'HasEverCancelled'] = True
 
 
-# In[83]:
+# In[84]:
 
 
 df_clients
@@ -775,25 +790,25 @@ df_clients
 
 # ## Product description bag of words
 
-# In[84]:
+# In[85]:
 
 
 df_nocancel.shape
 
 
-# In[85]:
+# In[86]:
 
 
 df_nocancel['DescriptionNormalized']
 
 
-# In[86]:
+# In[87]:
 
 
 df_nocancel.head(10)
 
 
-# In[87]:
+# In[88]:
 
 
 from sklearn.feature_extraction.text import CountVectorizer
@@ -803,36 +818,31 @@ vectorizer = CountVectorizer(min_df=0.001)
 matrix_vectorized = vectorizer.fit_transform(df_nocancel['DescriptionNormalized'])
 
 
-# In[88]:
+# In[89]:
 
 
 # Ordered column names :
 #[k for k, v in sorted(vectorizer.vocabulary_.items(), key=lambda item: item[1])]
 
 
-# In[89]:
+# In[90]:
 
 
 matrix_vectorized
 
 
-# In[90]:
+# In[91]:
 
 
 bow_features = ['desc_' + str(s) for s in vectorizer.get_feature_names()]
 df_vectorized = pd.DataFrame(matrix_vectorized.todense(), columns=bow_features)
 
 
-# In[91]:
-
-
-df_nocancel.shape
-
-
 # In[92]:
 
 
-df_vectorized
+df_vectorized = pd.DataFrame(matrix_vectorized.todense(), columns=bow_features, dtype='int8')
+del matrix_vectorized
 
 
 # In[93]:
@@ -844,40 +854,52 @@ df_vectorized.info()
 # In[94]:
 
 
-#df_vectorized.todense()
+df_nocancel.shape
 
 
 # In[95]:
 
 
-df_nocancel.shape
+df_vectorized
 
 
 # In[96]:
 
 
-df_vectorized.shape
+#df_vectorized.todense()
 
 
 # In[97]:
 
 
-df_nocancel.index
+df_nocancel.shape
 
 
 # In[98]:
 
 
-df_nocancel_bow = pd.concat([df_nocancel, df_vectorized], axis=1)
+df_vectorized.shape
 
 
 # In[99]:
 
 
-df_nocancel_bow.shape
+df_nocancel.index
 
 
 # In[100]:
+
+
+df_nocancel_bow = pd.concat([df_nocancel, df_vectorized], axis=1)
+
+
+# In[101]:
+
+
+df_nocancel_bow.shape
+
+
+# In[102]:
 
 
 df_nocancel.head(2)
@@ -885,19 +907,19 @@ df_nocancel.head(2)
 
 # ### Add a feature for top 200 products (that earn 50% of value)
 
-# In[101]:
+# In[103]:
 
 
 df_nocancel[df_nocancel['StockCode'].isin(df_gbproduct.sort_values(ascending=False).head(200).index)]['TotalPrice'].sum()
 
 
-# In[102]:
+# In[104]:
 
 
 df_nocancel_bow['Top200Value'] = 0
 
 
-# In[103]:
+# In[105]:
 
 
 df_nocancel_bow.loc[df_nocancel_bow['StockCode'].isin(df_gbproduct.sort_values(ascending=False).head(200).index), 'Top200Value'] = 1
@@ -905,19 +927,25 @@ df_nocancel_bow.loc[df_nocancel_bow['StockCode'].isin(df_gbproduct.sort_values(a
 
 # # Representation of products (dimensionality reduction)
 
-# In[104]:
+# In[106]:
 
 
 other_features = ['TotalPrice', 'Top200Value']
 
 
-# In[105]:
+# In[107]:
 
 
 ORDER_FEATS = bow_features + other_features
 
 
-# In[106]:
+# In[108]:
+
+
+df_nocancel_bow.info()
+
+
+# In[109]:
 
 
 from sklearn.preprocessing import MinMaxScaler
@@ -926,25 +954,25 @@ scaler = MinMaxScalerMultiple(features_toscale=other_features)
 df_nocancel_bow = scaler.fit_transform(df_nocancel_bow)
 
 
-# In[107]:
+# In[110]:
 
 
 df_nocancel_bow['TotalPrice'].sort_values(ascending=False)
 
 
-# In[108]:
+# In[111]:
 
 
 df_nocancel_bow['TotalPrice'].quantile(0.50)
 
 
-# In[110]:
+# In[112]:
 
 
 df_nocancel_bow.head(5)
 
 
-# In[111]:
+# In[113]:
 
 
 print('Start')
@@ -1007,7 +1035,7 @@ print('Transform...')
 X_projected = pca.transform(X_scaled)
 
 
-# In[112]:
+# In[114]:
 
 
 print('Display factorial planes')
@@ -1017,7 +1045,13 @@ display_factorial_planes(X_projected, n_comp, pca, [(0,1),(2,3),(4,5)], illustra
 plt.show()
 
 
-# In[ ]:
+# In[115]:
+
+
+display_scree_plot(pca)
+
+
+# In[116]:
 
 
 
@@ -1027,11 +1061,22 @@ q3 = df_nocancel_bow['TotalPrice'].quantile(0.75)
 q4 = df_nocancel_bow['TotalPrice'].quantile(1)
 
 
-# In[ ]:
+# In[117]:
 
 
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
 
-clusterer = KMeans(n_clusters=4, random_state=42).fit(X_scaled)
+#clusterer = KMeans(n_clusters=4, random_state=42).fit(data_pca)
+
+
+# # Export cleaned data
+
+# In[120]:
+
+
+if not os.path.isdir(DATA_PATH_OUT):
+    os.makedirs(DATA_PATH_OUT)
+
+df.to_csv(DATA_PATH_FILE_OUTPUT, index=False)
 

@@ -27,6 +27,8 @@ import pandas as pd
 
 import qgrid
 
+import numpy as np
+
 def qgrid_show(df):
     display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
 
@@ -513,4 +515,28 @@ class LogTransformer(BaseEstimator, TransformerMixin):
         else:
             return(df)
  
+
+def load_data(in_file):
+    df = pd.read_csv(in_file, encoding='utf-8')   
         
+    return(df)
+    
+def custom_train_test_split_sample(df, split_feature, SAMPLED_DATA=False):
+    from sklearn.model_selection import train_test_split
+    
+    if (SAMPLED_DATA == True):
+        df_labels_discrete = pd.cut(df[split_feature], bins=50)
+        df, df2 = train_test_split(df, train_size=NB_SAMPLES, random_state=42, shuffle = True, stratify = df_labels_discrete)
+        
+    #df_labels_discrete = pd.cut(df[split_feature], bins=50)
+    df_labels_discrete = pd.qcut(df[split_feature], 10)
+    
+    df_train, df_test = train_test_split(df, test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
+    #df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
+    
+    '''
+    df_train = df_train.copy()
+    df_test = df_test.copy()
+    '''
+    
+    return df, df_train, df_test
