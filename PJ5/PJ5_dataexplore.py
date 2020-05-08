@@ -835,7 +835,6 @@ matrix_vectorized
 
 
 bow_features = ['desc_' + str(s) for s in vectorizer.get_feature_names()]
-df_vectorized = pd.DataFrame(matrix_vectorized.todense(), columns=bow_features)
 
 
 # In[92]:

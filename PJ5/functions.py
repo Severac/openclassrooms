@@ -19,6 +19,9 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 
+
+from sklearn.feature_extraction.text import CountVectorizer
+
 import statistics
 
 from scipy import sparse
@@ -28,6 +31,7 @@ import pandas as pd
 import qgrid
 
 import numpy as np
+
 
 def qgrid_show(df):
     display(qgrid.show_grid(df, grid_options={'forceFitColumns': False, 'defaultColumnWidth': 170}))
@@ -517,7 +521,8 @@ class LogTransformer(BaseEstimator, TransformerMixin):
  
 
 def load_data(in_file):
-    df = pd.read_csv(in_file, encoding='utf-8')   
+    df = pd.read_csv(in_file, encoding='utf-8', converters={'InvoiceNo': str, 'StockCode':str, 'Description': str, \
+                                       'CustomerID':str, 'Country': str, 'DescriptionNormalized': str})   
         
     return(df)
     
@@ -527,12 +532,18 @@ def custom_train_test_split_sample(df, split_feature, SAMPLED_DATA=False):
     if (SAMPLED_DATA == True):
         df_labels_discrete = pd.cut(df[split_feature], bins=50)
         df, df2 = train_test_split(df, train_size=NB_SAMPLES, random_state=42, shuffle = True, stratify = df_labels_discrete)
-        
+            
     #df_labels_discrete = pd.cut(df[split_feature], bins=50)
     df_labels_discrete = pd.qcut(df[split_feature], 10)
     
     df_train, df_test = train_test_split(df, test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
     #df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
+
+    convert_dict = {'InvoiceNo': str, 'StockCode':str, 'Description': str, \
+                                       'CustomerID':str, 'Country': str, 'DescriptionNormalized': str}
+  
+    df_train = df_train.astype(convert_dict) 
+    df_test = df_test.astype(convert_dict)
     
     '''
     df_train = df_train.copy()
@@ -540,3 +551,94 @@ def custom_train_test_split_sample(df, split_feature, SAMPLED_DATA=False):
     '''
     
     return df, df_train, df_test
+
+
+
+class BowEncoder(BaseEstimator, TransformerMixin):
+    #def __init__(self, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):
+    def __init__(self, min_df=0.001):
+        #self.categorical_features_totransform = categorical_features_totransform
+        self.fitted = False
+        self.all_feature_values = {}
+        self.min_df = min_df
+        self.vectorizers = {}
+        #self.df_encoded = None
+    
+    #def fit(self, df, labels=None):      
+    def fit(self, df, categorical_features_totransform=['DescriptionNormalized']):      
+        print('Fit data')
+        print(f'categorical_features_totransform == {categorical_features_totransform}')
+        self.categorical_features_totransform = categorical_features_totransform
+        print('!! categorical_features_totransform' + str(self.categorical_features_totransform))
+
+        if (self.categorical_features_totransform != None):
+            for feature_name in self.categorical_features_totransform:
+                self.vectorizers[feature_name] = CountVectorizer(min_df=self.min_df)
+                matrix_vectorized = self.vectorizers[feature_name].fit(df[feature_name])
+                                
+        self.fitted = True
+        
+        return self
+    
+    def transform(self, df):
+        if (self.fitted == False):
+            self.fit(df)
+        
+        if (self.categorical_features_totransform != None):
+            print('Transform data')
+            for feature_name in self.categorical_features_totransform:
+                matrix_vectorized = self.vectorizers[feature_name].transform(df[feature_name])
+                
+                bow_features = [feature_name + '_' + str(s) for s in self.vectorizers[feature_name].get_feature_names()]
+        
+                df_vectorized = pd.DataFrame(matrix_vectorized.todense(), columns=bow_features, dtype='int8')
+                del matrix_vectorized
+                
+                df = pd.concat([df, df_vectorized], axis=1)            
+        
+            return(df)
+
+        else:
+            return(df)
+            
+'''
+This function agregates orders to client level :
+    - Get client ids that have cancelled at least 1 order
+    - Get client ids that bought top value products (passed as input to the model)
+    - Remove cancellations
+    - Calculate number of months for each client max(last month - first month ordered, 1 month)
+    
+    - Agregate on client level and sum: TotalPrice, BoW features
+        > Then divide Total price by number of months of client
+        
+    - Add features :
+        - Client has cancelled at least 1 order
+        - Clients has bought top value product
+'''
+            
+class AgregateToClientLevel(BaseEstimator, TransformerMixin):
+    def __init__(self, top_value_products):
+        self.fitted = False
+        self.top_value_products = top_value_products
+    
+    def fit(self, df):      
+        print('Fit data')
+
+                                
+        self.fitted = True
+        
+        return self
+    
+    def transform(self, df):
+        if (self.fitted == False):
+            self.fit(df)
+        
+        #df_gbproduct = df_nocancel[['StockCode', 'TotalPrice']].groupby('StockCode').sum()['TotalPrice']
+        
+        custid_cancelled = df[df['InvoiceNo'].str.startswith('C') == True]['CustomerID'].unique()
+
+        df_nocancel = df[df['InvoiceNo'].str.startswith('C') == False]
+        df_nocancel.reset_index(inplace=True)
+
+
+        return(df)
