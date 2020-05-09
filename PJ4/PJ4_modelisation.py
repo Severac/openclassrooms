@@ -3303,7 +3303,7 @@ df_feature_importances = pd.DataFrame(data = {'Feature name' : df_train_transfor
 pd.concat([df_feature_importances.sort_values(by='Feature importance', ascending=False),            df_feature_importances[['Feature importance']].sort_values(by='Feature importance', ascending=False).cumsum()], axis=1)
 
 
-# ## Random forest with weighted optimisation (suppress training instances)
+# ## Final model : random forest with weighted optimisation (suppress training instances)
 
 # In[78]:
 

@@ -186,5 +186,7 @@ if (debug_mode == True):
 
 del model
 
+# Manual memory cleaning at the of the program is necessary to avoid memory leak 
+# (due to streamlit bug ?)
 import gc
 gc.collect()

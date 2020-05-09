@@ -271,13 +271,13 @@ display_percent_complete(df)
 
 # ### Display cancellations (InvoiceNo starting with C according to dataset description)
 
-# In[25]:
+# In[26]:
 
 
 df[df['InvoiceNo'].str.startswith('C')]
 
 
-# In[26]:
+# In[27]:
 
 
 print('{:.2f}% of orders are cancellations'.format((len(df[df['InvoiceNo'].str.startswith('C')])/df.shape[0])*100))
@@ -285,7 +285,7 @@ print('{:.2f}% of orders are cancellations'.format((len(df[df['InvoiceNo'].str.s
 
 # ### Check all orders from a client that has cancelled 1 order
 
-# In[27]:
+# In[28]:
 
 
 df[df['CustomerID'] == '17548']
@@ -296,25 +296,25 @@ df[df['CustomerID'] == '17548']
 
 # ### Mean number of orders and total price for clients :
 
-# In[28]:
+# In[29]:
 
 
 df['CustomerID'].value_counts().mean()
 
 
-# In[29]:
+# In[30]:
 
 
 df['TotalPrice'] = df['Quantity'] * df['UnitPrice']
 
 
-# In[30]:
+# In[31]:
 
 
 df[['CustomerID', 'TotalPrice']].groupby('CustomerID').sum().mean()
 
 
-# In[31]:
+# In[32]:
 
 
 # Mean price must be calculated without taking cancellations into account :
@@ -323,13 +323,13 @@ df[df['InvoiceNo'].str.startswith('C') == False][['CustomerID', 'TotalPrice']].g
 
 # ### Mean number of orders and total price for clients that have cancelled at least 1 order :
 
-# In[32]:
+# In[33]:
 
 
 df[df['CustomerID'].isin(df[df['InvoiceNo'].str.startswith('C')]['CustomerID'].unique())]['CustomerID'].value_counts().mean()
 
 
-# In[33]:
+# In[34]:
 
 
 # Take cancellations into account
@@ -337,13 +337,13 @@ df[(df['CustomerID'].isin(df[df['InvoiceNo'].str.startswith('C')]['CustomerID'].
   ]['CustomerID'].value_counts().mean()
 
 
-# In[34]:
+# In[35]:
 
 
 df[df['CustomerID'].isin(df[df['InvoiceNo'].str.startswith('C')]['CustomerID'].unique())][['CustomerID', 'TotalPrice']].groupby('CustomerID').sum().mean()
 
 
-# In[35]:
+# In[36]:
 
 
 # Take cancellations into account
@@ -354,10 +354,60 @@ df[(df['CustomerID'].isin(df[df['InvoiceNo'].str.startswith('C')]['CustomerID'].
 # => Clients that have cancelled at least 1 order earn 2x more value  (4243 / 2048  = 2.07)  
 # => We'll keep this information of cancellations for the model
 
-# In[36]:
+# In[37]:
 
 
 df_nocancel = df[df['InvoiceNo'].str.startswith('C') == False]
+
+
+# ### Number of clients that got at least one discount
+
+# In[47]:
+
+
+df[df['StockCode'] == 'D']['CustomerID'].unique()
+
+
+# ### Total earned values for clients that got at least one discount
+
+# In[52]:
+
+
+df[df['CustomerID'].isin(df[df['StockCode'] == 'D']['CustomerID'].unique())]['TotalPrice'].sum()
+
+
+# In[55]:
+
+
+df[df['CustomerID'].isin(df[df['StockCode'] == 'D']['CustomerID'].unique()) & (df['StockCode'] == 'D')]['TotalPrice'].sum()
+
+
+# => 24 clients that got at least 1 discount earn 1M £ !  'StockCode' == 'D' (discount) feature will be useful
+
+# ### Mean number of orders and total price for clients that have got a discount
+
+# In[38]:
+
+
+# Take cancellations into account
+df[(df['CustomerID'].isin(df[df['StockCode'] == 'D']['CustomerID'].unique()))    & (df['InvoiceNo'].str.startswith('C') == False)
+  ][['CustomerID', 'TotalPrice']].groupby('CustomerID').sum().mean()
+
+
+# In[40]:
+
+
+df[(df['CustomerID'].isin(df[df['StockCode'] == 'D']['CustomerID'].unique()))    & (df['StockCode'] == 'D')
+  ][['CustomerID', 'TotalPrice']].groupby('CustomerID').sum().mean()
+
+
+# ### Drop false cancellations
+
+# In[25]:
+
+
+# Drop all alphanumeric product codes except 'D' that are Discounts which is a useful feature
+df.drop(index=df[df['StockCode'].isin(['POST', 'M', 'PADS', 'DOT', 'CRUK'])].index, axis=0, inplace=True)
 
 
 # ## Invoice date (min and max values)

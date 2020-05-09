@@ -566,7 +566,7 @@ class BowEncoder(BaseEstimator, TransformerMixin):
     
     #def fit(self, df, labels=None):      
     def fit(self, df, categorical_features_totransform=['DescriptionNormalized']):      
-        print('Fit data')
+        print('BowEncoder : Fit data')
         print(f'categorical_features_totransform == {categorical_features_totransform}')
         self.categorical_features_totransform = categorical_features_totransform
         print('!! categorical_features_totransform' + str(self.categorical_features_totransform))
@@ -603,6 +603,7 @@ class BowEncoder(BaseEstimator, TransformerMixin):
             
 '''
 This function agregates orders to client level :
+    - Drop generic products 
     - Get client ids that have cancelled at least 1 order
     - Get client ids that bought top value products (passed as input to the model)
     - Remove cancellations
@@ -617,12 +618,12 @@ This function agregates orders to client level :
 '''
             
 class AgregateToClientLevel(BaseEstimator, TransformerMixin):
-    def __init__(self, top_value_products):
+    def __init__(self, stockcodes_top_value_products):
         self.fitted = False
-        self.top_value_products = top_value_products
+        self.stockcodes_top_value_products = stockcodes_top_value_products
     
     def fit(self, df):      
-        print('Fit data')
+        print('AgregateToClientLevel : Fit data')
 
                                 
         self.fitted = True
@@ -633,12 +634,55 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         if (self.fitted == False):
             self.fit(df)
         
-        #df_gbproduct = df_nocancel[['StockCode', 'TotalPrice']].groupby('StockCode').sum()['TotalPrice']
+        LAST_ORDER_DATE_IN_DATASET = '2011-12-09 12:50:00'
         
+        # NEED TO fix agregation of TotalPrice on these products :
+        # Drop generic products (postage fees, manual entries, dot postage,   D?, CRUK commission?) 
+        # In data modelisation notebook there will be nothing to drop since we cleaned data in exploration notebook
+        # But for live data feed, it may needed to drop those lines
+        df.drop(index=df[df['StockCode'].isin(['POST', 'D', 'M', 'PADS', 'DOT', 'CRUK'])].index, axis=0, inplace=True)
+        
+        # Get client ids that have cancelled at least 1 order
         custid_cancelled = df[df['InvoiceNo'].str.startswith('C') == True]['CustomerID'].unique()
+        
+        # Get client ids that bought top value products (passed as input to the model)
+        custid_topvalue = df[df['StockCode'].isin(self.stockcodes_top_value_products)]['CustomerID'].unique()
 
+        # Remove cancellations
         df_nocancel = df[df['InvoiceNo'].str.startswith('C') == False]
         df_nocancel.reset_index(inplace=True)
+        
+        # Calculate number of months for each client max(last month - first month ordered, 1 month)
+        series_gbclient_nbmonths = np.maximum(\
+            (\
+               (\
+               pd.to_datetime('2011-12-09 12:50:00')\
+               - pd.to_datetime(df_nocancel[['CustomerID', 'InvoiceDate']].groupby('CustomerID').min()['InvoiceDate'])
+               )\
+                / (np.timedelta64(1, "M"))\
+            ), 1)
 
+        # Agregate on client level and sum: TotalPrice, BoW features
+        feat_list = ['CustomerID', 'TotalPrice']
+        feat_list_bow = [col for col in df_nocancel if col.startswith('DescriptionNormalized_')]
+        feat_list.extend(feat_list_bow)
+        
+        df_gbcust_nocancel = df_nocancel[feat_list].groupby('CustomerID').sum()
+        # Set max value of bow features that we just summed to 1 :
+        df_gbcust_nocancel[feat_list_bow] = df_gbcust_nocancel[feat_list_bow].clip(upper=1)
+        
+        # Then divide Total price by number of months of client
+        df_gbcust_nocancel['TotalPrice'] = df_gbcust_nocancel['TotalPrice'] / series_gbclient_nbmonths
+        df_gbcust_nocancel.rename(columns={'TotalPrice' : 'TotalPricePerMonth'}, inplace=True)
 
-        return(df)
+        # Add feature : Client has cancelled at least 1 order
+        df_gbcust_nocancel['HasEverCancelled'] = 0
+        df_gbcust_nocancel.loc[df_gbcust_nocancel.index.isin(custid_cancelled), 'HasEverCancelled'] = 1
+
+        # Add feature : Clients has bought top value product
+        df_gbcust_nocancel['BoughtTopValueProduct'] = 0
+        df_gbcust_nocancel.loc[df_gbcust_nocancel.index.isin(custid_topvalue), 'BoughtTopValueProduct'] = 1
+
+        # Now, need to remove POSTAGE products and maybe DISCOUNT, and M
+
+        return(df_gbcust_nocancel)
