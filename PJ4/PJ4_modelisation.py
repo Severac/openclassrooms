@@ -1786,7 +1786,7 @@ print("MAE : {:.2f}".format(mean_absolute_error(df_test[model1_label], y_pred_du
 
 
 # RMSE : 27.57  
-# MAE : 4.21  
+# MAE : real value is around 21 (4.21 was because we were doing square root of MAE which was an default in the code)
 # 
 # RMSE of naive approach was 42 before removing outliers
 
@@ -3714,7 +3714,7 @@ plt.savefig('linreg_actual_vs_predicted_test_set.png', dpi=400)
 
 # ### Degree 8
 
-# In[267]:
+# In[ ]:
 
 
 if (DATA_LOADED == True):
