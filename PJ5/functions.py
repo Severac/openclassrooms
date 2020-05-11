@@ -15,12 +15,11 @@ from sklearn import preprocessing
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
-
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
-
-
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.decomposition import PCA
 
 import statistics
 
@@ -480,6 +479,10 @@ class MinMaxScalerMultiple(BaseEstimator, TransformerMixin):
             self.fitted = True
             return(df)
         else:
+            if (self.columns == 'ALL_FEATURES'):
+                self.columns = df.columns.tolist()
+                #print(f'self.columns = {self.columns}')
+                
             self.scaler.fit(df[self.columns].to_numpy())            
             self.fitted = True
         
@@ -498,26 +501,90 @@ class MinMaxScalerMultiple(BaseEstimator, TransformerMixin):
 
         return(df)        
         
-class LogTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self, features_totransform = None):  # If None : every column is kept, nothing is done
-        self.features_toselect = features_toselect
+class LogScalerMultiple(BaseEstimator, TransformerMixin):
+    def __init__(self, features_toscale=None):
+        self.fitted = False
+        self.columns = features_toscale
     
-    def fit(self, df, labels=None):      
+    def fit(self, df):              
+        print('Fit log scaler multiple')
+        self.scaler = FunctionTransformer(np.log1p, validate=True)
+  
+        if (self.columns == None):
+            self.fitted = True
+            return(df)
+            
+        else:
+            self.scaler.fit(df[self.columns].to_numpy())            
+            self.fitted = True
+        
         return self
     
-    def transform(self, df):       
-        if (self.features_toselect != None):
-            filter_cols = [col for col in df if (col.startswith(tuple(self.features_toselect)))]
-            
-            filter_cols.sort()
-            
-            print("Features selected (in order): " + str(df[filter_cols].columns))
-            
-            df = df.loc[:, filter_cols]
+    def transform(self, df):
+        print('Transform log scaler scaler multiple')
+        if (self.fitted == False):
+            self.fit(df)
+        
+        if (self.columns == None):
             return(df)
-
+        
         else:
+            df.loc[:, self.columns] = self.scaler.transform(df.loc[:, self.columns].to_numpy())
+
+        return(df)    
+
+
+class DimensionalityReductor(BaseEstimator, TransformerMixin):
+    def __init__(self, features_totransform=None, algorithm_to_use='PCA', n_dim=20):
+        self.fitted = False
+        self.features_totransform = features_totransform
+        self.algorithm_to_use = algorithm_to_use
+        self.n_dim = n_dim
+    
+    def fit(self, df):              
+        print('Fit Dimensionality Reductor')
+              
+        if (self.features_totransform == None):
+            self.fitted = True
             return(df)
+            
+        else:            
+            if (self.algorithm_to_use == 'PCA'):
+                self.reductor = PCA(n_components=self.n_dim)                
+            
+            self.filter_cols = [col for col in df if (col.startswith(tuple(self.features_totransform)))]            
+            self.filter_cols.sort()
+            
+            print("Features selected (in order): " + str(df[self.filter_cols].columns))            
+            
+            self.reductor.fit(df[self.filter_cols].to_numpy())            
+            self.fitted = True
+        
+        return self
+    
+    def transform(self, df):
+        print('Transform Dimensionality Reductor')
+        if (self.fitted == False):
+            self.fit(df)
+        
+        if (self.features_totransform == None):
+            return(df)
+        
+        else:
+            remaining_columns = list(set(df.columns.tolist()) - set(self.filter_cols))
+            
+            print(f'Remaining columns: {remaining_columns}')
+            
+            np_transformed = self.reductor.transform(df[self.filter_cols].to_numpy())
+            
+            if (remaining_columns != []):
+                df_transformed = pd.concat([df[remaining_columns].reset_index(drop=True), pd.DataFrame(np_transformed)], axis=1)
+                
+            else:
+                df_transformed = pd.DataFrame(np_transformed)
+
+        return(df_transformed)    
+
  
 
 def load_data(in_file):
@@ -637,10 +704,11 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         LAST_ORDER_DATE_IN_DATASET = '2011-12-09 12:50:00'
         
         # NEED TO fix agregation of TotalPrice on these products :
-        # Drop generic products (postage fees, manual entries, dot postage,   D?, CRUK commission?) 
+        # Drop generic products (postage fees, manual entries, dot postage, CRUK commission) 
+        # But keep discounts (StockCode == 'D')
         # In data modelisation notebook there will be nothing to drop since we cleaned data in exploration notebook
         # But for live data feed, it may needed to drop those lines
-        df.drop(index=df[df['StockCode'].isin(['POST', 'D', 'M', 'PADS', 'DOT', 'CRUK'])].index, axis=0, inplace=True)
+        df.drop(index=df[df['StockCode'].isin(['POST', 'M', 'PADS', 'DOT', 'CRUK'])].index, axis=0, inplace=True)
         
         # Get client ids that have cancelled at least 1 order
         custid_cancelled = df[df['InvoiceNo'].str.startswith('C') == True]['CustomerID'].unique()
