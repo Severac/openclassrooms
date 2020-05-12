@@ -20,6 +20,8 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.decomposition import PCA
+from sklearn.neighbors import NeighborhoodComponentsAnalysis
+from sklearn.manifold import TSNE
 
 import statistics
 
@@ -535,11 +537,12 @@ class LogScalerMultiple(BaseEstimator, TransformerMixin):
 
 
 class DimensionalityReductor(BaseEstimator, TransformerMixin):
-    def __init__(self, features_totransform=None, algorithm_to_use='PCA', n_dim=20):
+    def __init__(self, features_totransform=None, algorithm_to_use='PCA', n_dim=20, labels_featurename=None):
         self.fitted = False
         self.features_totransform = features_totransform
         self.algorithm_to_use = algorithm_to_use
         self.n_dim = n_dim
+        self.labels_featurename = labels_featurename
     
     def fit(self, df):              
         print('Fit Dimensionality Reductor')
@@ -550,14 +553,35 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
             
         else:            
             if (self.algorithm_to_use == 'PCA'):
-                self.reductor = PCA(n_components=self.n_dim)                
+                self.reductor = PCA(n_components=self.n_dim, random_state=42)                
+            
+            if (self.algorithm_to_use == 'NCA'):
+                '''
+                if (self.labels == None):
+                    self.labels = df['TotalPricePerMonth']
+                '''
+                
+                self.labels_discrete = pd.cut(df[self.labels_featurename], bins=range(1,10), right=True).astype(str).tolist()
+                self.reductor = NeighborhoodComponentsAnalysis(random_state=42, n_components=self.n_dim)
+                
+            
+            if (self.algorithm_to_use == 'TSNE'):
+                self.reductor = TSNE(n_components=self.n_dim, random_state=42)
             
             self.filter_cols = [col for col in df if (col.startswith(tuple(self.features_totransform)))]            
             self.filter_cols.sort()
             
             print("Features selected (in order): " + str(df[self.filter_cols].columns))            
             
-            self.reductor.fit(df[self.filter_cols].to_numpy())            
+            if (self.algorithm_to_use == 'PCA'):
+                self.reductor.fit(df[self.filter_cols].to_numpy())            
+            
+            if (self.algorithm_to_use == 'NCA'):
+                self.reductor.fit(df[self.filter_cols].to_numpy(), self.labels_discrete)       
+            
+            if  (self.algorithm_to_use == 'TSNE'):
+                print('No fit for TSNE')
+            
             self.fitted = True
         
         return self
@@ -575,7 +599,12 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
             
             print(f'Remaining columns: {remaining_columns}')
             
-            np_transformed = self.reductor.transform(df[self.filter_cols].to_numpy())
+            if (self.algorithm_to_use == 'TSNE'):
+                # TNSE has not transform function so we have to do fit_transform directly
+                np_transformed = self.reductor.fit_transform(df[self.filter_cols].to_numpy())            
+            
+            else:
+                np_transformed = self.reductor.transform(df[self.filter_cols].to_numpy())
             
             if (remaining_columns != []):
                 df_transformed = pd.concat([df[remaining_columns].reset_index(drop=True), pd.DataFrame(np_transformed)], axis=1)
