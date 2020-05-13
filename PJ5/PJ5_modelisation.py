@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ5 : Online Retail dataset :  modelisation notebook 
 
-# In[125]:
+# In[207]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -44,6 +44,11 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import GridSearchCV
 
 from sklearn.manifold import TSNE
+
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import AgglomerativeClustering
+from scipy.stats import entropy
 
 DATA_PATH = os.path.join("datasets", "onlineretail")
 DATA_PATH = os.path.join(DATA_PATH, "out")
@@ -178,7 +183,7 @@ importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[93]:
+# In[12]:
 
 
 df_train = df_train_ori
@@ -338,21 +343,21 @@ plt.ylabel("Axe 2")
 
 # # Model with only bag of word features
 
-# In[66]:
+# In[26]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[67]:
+# In[27]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[68]:
+# In[28]:
 
 
 preparation_pipeline = Pipeline([
@@ -372,25 +377,25 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[69]:
+# In[29]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 
 
-# In[70]:
+# In[30]:
 
 
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[71]:
+# In[31]:
 
 
 df_train
 
 
-# In[72]:
+# In[32]:
 
 
 pca = PCA(n_components=2, random_state=42)
@@ -398,7 +403,7 @@ X_transformed = pca.fit_transform(df_train)
 X_test_transformed = pca.fit_transform(df_test)
 
 
-# In[74]:
+# In[33]:
 
 
 fig = plt.figure()
@@ -413,7 +418,7 @@ plt.ylabel("Axe 2")
 #plt.yscale('log')
 
 
-# In[76]:
+# In[34]:
 
 
 import plotly as py
@@ -444,21 +449,21 @@ py.offline.plot(fig, filename='clusters_plot_clients_onlybow.html')
 
 # # Model with bow features + TotalPricePerMonth
 
-# In[77]:
+# In[35]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[78]:
+# In[36]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[79]:
+# In[37]:
 
 
 preparation_pipeline = Pipeline([
@@ -478,25 +483,25 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[80]:
+# In[38]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 
 
-# In[81]:
+# In[39]:
 
 
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[82]:
+# In[40]:
 
 
 df_train
 
 
-# In[83]:
+# In[41]:
 
 
 pca = PCA(n_components=2, random_state=42)
@@ -510,7 +515,7 @@ X_test_transformed = pca.fit_transform(df_test)
 
 
 
-# In[84]:
+# In[42]:
 
 
 fig = plt.figure()
@@ -525,7 +530,7 @@ plt.ylabel("Axe 2")
 #plt.yscale('log')
 
 
-# In[76]:
+# In[43]:
 
 
 import plotly as py
@@ -556,21 +561,21 @@ py.offline.plot(fig, filename='clusters_plot_clients_onlybow.html')
 
 # # Model with bow features + TotalPricePerMonth + HasEverCancelled
 
-# In[85]:
+# In[44]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[86]:
+# In[45]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[87]:
+# In[46]:
 
 
 preparation_pipeline = Pipeline([
@@ -590,25 +595,25 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[88]:
+# In[47]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 
 
-# In[89]:
+# In[48]:
 
 
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[90]:
+# In[49]:
 
 
 df_train
 
 
-# In[91]:
+# In[50]:
 
 
 pca = PCA(n_components=2, random_state=42)
@@ -622,7 +627,7 @@ X_test_transformed = pca.fit_transform(df_test)
 
 
 
-# In[92]:
+# In[51]:
 
 
 fig = plt.figure()
@@ -637,7 +642,7 @@ plt.ylabel("Axe 2")
 #plt.yscale('log')
 
 
-# In[76]:
+# In[52]:
 
 
 import plotly as py
@@ -668,21 +673,21 @@ py.offline.plot(fig, filename='clusters_plot_clients_onlybow.html')
 
 # # Model with all features and NCA
 
-# In[107]:
+# In[53]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[108]:
+# In[54]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[109]:
+# In[55]:
 
 
 preparation_pipeline = Pipeline([
@@ -701,26 +706,26 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[110]:
+# In[56]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[111]:
+# In[57]:
 
 
 df_train
 
 
-# In[112]:
+# In[58]:
 
 
 df_train.info()
 
 
-# In[114]:
+# In[59]:
 
 
 pca = PCA(n_components=2,random_state=42)
@@ -728,13 +733,13 @@ X_transformed = pca.fit_transform(df_train)
 X_test_transformed = pca.fit_transform(df_test)
 
 
-# In[115]:
+# In[60]:
 
 
 X_transformed[:,1]
 
 
-# In[116]:
+# In[61]:
 
 
 fig = plt.figure()
@@ -749,7 +754,7 @@ plt.ylabel("Axe 2")
 #plt.yscale('log')
 
 
-# In[117]:
+# In[62]:
 
 
 import plotly as py
@@ -780,21 +785,21 @@ py.offline.plot(fig, filename='clusters_plot_clients_nca_allfeats.html')
 
 # # Model with all features and NCA, final representation with tSNE
 
-# In[142]:
+# In[63]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[143]:
+# In[64]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[144]:
+# In[65]:
 
 
 preparation_pipeline = Pipeline([
@@ -813,26 +818,26 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[145]:
+# In[66]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[146]:
+# In[67]:
 
 
 df_train
 
 
-# In[147]:
+# In[68]:
 
 
 df_train.info()
 
 
-# In[148]:
+# In[69]:
 
 
 tsne = TSNE(n_components=2, random_state=42)
@@ -840,13 +845,13 @@ X_transformed = tsne.fit_transform(df_train)
 X_test_transformed = tsne.fit_transform(df_test)
 
 
-# In[149]:
+# In[70]:
 
 
 X_transformed[:,1]
 
 
-# In[150]:
+# In[71]:
 
 
 fig = plt.figure()
@@ -861,7 +866,7 @@ plt.ylabel("Axe 2")
 #plt.yscale('log')
 
 
-# In[151]:
+# In[72]:
 
 
 import plotly as py
@@ -892,21 +897,21 @@ py.offline.plot(fig, filename='clusters_plot_clients_nca_allfeats_final_tsne.htm
 
 # # Model with all features and PCA, final representation with tSNE
 
-# In[169]:
+# In[73]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[170]:
+# In[74]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[171]:
+# In[75]:
 
 
 preparation_pipeline = Pipeline([
@@ -925,26 +930,26 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[172]:
+# In[76]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[173]:
+# In[77]:
 
 
 df_train
 
 
-# In[174]:
+# In[78]:
 
 
 df_train.info()
 
 
-# In[ ]:
+# In[79]:
 
 
 tsne = TSNE(n_components=2, random_state=42)
@@ -952,13 +957,13 @@ X_transformed = tsne.fit_transform(df_train)
 X_test_transformed = tsne.fit_transform(df_test)
 
 
-# In[139]:
+# In[80]:
 
 
 X_transformed[:,1]
 
 
-# In[140]:
+# In[81]:
 
 
 fig = plt.figure()
@@ -973,7 +978,7 @@ plt.ylabel("Axe 2")
 #plt.yscale('log')
 
 
-# In[141]:
+# In[82]:
 
 
 import plotly as py
@@ -1002,23 +1007,23 @@ fig = go.Figure(data = [trace_1], layout = layout)
 py.offline.plot(fig, filename='clusters_plot_clients_pca_allfeats_final_tsne.html') 
 
 
-# # Model with all features and tSNE, final representation with tSNE
+# # Model with all features and tSNE, final representation with tSNE (best)
 
-# In[177]:
+# In[83]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[178]:
+# In[84]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[179]:
+# In[85]:
 
 
 preparation_pipeline = Pipeline([
@@ -1037,26 +1042,26 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[180]:
+# In[86]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[181]:
+# In[87]:
 
 
 df_train
 
 
-# In[182]:
+# In[88]:
 
 
 df_train.info()
 
 
-# In[187]:
+# In[89]:
 
 
 tsne = TSNE(n_components=2, random_state=42)
@@ -1064,13 +1069,13 @@ X_transformed = tsne.fit_transform(df_train)
 X_test_transformed = tsne.fit_transform(df_test)
 
 
-# In[188]:
+# In[90]:
 
 
 X_transformed[:,1]
 
 
-# In[189]:
+# In[91]:
 
 
 fig = plt.figure()
@@ -1085,7 +1090,119 @@ plt.ylabel("Axe 2")
 #plt.yscale('log')
 
 
-# In[190]:
+# In[92]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = X_transformed[:,0], y = X_transformed[:,1],
+                    name = 'Clients',
+                    mode = 'markers',
+                    marker=dict(color=df_score_cat_train),
+                    text = df_train['TotalPricePerMonth'],
+                    )
+
+
+layout = go.Layout(title = 'Représentation des clients en 2 dimensions',
+                   hovermode = 'closest',
+)
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+#py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_clients_sne_allfeats_final_tsne.html') 
+
+
+# # Model with all features and tSNE, BoW not apart from the rest, final representation with tSNE
+
+# In[112]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[113]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+
+# In[114]:
+
+
+preparation_pipeline = Pipeline([
+    #('features_selector', FeaturesSelector(features_toselect=MODEL_FEATURES)),
+    ('bow_encoder', BowEncoder()),
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products)),
+    ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth'])),
+    
+    
+    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
+   
+    ('minmaxscaler', MinMaxScalerMultiple(features_toscale=['TotalPricePerMonth'])),
+    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized', 'TotalPricePerMonth', 'HasEverCancelled', 'BoughtTopValueProduct'], \
+                                                        algorithm_to_use='TSNE', n_dim=2)),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+])
+
+
+# In[115]:
+
+
+df_train = preparation_pipeline.fit_transform(df_train)
+df_test = preparation_pipeline.transform(df_test)
+
+
+# In[116]:
+
+
+df_train
+
+
+# In[88]:
+
+
+df_train.info()
+
+
+# In[89]:
+
+
+tsne = TSNE(n_components=2, random_state=42)
+X_transformed = tsne.fit_transform(df_train)
+X_test_transformed = tsne.fit_transform(df_test)
+
+
+# In[90]:
+
+
+X_transformed[:,1]
+
+
+# In[91]:
+
+
+fig = plt.figure()
+fig.suptitle('Customers 2d representation, training set')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+plt.scatter(X_transformed[:,0], X_transformed[:,1], c=df_score_cat_train)
+#ax.set_xlim([0,500])
+plt.xlabel('Axe 1')
+plt.ylabel("Axe 2")
+#plt.yscale('log')
+
+
+# In[92]:
 
 
 import plotly as py
@@ -1116,21 +1233,21 @@ py.offline.plot(fig, filename='clusters_plot_clients_sne_allfeats_final_tsne.htm
 
 # # Model with all features and tSNE, final representation with tSNE 3D
 
-# In[191]:
+# In[93]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[192]:
+# In[94]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[193]:
+# In[95]:
 
 
 preparation_pipeline = Pipeline([
@@ -1149,26 +1266,26 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[194]:
+# In[96]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[195]:
+# In[97]:
 
 
 df_train
 
 
-# In[196]:
+# In[98]:
 
 
 df_train.info()
 
 
-# In[197]:
+# In[99]:
 
 
 tsne = TSNE(n_components=3, random_state=42)
@@ -1176,13 +1293,13 @@ X_transformed = tsne.fit_transform(df_train)
 X_test_transformed = tsne.fit_transform(df_test)
 
 
-# In[198]:
+# In[100]:
 
 
 X_transformed[:,1]
 
 
-# In[201]:
+# In[101]:
 
 
 import plotly as py
@@ -1211,11 +1328,496 @@ fig = go.Figure(data = [trace_1], layout = layout)
 py.offline.plot(fig, filename='clusters_plot_clients_sne_allfeats_final_tsne_3d.html') 
 
 
-# In[ ]:
+# # Model with bow features + TotalPricePerMonth and NCA, final representation with tSNE
+
+# In[102]:
 
 
+importlib.reload(sys.modules['functions'])
+from functions import *
 
 
+# In[103]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+
+# In[104]:
+
+
+preparation_pipeline = Pipeline([
+    #('features_selector', FeaturesSelector(features_toselect=MODEL_FEATURES)),
+    ('bow_encoder', BowEncoder()),
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products)),
+    ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth'])),
+    
+    
+    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
+   
+    ('minmaxscaler', MinMaxScalerMultiple(features_toscale=['TotalPricePerMonth'])),
+    ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'TotalPricePerMonth'])),
+    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                        algorithm_to_use='NCA', n_dim=200, labels_featurename='TotalPricePerMonth')),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+])
+
+
+# In[105]:
+
+
+df_train = preparation_pipeline.fit_transform(df_train)
+df_test = preparation_pipeline.transform(df_test)
+
+
+# In[106]:
+
+
+df_train
+
+
+# In[107]:
+
+
+df_train.info()
+
+
+# In[108]:
+
+
+tsne = TSNE(n_components=2, random_state=42)
+X_transformed = tsne.fit_transform(df_train)
+X_test_transformed = tsne.fit_transform(df_test)
+
+
+# In[109]:
+
+
+X_transformed[:,1]
+
+
+# In[110]:
+
+
+fig = plt.figure()
+fig.suptitle('Customers 2d representation, training set')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+plt.scatter(X_transformed[:,0], X_transformed[:,1], c=df_score_cat_train)
+#ax.set_xlim([0,500])
+plt.xlabel('Axe 1')
+plt.ylabel("Axe 2")
+#plt.yscale('log')
+
+
+# In[111]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = X_transformed[:,0], y = X_transformed[:,1],
+                    name = 'Clients',
+                    mode = 'markers',
+                    marker=dict(color=df_score_cat_train),
+                    text = df_train['TotalPricePerMonth'],
+                    )
+
+
+layout = go.Layout(title = 'Représentation des clients en 2 dimensions',
+                   hovermode = 'closest',
+)
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+#py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_clients_nca_bowandtotalpricepermonthfeats_final_tsne.html') 
+
+
+# # Model with tSNE, then clustering algorithm KMeans
+
+# In[138]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[123]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+
+# In[124]:
+
+
+preparation_pipeline = Pipeline([
+    #('features_selector', FeaturesSelector(features_toselect=MODEL_FEATURES)),
+    ('bow_encoder', BowEncoder()),
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products)),
+    ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth'])),
+    
+    
+    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
+   
+    ('minmaxscaler', MinMaxScalerMultiple(features_toscale=['TotalPricePerMonth'])),
+    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                        algorithm_to_use='TSNE', n_dim=3)),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+])
+
+
+# In[125]:
+
+
+df_train = preparation_pipeline.fit_transform(df_train)
+df_test = preparation_pipeline.transform(df_test)
+
+
+# In[126]:
+
+
+df_train
+
+
+# In[129]:
+
+
+kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_train)
+                for k in range(1, 50)]
+
+
+# In[130]:
+
+
+labels_test_per_k = [model.predict(df_test) for model in kmeans_per_k[1:]]
+
+
+# In[131]:
+
+
+silhouette_scores = [silhouette_score(df_train, model.labels_)
+                     for model in kmeans_per_k[1:]]
+
+
+# In[135]:
+
+
+silhouette_scores_test = [silhouette_score(df_test, labels_test) for labels_test in labels_test_per_k]
+
+
+# In[163]:
+
+
+gini_mean_score_per_k_train = []
+
+for model in kmeans_per_k[1:]:
+    unique_labels = np.unique(model.labels_)
+    
+    gini_sum = 0
+    for unique_label in unique_labels:
+        gini_sum += gini(df_train['TotalPricePerMonth'][model.labels_ == unique_label].to_numpy())
+        
+    gini_sum = gini_sum / len(unique_labels)
+    
+    gini_mean_score_per_k_train.append(gini_sum)
+
+    
+gini_mean_score_per_k_test = []
+
+for labels_test in labels_test_per_k:
+    unique_labels = np.unique(labels_test)
+    
+    gini_sum = 0
+    for unique_label in unique_labels:
+        gini_sum += gini(df_test['TotalPricePerMonth'][labels_test == unique_label].to_numpy())
+        
+    gini_sum = gini_sum / len(unique_labels)
+    
+    gini_mean_score_per_k_test.append(gini_sum)    
+    
+
+
+# In[210]:
+
+
+entropy_mean_score_per_k_train = []
+
+for model in kmeans_per_k[1:]:
+    unique_labels = np.unique(model.labels_)
+    
+    entropy_sum = 0
+    for unique_label in unique_labels:
+        entropy_sum += entropy(df_train['TotalPricePerMonth'][model.labels_ == unique_label].to_numpy())
+        
+    entropy_sum = entropy_sum / len(unique_labels)
+    
+    entropy_mean_score_per_k_train.append(entropy_sum)
+
+    
+entropy_mean_score_per_k_test = []
+
+for labels_test in labels_test_per_k:
+    unique_labels = np.unique(labels_test)
+    
+    entropy_sum = 0
+    for unique_label in unique_labels:
+        entropy_sum += entropy(df_test['TotalPricePerMonth'][labels_test == unique_label].to_numpy())
+        
+    entropy_sum = entropy_sum / len(unique_labels)
+    
+    entropy_mean_score_per_k_test.append(entropy_sum)    
+    
+
+
+# In[133]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), silhouette_scores, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Silhouette score on training set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# In[136]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), silhouette_scores_test, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Silhouette score on test set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# In[214]:
+
+
+print('Gini before clustering :')
+gini(df_train['TotalPricePerMonth'].to_numpy())
+
+
+# In[166]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), gini_mean_score_per_k_train, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Mean gini score on training set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# In[167]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), gini_mean_score_per_k_test, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Mean gini score on test set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# In[209]:
+
+
+print('Entropy before clustering :')
+entropy(df_train['TotalPricePerMonth'])
+
+
+# In[215]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), entropy_mean_score_per_k_train, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Mean entropy score on training set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# In[216]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), entropy_mean_score_per_k_test, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Mean entropy score on test set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# # Model with tSNE, then clustering algorithm Ward
+# No visualisation on test set because AgglomerativeClustering has no predict function, only fit_predict
+
+# In[168]:
+
+
+clusterer_per_k = [AgglomerativeClustering(n_clusters=k, affinity='euclidean').fit(df_train) for k in range(1,50)]
+
+
+# In[170]:
+
+
+silhouette_scores = [silhouette_score(df_train, model.labels_)
+                     for model in clusterer_per_k[1:]]
+
+
+# In[171]:
+
+
+gini_mean_score_per_k_train = []
+
+for model in clusterer_per_k[1:]:
+    unique_labels = np.unique(model.labels_)
+    
+    gini_sum = 0
+    for unique_label in unique_labels:
+        gini_sum += gini(df_train['TotalPricePerMonth'][model.labels_ == unique_label].to_numpy())
+        
+    gini_sum = gini_sum / len(unique_labels)
+    
+    gini_mean_score_per_k_train.append(gini_sum)
+
+
+    
+
+
+# In[217]:
+
+
+entropy_mean_score_per_k_train = []
+
+for model in clusterer_per_k[1:]:
+    unique_labels = np.unique(model.labels_)
+    
+    entropy_sum = 0
+    for unique_label in unique_labels:
+        entropy_sum += entropy(df_train['TotalPricePerMonth'][model.labels_ == unique_label].to_numpy())
+        
+    entropy_sum = entropy_sum / len(unique_labels)
+    
+    entropy_mean_score_per_k_train.append(entropy_sum)
+
+
+# In[172]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), silhouette_scores, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Silhouette score on training set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# In[173]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), gini_mean_score_per_k_train, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Mean gini score on training set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# In[221]:
+
+
+print('Entropy before clustering :')
+entropy(df_train['TotalPricePerMonth'])
+
+
+# In[219]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 50), entropy_mean_score_per_k_train, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Mean entropy score on training set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# # Model with tSNE, then clustering algorithm Ward, distance threshold
+# No visualisation on test set because AgglomerativeClustering has no predict function, only fit_predict
+
+# In[253]:
+
+
+np.unique(AgglomerativeClustering(distance_threshold=1, n_clusters=None, affinity='euclidean').fit(df_train).labels_)
+
+
+# In[271]:
+
+
+clusterer_ward_per_thr = [AgglomerativeClustering(distance_threshold=thr, n_clusters=None, affinity='euclidean').fit(df_train) for thr in reversed(range(0,12))]
+
+
+# In[234]:
+
+
+np.unique(clusterer_ward.labels_)
+
+
+# In[262]:
+
+
+clusterer_ward_per_thr
+
+
+# In[272]:
+
+
+entropy_mean_score_per_k_train = []
+
+for model in clusterer_ward_per_thr[1:]:
+    unique_labels = np.unique(model.labels_)
+    
+    entropy_sum = 0
+    for unique_label in unique_labels:
+        entropy_sum += entropy(df_train['TotalPricePerMonth'][model.labels_ == unique_label].to_numpy())
+        
+    entropy_sum = entropy_sum / len(unique_labels)
+    
+    entropy_mean_score_per_k_train.append(entropy_sum)
+
+
+# In[276]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(1,12), entropy_mean_score_per_k_train, "bo-")
+plt.xlabel("$Ward threshold$", fontsize=14)
+plt.ylabel("Mean entropy score on training set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# # => Around 50 clusters => entropy of TotalPrice around 4.5
 
 # # Annex
 
