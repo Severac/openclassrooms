@@ -22,6 +22,7 @@ from sklearn.preprocessing import FunctionTransformer
 from sklearn.decomposition import PCA
 from sklearn.neighbors import NeighborhoodComponentsAnalysis
 from sklearn.manifold import TSNE
+from sklearn.manifold import LocallyLinearEmbedding
 
 import statistics
 
@@ -551,12 +552,13 @@ class LogScalerMultiple(BaseEstimator, TransformerMixin):
 
 
 class DimensionalityReductor(BaseEstimator, TransformerMixin):
-    def __init__(self, features_totransform=None, algorithm_to_use='PCA', n_dim=20, labels_featurename=None):
+    def __init__(self, features_totransform=None, algorithm_to_use='PCA', n_dim=20, labels_featurename=None, n_neighbors=10):
         self.fitted = False
         self.features_totransform = features_totransform
         self.algorithm_to_use = algorithm_to_use
         self.n_dim = n_dim
-        self.labels_featurename = labels_featurename
+        self.labels_featurename = labels_featurename # For NCA
+        self.n_neighbors = n_neighbors # For LLE
     
     def fit(self, df):              
         print('Fit Dimensionality Reductor')
@@ -581,13 +583,17 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
             
             if (self.algorithm_to_use == 'TSNE'):
                 self.reductor = TSNE(n_components=self.n_dim, random_state=42)
+
+            if (self.algorithm_to_use == 'LLE'):
+                self.reductor = LocallyLinearEmbedding(n_components=self.n_dim, n_neighbors=self.n_neighbors, random_state=42)
+
             
             self.filter_cols = [col for col in df if (col.startswith(tuple(self.features_totransform)))]            
             self.filter_cols.sort()
             
             print("Features selected (in order): " + str(df[self.filter_cols].columns))            
             
-            if (self.algorithm_to_use == 'PCA'):
+            if ((self.algorithm_to_use == 'PCA') or (self.algorithm_to_use == 'LLE')):
                 self.reductor.fit(df[self.filter_cols].to_numpy())            
             
             if (self.algorithm_to_use == 'NCA'):
@@ -728,14 +734,15 @@ This function agregates orders to client level :
 '''
             
 class AgregateToClientLevel(BaseEstimator, TransformerMixin):
-    def __init__(self, stockcodes_top_value_products):
+    def __init__(self, stockcodes_top_value_products, compute_rfm=False):
         self.fitted = False
         self.stockcodes_top_value_products = stockcodes_top_value_products
+        self.compute_rfm = compute_rfm
     
     def fit(self, df):      
         print('AgregateToClientLevel : Fit data')
 
-                                
+        self.max_order_date = df['InvoiceDate'].max()
         self.fitted = True
         
         return self
@@ -744,7 +751,7 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         if (self.fitted == False):
             self.fit(df)
         
-        LAST_ORDER_DATE_IN_DATASET = '2011-12-09 12:50:00'
+        #LAST_ORDER_DATE_IN_DATASET = '2011-12-09 12:50:00'
         
         # NEED TO fix agregation of TotalPrice on these products :
         # Drop generic products (postage fees, manual entries, dot postage, CRUK commission) 
@@ -767,7 +774,7 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         series_gbclient_nbmonths = np.maximum(\
             (\
                (\
-               pd.to_datetime('2011-12-09 12:50:00')\
+               pd.to_datetime(self.max_order_date)\
                - pd.to_datetime(df_nocancel[['CustomerID', 'InvoiceDate']].groupby('CustomerID').min()['InvoiceDate'])
                )\
                 / (np.timedelta64(1, "M"))\
@@ -794,6 +801,55 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         df_gbcust_nocancel['BoughtTopValueProduct'] = 0
         df_gbcust_nocancel.loc[df_gbcust_nocancel.index.isin(custid_topvalue), 'BoughtTopValueProduct'] = 1
 
-        # Now, need to remove POSTAGE products and maybe DISCOUNT, and M
+        if (self.compute_rfm == True):
+            # RFM score commonly used in marketing
+            # Recency ('Recency' column name), Frequency ('TotalQuantityPerMonnth' column name), Monetary value ('TotalPricePerMonth' column name : already computed above)
+            df_gbcust_nocancel['Recency'] = series_gbclient_nbmonths
+            df_gbcust_nocancel['TotalQuantityPerMonth'] = df_nocancel[['CustomerID', 'Quantity']].groupby('CustomerID').sum()['Quantity'] / series_gbclient_nbmonths
 
         return(df_gbcust_nocancel)
+        
+        
+def RScore(x,p,d):
+    if x <= d[p][0.25]:
+        return 1
+    elif x <= d[p][0.50]:
+        return 2
+    elif x <= d[p][0.75]: 
+        return 3
+    else:
+        return 4
+    
+def FMScore(x,p,d):
+    if x <= d[p][0.25]:
+        return 4
+    elif x <= d[p][0.50]:
+        return 3
+    elif x <= d[p][0.75]: 
+        return 2
+    else:
+        return 1
+    
+    
+'''
+This function returns RFM score corresponding to dataframe passed as input
+The input dataframe must contain R,F,M columns previously computed by AgregateToClientLevel class
+(TotalPricePerMonth, TotalQuantityPerMonth, Recurence)
+'''    
+def get_rfm_scores(df):
+    quantiles = df[['TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']].quantile(q=[0.25,0.5,0.75])
+    quantiles = quantiles.to_dict()
+    
+    df_rfmtable = df[['TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']]
+    
+    df_rfmtable.loc[:, 'r_quartile'] = df_rfmtable.loc[:, 'Recency'].apply(RScore, args=('Recency',quantiles,))
+    
+    df_rfmtable.loc[:, 'r_quartile'] = df_rfmtable.loc[:, 'Recency'].apply(RScore, args=('Recency',quantiles,))
+    df_rfmtable.loc[:, 'f_quartile'] = df_rfmtable.loc[:, 'TotalQuantityPerMonth'].apply(FMScore, args=('TotalQuantityPerMonth',quantiles,))
+    df_rfmtable.loc[:, 'm_quartile'] = df_rfmtable.loc[:, 'TotalPricePerMonth'].apply(FMScore, args=('TotalPricePerMonth',quantiles,))
+    
+    df_rfmtable.loc[:, 'RFMScore'] = df_rfmtable.r_quartile.map(str) \
+                                + df_rfmtable.f_quartile.map(str) \
+                                + df_rfmtable.m_quartile.map(str)
+    
+    return(df_rfmtable.loc[:, 'RFMScore'])
