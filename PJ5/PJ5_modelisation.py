@@ -177,21 +177,21 @@ top_value_products
 
 # # Preparation pipeline : model with bow features + TotalPricePerMonth + BoughtTopValueProduct + HasEverCancelled
 
-# In[16]:
+# In[11]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[17]:
+# In[12]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[18]:
+# In[13]:
 
 
 preparation_pipeline = Pipeline([
@@ -210,31 +210,31 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[19]:
+# In[14]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 
 
-# In[20]:
+# In[ ]:
 
 
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[21]:
+# In[ ]:
 
 
 df_train
 
 
-# In[22]:
+# In[ ]:
 
 
 df_train.info()
 
 
-# In[23]:
+# In[ ]:
 
 
 series_total_price_per_month_train = df_train['TotalPricePerMonth']
@@ -278,7 +278,7 @@ X_test_transformed = pca.fit_transform(df_test)
 X_transformed[:,1]
 
 
-# In[28]:
+# In[135]:
 
 
 print('Binarisation of color categories')
@@ -3634,7 +3634,7 @@ fig = go.Figure(data = [trace_1], layout = layout)
 py.offline.plot(fig, filename='clusters_plot_clients_lle_bowfeats_3d.html') 
 
 
-# # Model with all features and RFM, and TSNE, with KMeans
+# # Model with all features and RFM feats, and TSNE, with KMeans
 
 # In[133]:
 
@@ -3649,6 +3649,8 @@ from functions import *
 df_train = df_train_ori
 df_test = df_test_ori
 
+
+# ## To do : filter RFM score 
 
 # In[69]:
 
@@ -3724,6 +3726,12 @@ rfm_scores_train
 df_train
 
 
+# In[217]:
+
+
+df_train
+
+
 # In[72]:
 
 
@@ -3743,6 +3751,8 @@ X_test_transformed = tsne.fit_transform(df_test)
 
 X_transformed[:,1]
 
+
+# ## TO DO important : add RFM agregated score to features, to get below graph
 
 # In[200]:
 
@@ -3900,6 +3910,88 @@ py.offline.plot(fig, filename='clusters_plot_clients_sne_bowandRfm_final_tsne.ht
 
 
 # In[173]:
+
+
+fig = plt.figure()
+fig.suptitle('Customers 2d representation, RFM colored, training set')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+plt.scatter(X_transformed[:,0], X_transformed[:,1], c=rfm_scores_train_colors)
+#ax.set_xlim([0,500])
+plt.xlabel('Axe 1')
+plt.ylabel("Axe 2")
+
+#plt.yscale('log')
+
+
+# ## RFM and bow (without HasEverCancelled, but WITH BoughtTopValueProduct)
+
+# In[210]:
+
+
+df_train[['TotalPricePerMonth', 'Recency', 'TotalQuantityPerMonth', 'BoughtTopValueProduct', 0, 1, 2]]
+
+
+# In[211]:
+
+
+tsne = TSNE(n_components=2, random_state=42)
+X_transformed = tsne.fit_transform(df_train[['TotalPricePerMonth', 'Recency', 'TotalQuantityPerMonth', 'BoughtTopValueProduct', 0, 1, 2]])
+X_test_transformed = tsne.fit_transform(df_test[['TotalPricePerMonth', 'Recency', 'TotalQuantityPerMonth', 'BoughtTopValueProduct', 0, 1, 2]])
+
+
+# In[212]:
+
+
+X_transformed[:,1]
+
+
+# In[213]:
+
+
+fig = plt.figure()
+fig.suptitle('Customers 2d representation, training set')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+plt.scatter(X_transformed[:,0], X_transformed[:,1], c=df_score_cat_train)
+#ax.set_xlim([0,500])
+plt.xlabel('Axe 1')
+plt.ylabel("Axe 2")
+#plt.yscale('log')
+
+
+# In[214]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = X_transformed[:,0], y = X_transformed[:,1],
+                    name = 'Clients',
+                    mode = 'markers',
+                    marker=dict(color=df_score_cat_train),
+                    text = df_train['TotalPricePerMonth'],
+                    )
+
+
+layout = go.Layout(title = 'Représentation des clients en 2 dimensions',
+                   hovermode = 'closest',
+)
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+#py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_clients_sne_bowandRfmandboughttopvalue_final_tsne.html') 
+
+
+# In[215]:
 
 
 fig = plt.figure()
@@ -4077,6 +4169,162 @@ plt.xlabel('Axe 1')
 plt.ylabel("Axe 2")
 
 #plt.yscale('log')
+
+
+# # Model with all bow features and RFM score (not individual feats), and TSNE, with KMeans
+
+# In[120]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[121]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+
+# In[122]:
+
+
+preparation_pipeline = Pipeline([
+    #('features_selector', FeaturesSelector(features_toselect=MODEL_FEATURES)),
+    ('bow_encoder', BowEncoder()),
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+    ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'RfmScore'])),
+    #('scaler', LogScalerMultiple(features_toscale=['RfmScore'])),
+    
+    
+    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
+   
+    ('minmaxscaler', MinMaxScalerMultiple(features_toscale=['RfmScore'])),
+    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                        algorithm_to_use='TSNE', n_dim=3)),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+])
+
+
+# In[123]:
+
+
+df_train = preparation_pipeline.fit_transform(df_train)
+df_test = preparation_pipeline.transform(df_test)
+
+
+# In[124]:
+
+
+rfm_scores_train = df_train['RfmScore']
+
+
+# In[125]:
+
+
+unique_rfm_scores = np.sort(rfm_scores_train.unique())
+
+
+# In[126]:
+
+
+rfm_dict_colors = {}
+cnt = 0
+
+for unique_rfm_score in unique_rfm_scores:
+    rfm_dict_colors[unique_rfm_score] = cnt
+    cnt += 1
+    
+
+
+# In[127]:
+
+
+rfm_scores_train_colors = rfm_scores_train.apply(lambda x : rfm_dict_colors[x])
+
+
+# In[128]:
+
+
+rfm_scores_train_colors
+
+
+# In[129]:
+
+
+rfm_scores_train
+
+
+# In[130]:
+
+
+df_train
+
+
+# In[131]:
+
+
+df_train.info()
+
+
+# In[132]:
+
+
+tsne = TSNE(n_components=2, random_state=42)
+X_transformed = tsne.fit_transform(df_train)
+X_test_transformed = tsne.fit_transform(df_test)
+
+
+# In[133]:
+
+
+X_transformed[:,1]
+
+
+# In[137]:
+
+
+fig = plt.figure()
+fig.suptitle('Customers 2d representation, RFM colored, training set')
+
+ax = plt.gca()
+#plt.hist(df_nocancel['TotalPrice'], bins=50, range=(0,100))
+plt.scatter(X_transformed[:,0], X_transformed[:,1], c=rfm_scores_train_colors)
+#ax.set_xlim([0,500])
+plt.xlabel('Axe 1')
+plt.ylabel("Axe 2")
+
+#plt.yscale('log')
+
+
+# In[138]:
+
+
+import plotly as py
+import plotly.graph_objects as go
+import ipywidgets as widgets
+
+py.offline.init_notebook_mode(connected=True)
+
+
+trace_1 = go.Scatter(x = X_transformed[:,0], y = X_transformed[:,1],
+                    name = 'Clients',
+                    mode = 'markers',
+                    marker=dict(color=rfm_scores_train_colors),
+                    text = rfm_scores_train,
+                    )
+
+
+layout = go.Layout(title = 'Représentation des clients en 2 dimensions',
+                   hovermode = 'closest',
+)
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+#py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_plot_clients_sne_bowwithRFMscore_color_RFM_final_tsne.html') 
 
 
 # # Annex
