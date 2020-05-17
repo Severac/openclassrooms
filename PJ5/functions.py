@@ -23,6 +23,7 @@ from sklearn.decomposition import PCA
 from sklearn.neighbors import NeighborhoodComponentsAnalysis
 from sklearn.manifold import TSNE
 from sklearn.manifold import LocallyLinearEmbedding
+from sklearn.manifold import Isomap
 
 import statistics
 
@@ -590,6 +591,8 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
             if (self.algorithm_to_use == 'LLE'):
                 self.reductor = LocallyLinearEmbedding(n_components=self.n_dim, n_neighbors=self.n_neighbors, random_state=42)
 
+            if (self.algorithm_to_use == 'ISOMAP'):
+                self.reductor = Isomap(n_components=self.n_dim)
             
             self.filter_cols = [col for col in df if (col.startswith(tuple(self.features_totransform)))]            
             self.filter_cols.sort()
@@ -598,7 +601,7 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
             print("Features selected (in order): " + str(df.loc[:, self.filter_cols].columns))            
             print('2')
             
-            if ((self.algorithm_to_use == 'PCA') or (self.algorithm_to_use == 'LLE')):
+            if ((self.algorithm_to_use == 'PCA') or (self.algorithm_to_use == 'LLE') or (self.algorithm_to_use == 'ISOMAP')):
                 self.reductor.fit(df[self.filter_cols].to_numpy())            
             
             if (self.algorithm_to_use == 'NCA'):
@@ -785,7 +788,6 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
                 / (np.timedelta64(1, "M"))\
             ), 1)
 
-        print('Trace')
 
         # Agregate on client level and sum: TotalPrice, BoW features
         feat_list = ['CustomerID', 'TotalPrice']
@@ -800,28 +802,23 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         df_gbcust_nocancel.loc[:, 'TotalPrice'] = df_gbcust_nocancel.loc[:, 'TotalPrice'] / series_gbclient_nbmonths
         df_gbcust_nocancel.rename(columns={'TotalPrice' : 'TotalPricePerMonth'}, inplace=True)
 
-        print('Trace 2')
 
         # Add feature : Client has cancelled at least 1 order
         df_gbcust_nocancel.loc[:, 'HasEverCancelled'] = 0
         df_gbcust_nocancel.loc[df_gbcust_nocancel.index.isin(custid_cancelled), 'HasEverCancelled'] = 1
 
-        print('Trace 3')
 
         # Add feature : Clients has bought top value product
         df_gbcust_nocancel.loc[:, 'BoughtTopValueProduct'] = 0
         df_gbcust_nocancel.loc[df_gbcust_nocancel.index.isin(custid_topvalue), 'BoughtTopValueProduct'] = 1
 
-        print('Trace 4')
 
         if (self.compute_rfm == True):
             # RFM score commonly used in marketing
             # Recency ('Recency' column name), Frequency ('TotalQuantityPerMonnth' column name), Monetary value ('TotalPricePerMonth' column name : already computed above)
             
             df_gbcust_nocancel.loc[:, 'Recency'] = series_gbclient_nbmonths
-            print('Trace 5')
             df_gbcust_nocancel.loc[:, 'TotalQuantityPerMonth'] = df_nocancel[['CustomerID', 'Quantity']].groupby('CustomerID').sum()['Quantity'] / series_gbclient_nbmonths
-            print('Trace 6')
             df_gbcust_nocancel.loc[:, 'RfmScore'] = get_rfm_scores(df_gbcust_nocancel)  # This line when added, created "local copy slice dataframe" error
             
         print('Trace 7 before end')
@@ -855,26 +852,18 @@ The input dataframe must contain R,F,M columns previously computed by AgregateTo
 (TotalPricePerMonth, TotalQuantityPerMonth, Recurence)
 '''    
 def get_rfm_scores(df):
-    print('Trace 1')
     quantiles = df[['TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']].quantile(q=[0.25,0.5,0.75])
     quantiles = quantiles.to_dict()
     
-    print('Trace 2')
+    
     df_rfmtable = df[['TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']].copy(deep=True) # Did this copy deep=True in order to avoid "copy on slice of dataframe" error
-    
-    print('Trace 3')
-    df_rfmtable.loc[:, 'r_quartile'] = df_rfmtable.loc[:, 'Recency'].apply(RScore, args=('Recency',quantiles,))
-    
-    print('Trace 4')
-    df_rfmtable.loc[:, 'r_quartile'] = df_rfmtable.loc[:, 'Recency'].apply(RScore, args=('Recency',quantiles,))
-    print('Trace 5')
-    df_rfmtable.loc[:, 'f_quartile'] = df_rfmtable.loc[:, 'TotalQuantityPerMonth'].apply(FMScore, args=('TotalQuantityPerMonth',quantiles,))
-    print('Trace 6')
-    df_rfmtable.loc[:, 'm_quartile'] = df_rfmtable.loc[:, 'TotalPricePerMonth'].apply(FMScore, args=('TotalPricePerMonth',quantiles,))
-    print('Trace 7')
+        
+    df_rfmtable.loc[:, 'r_quartile'] = df_rfmtable.loc[:, 'Recency'].apply(RScore, args=('Recency',quantiles,))    
+    df_rfmtable.loc[:, 'r_quartile'] = df_rfmtable.loc[:, 'Recency'].apply(RScore, args=('Recency',quantiles,))    
+    df_rfmtable.loc[:, 'f_quartile'] = df_rfmtable.loc[:, 'TotalQuantityPerMonth'].apply(FMScore, args=('TotalQuantityPerMonth',quantiles,))   
+    df_rfmtable.loc[:, 'm_quartile'] = df_rfmtable.loc[:, 'TotalPricePerMonth'].apply(FMScore, args=('TotalPricePerMonth',quantiles,))    
     df_rfmtable.loc[:, 'RFMScore'] = df_rfmtable.r_quartile.map(str) \
                                 + df_rfmtable.f_quartile.map(str) \
                                 + df_rfmtable.m_quartile.map(str)
     
-    print('Trace 8')
     return(df_rfmtable.loc[:, 'RFMScore'].copy(deep=True))
