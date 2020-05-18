@@ -26,12 +26,44 @@ pip install plotly_express
 sudo apt-get install tmux
 tmux new -s StreamSession
 cd streamlit_OC_PJ4
-streamlit run UI.py
+streamlit run UI.py --server.port=8501 --browser.serverPort='8501' --browser.serverAddress='pj4.analysons.com'
 
 Exit TMUX session with : Ctrl + B  then D (streamlit will continue to run in the background after your disconnect)
 
 To reattach to the session, in order to stop or relaunch streamlit :
 tmux attach -t StreamSession
+
+Web server configuration for redirection :
+
+sudo apt-get update
+sudo apt-get upgrade
+
+sudo apt-get install apache2
+
+sudo a2enmod proxy && sudo a2enmod proxy_http
+sudo a2enmod rewrite
+sudo a2enmod proxy_wstunnel
+
+sudo service apache2 restart
+
+Pour logger l'url:  ajout de %V dans le LogFormat du /etc/apache2/apache2.conf
+
+/etc/apache2/sites-available/000-default.conf :
+
+<VirtualHost *:80>
+   ServerName pj4.analysons.com
+
+   RewriteEngine On
+   RewriteCond %{HTTP:Upgrade} =websocket
+   RewriteRule /(.*) ws://localhost:8501/$1 [P]
+   RewriteCond %{HTTP:Upgrade} !=websocket
+   RewriteRule /(.*) http://localhost:8501/$1 [P]
+   ProxyPassReverse / http://localhost:8501
+
+   ErrorLog ${APACHE_LOG_DIR}/error.log
+   CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+
 
 
 
