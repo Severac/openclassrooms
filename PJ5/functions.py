@@ -761,7 +761,7 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         
         #LAST_ORDER_DATE_IN_DATASET = '2011-12-09 12:50:00'
         
-        # NEED TO fix agregation of TotalPrice on these products :
+        # FIXED agregation of TotalPrice on these products :
         # Drop generic products (postage fees, manual entries, dot postage, CRUK commission) 
         # But keep discounts (StockCode == 'D')
         # In data modelisation notebook there will be nothing to drop since we cleaned data in exploration notebook
@@ -858,7 +858,6 @@ def get_rfm_scores(df):
     
     df_rfmtable = df[['TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']].copy(deep=True) # Did this copy deep=True in order to avoid "copy on slice of dataframe" error
         
-    df_rfmtable.loc[:, 'r_quartile'] = df_rfmtable.loc[:, 'Recency'].apply(RScore, args=('Recency',quantiles,))    
     df_rfmtable.loc[:, 'r_quartile'] = df_rfmtable.loc[:, 'Recency'].apply(RScore, args=('Recency',quantiles,))    
     df_rfmtable.loc[:, 'f_quartile'] = df_rfmtable.loc[:, 'TotalQuantityPerMonth'].apply(FMScore, args=('TotalQuantityPerMonth',quantiles,))   
     df_rfmtable.loc[:, 'm_quartile'] = df_rfmtable.loc[:, 'TotalPricePerMonth'].apply(FMScore, args=('TotalPricePerMonth',quantiles,))    

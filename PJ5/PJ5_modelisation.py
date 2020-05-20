@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ5 : Online Retail dataset :  modelisation notebook 
 
-# In[280]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -3637,7 +3637,7 @@ fig = go.Figure(data = [trace_1], layout = layout)
 py.offline.plot(fig, filename='clusters_plot_clients_lle_bowfeats_3d.html') 
 
 
-# # Model with 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency', 'HasEverCancelled', 'BoughtTopValueProduct', 'DescriptionNormalized', and TSNE, with KMeans
+# # Model with 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency', 'HasEverCancelled', 'BoughtTopValueProduct', 'DescriptionNormalized', and TSNE, with KMeans (INTERESTING)
 
 # In[182]:
 
@@ -5500,23 +5500,23 @@ fig = go.Figure(data = [trace_1], layout = layout)
 py.offline.plot(fig, filename='clusters_plot_clients_TSNE_allFeatswithOUTRFMscore_color_RFM_final_tsnelast.html') 
 
 
-# # Model with 'DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 'RfmScore' with NCA up to 200 then KMeans then TSNE to visualize clusters
+# # Model with 'DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 'RfmScore' with NCA up to 200 then KMeans then NCA to visualize clusters   (GOOD, ONLY NCA not TSNE)
 
-# In[382]:
+# In[27]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[383]:
+# In[28]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[384]:
+# In[29]:
 
 
 preparation_pipeline = Pipeline([
@@ -5536,28 +5536,28 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[385]:
+# In[30]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[386]:
+# In[31]:
 
 
 rfm_scores_train = df_train['RfmScore']
 rfm_scores_test = df_test['RfmScore']
 
 
-# In[387]:
+# In[32]:
 
 
 unique_rfm_scores = np.sort(rfm_scores_train.unique())
 unique_rfm_scores_test = np.sort(rfm_scores_test.unique())
 
 
-# In[388]:
+# In[33]:
 
 
 rfm_dict_colors = {}
@@ -5575,44 +5575,44 @@ for unique_rfm_score in unique_rfm_scores_test:
     cnt += 1    
 
 
-# In[389]:
+# In[34]:
 
 
 rfm_scores_train_colors = rfm_scores_train.apply(lambda x : rfm_dict_colors[x])
 rfm_scores_test_colors = rfm_scores_test.apply(lambda x : rfm_dict_colors_test[x])
 
 
-# In[390]:
+# In[35]:
 
 
 rfm_scores_train_colors
 
 
-# In[391]:
+# In[36]:
 
 
 rfm_scores_test_colors
 
 
-# In[392]:
+# In[37]:
 
 
 rfm_scores_train
 
 
-# In[393]:
+# In[38]:
 
 
 df_train
 
 
-# In[394]:
+# In[39]:
 
 
 df_train.info()
 
 
-# In[395]:
+# In[40]:
 
 
 '''
@@ -5621,40 +5621,40 @@ df_test_rfmscore_distances = pairwise_distances(df_test['RfmScore'].to_numpy().r
 '''
 
 
-# In[396]:
+# In[41]:
 
 
 kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_train)
                 for k in range(1, 50)]
 
 
-# In[397]:
+# In[42]:
 
 
 labels_test_per_k = [model.predict(df_test) for model in kmeans_per_k[1:]]
 
 
-# In[398]:
+# In[43]:
 
 
 silhouette_scores = [silhouette_score(df_train, model.labels_)
                      for model in kmeans_per_k[1:]]
 
 
-# In[399]:
+# In[44]:
 
 
 silhouette_scores_test = [silhouette_score(df_test, labels_test) for labels_test in labels_test_per_k]
 
 
-# In[413]:
+# In[45]:
 
 
 # Model corresponding to max silhouette score. We add +1 because "for model in kmeans_per_k[1:] above has suppressed one indice"
 # kmeans_per_k[silhouette_scores.index(max(silhouette_scores)) + 1].labels_
 
 
-# In[400]:
+# In[46]:
 
 
 entropy_mean_score_per_k_train = []
@@ -5686,7 +5686,7 @@ for labels_test in labels_test_per_k:
     
 
 
-# In[401]:
+# In[47]:
 
 
 plt.figure(figsize=(8, 3))
@@ -5698,7 +5698,7 @@ plt.ylabel("Silhouette score on training set", fontsize=14)
 plt.show()
 
 
-# In[402]:
+# In[48]:
 
 
 plt.figure(figsize=(8, 3))
@@ -5710,14 +5710,14 @@ plt.ylabel("Silhouette score on test set", fontsize=14)
 plt.show()
 
 
-# In[403]:
+# In[49]:
 
 
 print('Entropy before clustering :')
 entropy(df_train['RfmScore'])
 
 
-# In[404]:
+# In[50]:
 
 
 plt.figure(figsize=(8, 3))
@@ -5729,7 +5729,7 @@ plt.ylabel("Mean entropy score on training set", fontsize=14)
 plt.show()
 
 
-# In[405]:
+# In[51]:
 
 
 plt.figure(figsize=(8, 3))
@@ -6454,16 +6454,79 @@ plt.ylabel("Mean entropy score on training set", fontsize=14)
 plt.show()
 
 
-# In[311]:
+# # Correlations
+
+# In[70]:
 
 
-plt.figure(figsize=(8, 3))
-plt.plot(range(2, 50), entropy_mean_score_per_k_test, "bo-")
-plt.xlabel("$k$", fontsize=14)
-plt.ylabel("Mean entropy score on test set", fontsize=14)
-#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
-#save_fig("silhouette_score_vs_k_plot")
-plt.show()
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[71]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+
+# In[72]:
+
+
+preparation_pipeline = Pipeline([
+    #('features_selector', FeaturesSelector(features_toselect=MODEL_FEATURES)),
+    ('bow_encoder', BowEncoder()),
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+    ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'TotalPricePerMonth', 'Recency', 'TotalQuantityPerMonth', 'RfmScore', 'BoughtTopValueProduct', 'HasEverCancelled'])),
+    ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
+    
+    
+    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
+   
+    ('minmaxscaler', MinMaxScalerMultiple(features_toscale=['TotalPricePerMonth', 'Recency', 'TotalQuantityPerMonth', 'RfmScore'])),
+    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                        algorithm_to_use='NCA', n_dim=3, labels_featurename='RfmScore')),
+    #('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+])
+
+
+# In[73]:
+
+
+df_train = preparation_pipeline.fit_transform(df_train)
+df_test = preparation_pipeline.transform(df_test)
+
+
+# In[75]:
+
+
+corr_matrix = df_train.corr()
+
+
+# In[76]:
+
+
+corr_matrix
+
+
+# In[77]:
+
+
+plt.title('Corrélation entre les features')
+sns.heatmap(corr_matrix, 
+        xticklabels=corr_matrix.columns,
+        yticklabels=corr_matrix.columns, cmap='coolwarm' ,center=0.20)
+
+
+# In[84]:
+
+
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+
+model = ols("BMI ~ 0 + 1 + 2", data=df_train).fit()
+#print model.params
+#print model.summary()
 
 
 # # Annex
