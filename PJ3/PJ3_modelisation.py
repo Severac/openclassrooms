@@ -1136,7 +1136,7 @@ if (RECOMPUTE_GRIDSEARCH == True):
             ],
         }
 
-    grid_search = GridSearchCV(recommendation_pipeline_KNN, param_grid, cv=5, verbose=2, error_score=np.nan)
+    grid_search = GridSearchCV(recommendation_pipeline_KNN, param_grid, cv=5, verbose=2, error_score=np.nan, scoring=None)
     grid_search.fit(df_encoded, labels)
 
     

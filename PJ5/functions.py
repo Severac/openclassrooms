@@ -25,6 +25,14 @@ from sklearn.manifold import TSNE
 from sklearn.manifold import LocallyLinearEmbedding
 from sklearn.manifold import Isomap
 
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.metrics import pairwise_distances
+from sklearn.cluster import AgglomerativeClustering
+
+from sklearn.neighbors import NearestNeighbors
+#from sklearn.neighbors import KDTree
+
 import statistics
 
 from scipy import sparse
@@ -489,6 +497,7 @@ class StandardScalerMultiple(BaseEstimator, TransformerMixin):
 
 class MinMaxScalerMultiple(BaseEstimator, TransformerMixin):
     def __init__(self, features_toscale=None):
+        print('Init MinMaxScalerMultiple')
         self.fitted = False
         self.columns = features_toscale
     
@@ -557,6 +566,7 @@ class LogScalerMultiple(BaseEstimator, TransformerMixin):
 
 class DimensionalityReductor(BaseEstimator, TransformerMixin):
     def __init__(self, features_totransform=None, algorithm_to_use='PCA', n_dim=20, labels_featurename=None, n_neighbors=10):
+        # labels_featurename can be a feature name and also a list of discrete labels
         self.fitted = False
         self.features_totransform = features_totransform
         self.algorithm_to_use = algorithm_to_use
@@ -564,7 +574,7 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
         self.labels_featurename = labels_featurename # For NCA
         self.n_neighbors = n_neighbors # For LLE
     
-    def fit(self, df):              
+    def fit(self, df, labels=None):  # Labels=None added to attempt to remove weird error fit() takes 2 positional arguments but 3 were given
         print('Fit Dimensionality Reductor')
               
         if (self.features_totransform == None):
@@ -581,7 +591,12 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
                     self.labels = df['TotalPricePerMonth']
                 '''
                 
-                self.labels_discrete = pd.cut(df[self.labels_featurename], bins=range(1,10), right=True).astype(str).tolist()
+                if isinstance(self.labels_featurename, str):
+                    self.labels_discrete = pd.cut(df[self.labels_featurename], bins=range(1,10), right=True).astype(str).tolist()
+                    
+                else:
+                    self.labels_discrete = self.labels_featurename
+                    
                 self.reductor = NeighborhoodComponentsAnalysis(random_state=42, n_components=self.n_dim)
                 
             
@@ -594,7 +609,13 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
             if (self.algorithm_to_use == 'ISOMAP'):
                 self.reductor = Isomap(n_components=self.n_dim)
             
-            self.filter_cols = [col for col in df if (col.startswith(tuple(self.features_totransform)))]            
+            
+            if (self.features_totransform == 'ALL'):
+                self.filter_cols = [col for col in df]
+            
+            else:
+                self.filter_cols = [col for col in df if (col.startswith(tuple(self.features_totransform)))]            
+
             self.filter_cols.sort()
             
             print('1')
@@ -632,14 +653,19 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
                 np_transformed = self.reductor.fit_transform(df[self.filter_cols].to_numpy())            
             
             else:
+                print('1')
                 np_transformed = self.reductor.transform(df[self.filter_cols].to_numpy())
+                print('2')
             
             if (remaining_columns != []):
+                print('3')
                 df_transformed = pd.concat([df[remaining_columns].reset_index(drop=True), pd.DataFrame(np_transformed)], axis=1)
+                print('4')
                 
             else:
                 df_transformed = pd.DataFrame(np_transformed)
 
+        print('5')
         return(df_transformed)    
 
  
@@ -698,7 +724,9 @@ class BowEncoder(BaseEstimator, TransformerMixin):
         if (self.categorical_features_totransform != None):
             for feature_name in self.categorical_features_totransform:
                 self.vectorizers[feature_name] = CountVectorizer(min_df=self.min_df)
-                matrix_vectorized = self.vectorizers[feature_name].fit(df[feature_name])
+                print('track1')
+                matrix_vectorized = self.vectorizers[feature_name].fit(df[feature_name].astype(str))
+                print('track2')
                                 
         self.fitted = True
         
@@ -749,6 +777,7 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
     
     def fit(self, df):      
         print('AgregateToClientLevel : Fit data')
+        print('compute_rfm :' + str(self.compute_rfm))
 
         self.max_order_date = df['InvoiceDate'].max()
         self.fitted = True
@@ -861,8 +890,77 @@ def get_rfm_scores(df):
     df_rfmtable.loc[:, 'r_quartile'] = df_rfmtable.loc[:, 'Recency'].apply(RScore, args=('Recency',quantiles,))    
     df_rfmtable.loc[:, 'f_quartile'] = df_rfmtable.loc[:, 'TotalQuantityPerMonth'].apply(FMScore, args=('TotalQuantityPerMonth',quantiles,))   
     df_rfmtable.loc[:, 'm_quartile'] = df_rfmtable.loc[:, 'TotalPricePerMonth'].apply(FMScore, args=('TotalPricePerMonth',quantiles,))    
-    df_rfmtable.loc[:, 'RFMScore'] = df_rfmtable.r_quartile.map(str) \
-                                + df_rfmtable.f_quartile.map(str) \
-                                + df_rfmtable.m_quartile.map(str)
     
+    # This code was a concatenation of R, F, M features (instead of addition)
+    #df_rfmtable.loc[:, 'RFMScore'] = df_rfmtable.r_quartile.map(str) \
+    #                            + df_rfmtable.f_quartile.map(str) \
+    #                            + df_rfmtable.m_quartile.map(str)
+
+    df_rfmtable.loc[:, 'RFMScore'] = df_rfmtable.r_quartile \
+                                + df_rfmtable.f_quartile \
+                                + df_rfmtable.m_quartile
+            
     return(df_rfmtable.loc[:, 'RFMScore'].copy(deep=True))
+    
+    
+    
+class Clusterer(BaseEstimator, TransformerMixin):
+    def __init__(self, algorithm_to_use='KMEANS', n_clusters=10):
+        self.clusterer = None
+        self.fitted = False
+        self.algos_without_transform = ['WARD'] # List of algorithms that do not have a transform function and must be handled differently in predict()
+        self.knn_model = None # Will be used for custom transform for algorithms that do not have a transform function
+        
+        self.algorithm_to_use = algorithm_to_use
+        self.n_clusters = n_clusters
+    
+    def fit(self, df, labels=None):              
+        print('Fit method of Clusterer')
+        
+        if (self.algorithm_to_use == 'KMEANS'):
+            self.clusterer = KMeans(n_clusters=self.n_clusters, random_state=42)
+        
+        elif (self.algorithm_to_use == 'WARD'):
+            self.clusterer = AgglomerativeClustering(n_clusters=self.n_clusters, affinity='euclidean', linkage='ward')
+        
+        self.clusterer.fit(df)
+        
+        if (self.algorithm_to_use in self.algos_without_transform):
+            self.knn_model = NearestNeighbors(n_neighbors=6, algorithm='ball_tree', metric='minkowski')
+            self.knn_model.fit(df)
+            
+        self.fitted = True
+    
+        return self
+
+    def predict(self, df):
+        print('Predict method of Clusterer')
+        
+        if (self.algorithm_to_use in self.algos_without_transform):
+            # First, get closest instances from training set, to the instances we're predicting
+            
+            # > This will return 2d array of 1 values : [[indice_0], [indice_1], ...]
+            df_train_nearest_neighbors_indices = self.knn_model.kneighbors(df, 1, return_distance=False)  
+            
+            # > Convert to simple array : [indice_0, indice_1, ...]
+            array_train_nearest_neighbors_indices = [df_train_nn[0] for df_train_nn in df_train_nearest_neighbors_indices]
+
+            # Return cluster labels from these instances on training set            
+            return(self.clusterer.labels_[array_train_nearest_neighbors_indices])
+            # Need to add : get cluster numbers in training set corresponding to df_train_nearest_neighbors
+            
+        else:
+            # Code
+            return(self.clusterer.predict(df))
+
+        #return(labels_predicted)
+        
+    def score(self, X, y=None):
+        print('Score method of Clusterer')
+        
+        predicted_labels = self.predict(X)
+        
+        return(silhouette_score(X, predicted_labels))
+        
+        
+        
