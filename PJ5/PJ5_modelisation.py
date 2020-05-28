@@ -7569,21 +7569,21 @@ bow_labels_test = kmeans_per_k[10].predict(df_test.loc[:, 0].to_numpy().reshape(
 
 # # Pipeline with clustering
 
-# In[42]:
+# In[56]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[43]:
+# In[57]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[44]:
+# In[58]:
 
 
 complete_pipeline = Pipeline([
@@ -7605,7 +7605,12 @@ complete_pipeline = Pipeline([
 ])
 
 
-# In[45]:
+# /!\ RfmScore doit être dans le DataFrame pour qu'il puise servir de label à NCA or ce n'est pas toujours le cas
+# /!\ Quand je passe les labels bow au NCA, je passe les labels de tout le training set, ça ne va pas aller
+# 
+# => Systématiquement recalculer les labels bow et RfmScore à partir du training set fourni en entrée du pipeline
+
+# In[59]:
 
 
 param_grid = [
@@ -7720,10 +7725,58 @@ param_grid = [
 ]
 
 
+# In[46]:
+
+
+type(df_train['InvoiceDate'][0])
+
+
+# In[47]:
+
+
+complete_pipeline_debug = Pipeline([
+    #('features_selector', FeaturesSelector(features_toselect=MODEL_FEATURES)),
+    ('bow_encoder', BowEncoder()),
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+    ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 'RfmScore'])),
+    #('scaler', LogScalerMultiple(features_toscale=['RfmScore'])),
+    
+    
+    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
+   
+    ('minmaxscaler', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                        algorithm_to_use='NCA', n_dim=3, labels_featurename='RfmScore')),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+    ('clusterer', Clusterer(n_clusters=3, algorithm_to_use='WARD'))
+])
+
+
+# In[48]:
+
+
+complete_pipeline_debug.fit(df_train)
+df_train_res = complete_pipeline_debug.predict(df_train)
+
+
+# In[60]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[61]:
+
+
+#complete_pipeline_debug.fit(df_test)
+df_test_res = complete_pipeline_debug.predict(df_test)
+
+
 # In[ ]:
 
 
-get_ipython().run_cell_magic('time', '', "\nif (RECOMPUTE_GRIDSEARCH == True):\n    model = complete_pipeline\n    \n    # error_score = np.nan means an error on 1 combination does is not blocking every other models.  scoring=None means our predictor's score method will be used\n    # For later : try custom cv splitter\n    grid_search = GridSearchCV(model, param_grid, cv=5, verbose=2, error_score=np.nan, scoring=None)\n    grid_search.fit(df_train)")
+get_ipython().run_cell_magic('time', '', "\nif (RECOMPUTE_GRIDSEARCH == True):\n    model = complete_pipeline\n        \n    # error_score = np.nan means an error on 1 combination does is not blocking every other models.  scoring=None means our predictor's score method will be used\n    # For later : try custom cv splitter\n    grid_search = GridSearchCV(model, param_grid, cv=5, verbose=51, error_score=np.nan, scoring=None)\n    grid_search.fit(df_train)")
 
 
 # # Annex

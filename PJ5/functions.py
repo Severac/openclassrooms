@@ -5,7 +5,8 @@ Created on Fri Apr 24 15:45:19 2020
 
 @author: francois
 """
-
+def blabla2():
+    print('bla2')
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
@@ -42,6 +43,15 @@ import pandas as pd
 import qgrid
 
 import numpy as np
+
+import pickle
+RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
+SAVE_GRID_RESULTS = True # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
+LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
+
+#GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
+
+GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
 
 def gini(array):
     """Calculate the Gini coefficient of a numpy array."""
@@ -493,25 +503,38 @@ class StandardScalerMultiple(BaseEstimator, TransformerMixin):
             df.loc[:, self.columns] = self.scaler.transform(df.loc[:, self.columns].to_numpy())
 
         return(df)
+
+def bla():
+    print('bla')
         
 
 class MinMaxScalerMultiple(BaseEstimator, TransformerMixin):
-    def __init__(self, features_toscale=None):
+    #def __init__(self, features_toscale='ALL_FEATURES'):        
+    def __init__(self, features_toscale):        
         print('Init MinMaxScalerMultiple')
+        print(f'At init! : features_toscale == {features_toscale}')
         self.fitted = False
         self.columns = features_toscale
+        # This line is mandatory for gridsearch to take features_toscale into account :
+        self.features_toscale = features_toscale 
+        
+        print(f'At init : self.columns == {self.columns}')
     
-    def fit(self, df):              
-        print('Fit Min max scaler multiple')
+    def fit(self, df, labels=None):              
+        print('Fit Min max scaler multiple !')
+        print('Fit Min max scaler multiple 3')
         self.scaler = MinMaxScaler()
   
         if (self.columns == None):
+            print('self.columns == None')
             self.fitted = True
             return(df)
+            
         else:
+            print('self.columns not None')
             if (self.columns == 'ALL_FEATURES'):
                 self.columns = df.columns.tolist()
-                #print(f'self.columns = {self.columns}')
+                print(f'MinMaxScalerMultiple : self.columns  = {self.columns}')
                 
             self.scaler.fit(df[self.columns].to_numpy())            
             self.fitted = True
@@ -715,7 +738,7 @@ class BowEncoder(BaseEstimator, TransformerMixin):
         #self.df_encoded = None
     
     #def fit(self, df, labels=None):      
-    def fit(self, df, categorical_features_totransform=['DescriptionNormalized']):      
+    def fit(self, df, labels=None, categorical_features_totransform=['DescriptionNormalized']):      
         print('BowEncoder : Fit data')
         print(f'categorical_features_totransform == {categorical_features_totransform}')
         self.categorical_features_totransform = categorical_features_totransform
@@ -737,6 +760,8 @@ class BowEncoder(BaseEstimator, TransformerMixin):
             self.fit(df)
         
         if (self.categorical_features_totransform != None):
+            #df = df.copy(deep=True)                                                                 
+            
             print('Transform data')
             for feature_name in self.categorical_features_totransform:
                 matrix_vectorized = self.vectorizers[feature_name].transform(df[feature_name])
@@ -775,11 +800,13 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         self.stockcodes_top_value_products = stockcodes_top_value_products
         self.compute_rfm = compute_rfm
     
-    def fit(self, df):      
+    def fit(self, df, labels=None):      
         print('AgregateToClientLevel : Fit data')
         print('compute_rfm :' + str(self.compute_rfm))
 
-        self.max_order_date = df['InvoiceDate'].max()
+        print('trace1')
+        self.max_order_date = df['InvoiceDate'].astype(str).max()
+        print('trace2')
         self.fitted = True
         
         return self
@@ -955,12 +982,47 @@ class Clusterer(BaseEstimator, TransformerMixin):
 
         #return(labels_predicted)
         
+    # If there are less than 2 labels : silhouette score will be -1
     def score(self, X, y=None):
         print('Score method of Clusterer')
         
         predicted_labels = self.predict(X)
         
-        return(silhouette_score(X, predicted_labels))
+        if (len(np.unique(predicted_labels)) < 2):
+            print('Labels for cluster < 2 : we return a silhouette score of -1')
+            return(-1)
         
+        else:
+            return(silhouette_score(X, predicted_labels))
         
+def save_or_load_search_params(grid_search, save_file_suffix):
+    if (SAVE_GRID_RESULTS == True):
+        #df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
+        #df_grid_search_results.to_csv(GRIDSEARCH_CSV_FILE)
+
+        df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["mean_test_score"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["std_test_score"], columns=["std_test_score"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_fit_time"], columns=["mean_fit_time"])],axis=1)
+        df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
+        df_grid_search_results.to_csv(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.csv')
+
+        with open(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.pickle', 'wb') as f:
+            pickle.dump(grid_search, f, pickle.HIGHEST_PROTOCOL)
+            
+        return(grid_search, df_grid_search_results)
+
+    if (LOAD_GRID_RESULTS == True):
+        if ((SAVE_GRID_RESULTS == True) or (RECOMPUTE_GRIDSEARCH == True)):
+            print('Error : if want to load grid results, you should not have saved them or recomputed them before, or you will loose all your training data')
+
+        else:
+            with open(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.pickle', 'rb') as f:
+                grid_search = pickle.load(f)
+
+            df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["mean_test_score"])],axis=1)
+            df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["std_test_score"], columns=["std_test_score"])],axis=1)
+            df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_fit_time"], columns=["mean_fit_time"])],axis=1)
+            df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
+            
+            return(grid_search, df_grid_search_results)
         
