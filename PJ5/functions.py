@@ -589,7 +589,12 @@ class LogScalerMultiple(BaseEstimator, TransformerMixin):
 
 class DimensionalityReductor(BaseEstimator, TransformerMixin):
     def __init__(self, features_totransform=None, algorithm_to_use='PCA', n_dim=20, labels_featurename=None, n_neighbors=10):
-        # labels_featurename can be a feature name and also a list of discrete labels
+        # Passing labels_featurename here for NCA is a mistake :(  it should be passed as a label to fit function, for
+        # gridsearch to correctly split labels associated with folds.
+        # So, I kept labels_featurenamesfor backwards compatibility with the rest of the notebook.
+        # But with GridSearchCV, labels_featurename won't be used :  labels passed to fit will be used instead
+        
+        # labels_featurename can be a feature name and also a list of discrete labels               
         self.fitted = False
         self.features_totransform = features_totransform
         self.algorithm_to_use = algorithm_to_use
@@ -614,11 +619,13 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
                     self.labels = df['TotalPricePerMonth']
                 '''
                 
-                if isinstance(self.labels_featurename, str):
-                    self.labels_discrete = pd.cut(df[self.labels_featurename], bins=range(1,10), right=True).astype(str).tolist()
-                    
-                else:
-                    self.labels_discrete = self.labels_featurename
+                if (self.labels_featurename != None):
+                    if isinstance(self.labels_featurename, str):
+                        self.labels_discrete = pd.cut(df[self.labels_featurename], bins=10, right=True).astype(str).tolist()
+                        
+                    else:
+                        #self.labels_discrete = self.labels_featurename
+                        self.labels_discrete = pd.cut(self.labels_featurename, bins=10, right=True).astype(str).tolist()
                     
                 self.reductor = NeighborhoodComponentsAnalysis(random_state=42, n_components=self.n_dim)
                 
@@ -649,7 +656,20 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
                 self.reductor.fit(df[self.filter_cols].to_numpy())            
             
             if (self.algorithm_to_use == 'NCA'):
-                self.reductor.fit(df[self.filter_cols].to_numpy(), self.labels_discrete)       
+                if (self.labels_featurename != None):  # Backwards compatibility. For use without GridSearchCV
+                    self.reductor.fit(df[self.filter_cols].to_numpy(), self.labels_discrete)       
+                    
+                else:  # For use with GridSearchCV : labels passed to fit
+                    print('self.labels_featurename != None : for gridsearch')
+                    
+                    print('len of labels: ' + str(len(labels)))
+                    labels_discrete = pd.cut(labels, bins=10, right=True).astype(str).tolist()
+                    print('len of labels_discrete: ' + str(len(labels_discrete)))
+                    print('len of input df to transform : ' + str(len(df[self.filter_cols])))    
+                
+                
+                    
+                    self.reductor.fit(df[self.filter_cols].to_numpy(), labels_discrete)       
             
             if  (self.algorithm_to_use == 'TSNE'):
                 print('No fit for TSNE')
@@ -742,14 +762,14 @@ class BowEncoder(BaseEstimator, TransformerMixin):
         print('BowEncoder : Fit data')
         print(f'categorical_features_totransform == {categorical_features_totransform}')
         self.categorical_features_totransform = categorical_features_totransform
-        print('!! categorical_features_totransform' + str(self.categorical_features_totransform))
+        #print('!! categorical_features_totransform' + str(self.categorical_features_totransform))
 
         if (self.categorical_features_totransform != None):
             for feature_name in self.categorical_features_totransform:
                 self.vectorizers[feature_name] = CountVectorizer(min_df=self.min_df)
-                print('track1')
+                #print('track1')
                 matrix_vectorized = self.vectorizers[feature_name].fit(df[feature_name].astype(str))
-                print('track2')
+                #print('track2')
                                 
         self.fitted = True
         
@@ -804,9 +824,9 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         print('AgregateToClientLevel : Fit data')
         print('compute_rfm :' + str(self.compute_rfm))
 
-        print('trace1')
+        #print('trace1')
         self.max_order_date = df['InvoiceDate'].astype(str).max()
-        print('trace2')
+        #print('trace2')
         self.fitted = True
         
         return self
@@ -974,7 +994,6 @@ class Clusterer(BaseEstimator, TransformerMixin):
 
             # Return cluster labels from these instances on training set            
             return(self.clusterer.labels_[array_train_nearest_neighbors_indices])
-            # Need to add : get cluster numbers in training set corresponding to df_train_nearest_neighbors
             
         else:
             # Code

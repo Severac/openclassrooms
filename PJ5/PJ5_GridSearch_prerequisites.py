@@ -259,6 +259,8 @@ for labels_test in labels_test_per_k:
     
     entropy_mean_score_per_k_test.append(entropy_sum)    
     
-bow_labels_train = kmeans_per_k[10].labels_
-
+bow_labels_train = kmeans_per_k[10].labels_  # sample : [4 7 8 ... 4 8 1]
 bow_labels_test = kmeans_per_k[10].predict(df_test.loc[:, 0].to_numpy().reshape(-1,1))
+
+rfm_score_train = df_train['RfmScore']
+rfm_score_test = df_test['RfmScore']
