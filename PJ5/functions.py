@@ -5,8 +5,8 @@ Created on Fri Apr 24 15:45:19 2020
 
 @author: francois
 """
-def blabla2():
-    print('bla2')
+
+DEBUG_LEVEL = 0  # 1 = Main steps
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
@@ -192,7 +192,7 @@ class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
     def fit(self, df, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):      
         print('Fit data')
         self.categorical_features_totransform = categorical_features_totransform
-        print('!! categorical_features_totransform' + str(self.categorical_features_totransform))
+        #print('!! categorical_features_totransform' + str(self.categorical_features_totransform))
 
         if (self.categorical_features_totransform != None):
             for feature_name in self.categorical_features_totransform:
@@ -210,22 +210,22 @@ class CategoricalFeatures1HotEncoder(BaseEstimator, TransformerMixin):
         if (self.categorical_features_totransform != None):
             print('Transform data')
             
-            print('1hot encode categorical features...')
+            #print('1hot encode categorical features...')
             #df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=True)  # Sparse allows to gain memory. But then, standardscale must be with_mean=False
             df_encoded = pd.get_dummies(df, columns=self.categorical_features_totransform, sparse=False)
 
             # Get category values that were in fitted data, but that are not in data to transform 
             for feature_name, feature_values in self.all_feature_values.items():
                 diff_columns = list(set(feature_values) - set(df_encoded.columns.tolist()))
-                print(f'Column values that were in fitted data but not in current data: {diff_columns}')
+                #print(f'Column values that were in fitted data but not in current data: {diff_columns}')
 
                 if (len(diff_columns) > 0):
-                    print('Adding those column with 0 values to the DataFrme...')
+                    #print('Adding those column with 0 values to the DataFrme...')
                     # Create columns with 0 for the above categories, in order to preserve same matrix shape between train et test set
                     zeros_dict = dict.fromkeys(diff_columns, 0)
                     df_encoded = df_encoded.assign(**zeros_dict)
 
-            print('type of df : ' + str(type(df_encoded)))
+            #print('type of df : ' + str(type(df_encoded)))
             return(df_encoded)
 
         else:
@@ -238,12 +238,12 @@ class Aggregate_then_GroupByMean_then_Sort_numericalEncoder(BaseEstimator, Trans
         self.all_feature_values = {}
     
     def fit(self, df, labels=None):      
-        print('Fit data')
+        #print('Fit data')
         
         self.feature_maps = {}
         
         for feature_name in self.categorical_features_totransform:
-            print(f'Fitting feature {feature_name}')
+            #print(f'Fitting feature {feature_name}')
             # List all feature values ordered by mean delay
             list_feature_mean_ordered = df[['ARR_DELAY', feature_name]].groupby(feature_name).mean().sort_values(by='ARR_DELAY', ascending=True).index.tolist()
             
@@ -265,10 +265,10 @@ class Aggregate_then_GroupByMean_then_Sort_numericalEncoder(BaseEstimator, Trans
             print('Launching fit first (if you see this message : ensure that you have passed training set as input, not test set)')
             self.fit(df)
         
-        print('Encode categorical features...')
+        #print('Encode categorical features...')
         
         for feature_name in self.categorical_features_totransform:
-            print(f'Encoding feature {feature_name} ...')
+            #print(f'Encoding feature {feature_name} ...')
             #print('Dictionnary : ' + str(self.feature_maps[feature_name]['list_feature_mean_ordered_dict']))
             
             # Replace each feature value by its index (the lowest the index, the lowest the mean delay is for this feature)
@@ -285,18 +285,20 @@ class FeaturesSelector(BaseEstimator, TransformerMixin):
         self.features_toselect = features_toselect
     
     def fit(self, df, labels=None):      
-        print('Fit FeaturesSelector')
+        if (DEBUG_LEVEL >= 1) :
+            print('Fit FeaturesSelector')
         return self
     
     def transform(self, df):       
-        print('Transform FeaturesSelector')
+        if (DEBUG_LEVEL >= 1) :
+            print('Transform FeaturesSelector')
         
         if (self.features_toselect != None):
             filter_cols = [col for col in df if (col.startswith(tuple(self.features_toselect)))]
             
             filter_cols.sort()
             
-            print("Features selected (in order): " + str(df.loc[:, filter_cols].columns))
+            #print("Features selected (in order): " + str(df.loc[:, filter_cols].columns))
             
             #df = df.loc[:, filter_cols]
             return(df.loc[:, filter_cols])
@@ -317,7 +319,9 @@ class Filter_High_Percentile(BaseEstimator, TransformerMixin):
         self.low_percentile = None
     
     def fit(self, df, labels=None): 
-        print('Fit high percentile filter...')
+        if (DEBUG_LEVEL >= 1) :
+            print('Fit high percentile filter...')
+            
         for feature_tofilter in self.features_tofilter:
             # Get feature_tofilter values that represent 80% of data
             self.high_percentile = ((((df[[feature_tofilter]].groupby(feature_tofilter).size() / len(df)).sort_values(ascending=False)) * 100).cumsum() < self.percent_tokeep).where(lambda x : x == True).dropna().index.values.tolist()
@@ -472,7 +476,14 @@ class StandardScalerMultiple_old(BaseEstimator, TransformerMixin):
             df[self.columns] = self.scaler.transform(df[self.columns].to_numpy())
 
         return(df)
-        
+  
+'''
+This class does StandardScale scaling 
+It is "Multiple" because you can select which features to scale.
+Other columns are kept untouched.
+
+In and out data : pandas DataFrame
+'''      
 class StandardScalerMultiple(BaseEstimator, TransformerMixin):
     def __init__(self, features_toscale=None):
         self.fitted = False
@@ -504,45 +515,52 @@ class StandardScalerMultiple(BaseEstimator, TransformerMixin):
 
         return(df)
 
-def bla():
-    print('bla')
-        
 
+'''
+This class does MinMax scaling 
+It is "Multiple" because you can select which features to scale.
+Other columns are kept untouched.
+
+In and out data : pandas DataFrame
+'''
 class MinMaxScalerMultiple(BaseEstimator, TransformerMixin):
     #def __init__(self, features_toscale='ALL_FEATURES'):        
     def __init__(self, features_toscale):        
-        print('Init MinMaxScalerMultiple')
-        print(f'At init! : features_toscale == {features_toscale}')
+        if (DEBUG_LEVEL >= 1) :
+            print('Init MinMaxScalerMultiple')
+        #print(f'At init : features_toscale == {features_toscale}')
         self.fitted = False
         self.columns = features_toscale
         # This line is mandatory for gridsearch to take features_toscale into account :
         self.features_toscale = features_toscale 
-        
-        print(f'At init : self.columns == {self.columns}')
     
     def fit(self, df, labels=None):              
-        print('Fit Min max scaler multiple !')
-        print('Fit Min max scaler multiple 3')
+        if (DEBUG_LEVEL >= 1) :
+            print('Fit Min max scaler multiple')
+            
         self.scaler = MinMaxScaler()
   
         if (self.columns == None):
-            print('self.columns == None')
+            #print('self.columns == None')
             self.fitted = True
             return(df)
             
         else:
-            print('self.columns not None')
+            #print('self.columns not None')
             if (self.columns == 'ALL_FEATURES'):
                 self.columns = df.columns.tolist()
-                print(f'MinMaxScalerMultiple : self.columns  = {self.columns}')
-                
+                #print(f'MinMaxScalerMultiple : self.columns  = {self.columns}')
+            
+            #print('1')
             self.scaler.fit(df[self.columns].to_numpy())            
             self.fitted = True
+            #print('2')
         
         return self
     
     def transform(self, df):
-        print('Transform Min max scaler multiple')
+        if (DEBUG_LEVEL >= 1) :
+            print('Transform Min max scaler multiple')
         if (self.fitted == False):
             self.fit(df)
         
@@ -553,6 +571,14 @@ class MinMaxScalerMultiple(BaseEstimator, TransformerMixin):
             df.loc[:, self.columns] = self.scaler.transform(df.loc[:, self.columns].to_numpy())
 
         return(df)        
+
+'''
+This class does Logarithm scaling 
+It is "Multiple" because you can select which features to scale.
+Other columns are kept untouched.
+
+In and out data : pandas DataFrame
+'''
         
 class LogScalerMultiple(BaseEstimator, TransformerMixin):
     def __init__(self, features_toscale=None):
@@ -560,7 +586,8 @@ class LogScalerMultiple(BaseEstimator, TransformerMixin):
         self.columns = features_toscale
     
     def fit(self, df):              
-        print('Fit log scaler multiple')
+        if (DEBUG_LEVEL >= 1) :
+            print('Fit log scaler multiple')
         self.scaler = FunctionTransformer(np.log1p, validate=True)
   
         if (self.columns == None):
@@ -574,7 +601,8 @@ class LogScalerMultiple(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, df):
-        print('Transform log scaler scaler multiple')
+        if (DEBUG_LEVEL >= 1) :
+            print('Transform log scaler scaler multiple')
         if (self.fitted == False):
             self.fit(df)
         
@@ -586,7 +614,12 @@ class LogScalerMultiple(BaseEstimator, TransformerMixin):
 
         return(df)    
 
+'''
+This class is a wrapper for dimensionality reduction.
+Different dimensionality reduction algorithms can be selected, along with hyperparameters
 
+In and out data : pandas DataFrame
+'''
 class DimensionalityReductor(BaseEstimator, TransformerMixin):
     def __init__(self, features_totransform=None, algorithm_to_use='PCA', n_dim=20, labels_featurename=None, n_neighbors=10):
         # Passing labels_featurename here for NCA is a mistake :(  it should be passed as a label to fit function, for
@@ -603,7 +636,8 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
         self.n_neighbors = n_neighbors # For LLE
     
     def fit(self, df, labels=None):  # Labels=None added to attempt to remove weird error fit() takes 2 positional arguments but 3 were given
-        print('Fit Dimensionality Reductor')
+        if (DEBUG_LEVEL >= 1) :
+            print('Fit Dimensionality Reductor')
               
         if (self.features_totransform == None):
             self.fitted = True
@@ -626,7 +660,22 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
                     else:
                         #self.labels_discrete = self.labels_featurename
                         self.labels_discrete = pd.cut(self.labels_featurename, bins=10, right=True).astype(str).tolist()
+                
+                else:  # For use with GridSearchCV : in this case, labels variable has been passed to fit()                    
+                    #print('df indexes :')
+                    #print(df.index)
+                        
+                    labels = labels[df.index]  # Select only labels in df (which is a fold of the training set)
+                    #print('labels sliced successfuly')
+                    #print('Printing labels sliced :')
+                    #print(labels)
                     
+                    labels_discrete = pd.cut(labels, bins=10, right=True).astype(str).tolist()
+                    #print('labels discretized successfuly')
+                    #print(labels_discrete)
+                    
+                
+                
                 self.reductor = NeighborhoodComponentsAnalysis(random_state=42, n_components=self.n_dim)
                 
             
@@ -648,9 +697,9 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
 
             self.filter_cols.sort()
             
-            print('1')
-            print("Features selected (in order): " + str(df.loc[:, self.filter_cols].columns))            
-            print('2')
+            #print('1')
+            #print("Features selected (in order): " + str(df.loc[:, self.filter_cols].columns))            
+            #print('2')
             
             if ((self.algorithm_to_use == 'PCA') or (self.algorithm_to_use == 'LLE') or (self.algorithm_to_use == 'ISOMAP')):
                 self.reductor.fit(df[self.filter_cols].to_numpy())            
@@ -660,16 +709,17 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
                     self.reductor.fit(df[self.filter_cols].to_numpy(), self.labels_discrete)       
                     
                 else:  # For use with GridSearchCV : labels passed to fit
-                    print('self.labels_featurename != None : for gridsearch')
+                    #print('self.labels_featurename != None : for gridsearch')
                     
-                    print('len of labels: ' + str(len(labels)))
-                    labels_discrete = pd.cut(labels, bins=10, right=True).astype(str).tolist()
-                    print('len of labels_discrete: ' + str(len(labels_discrete)))
-                    print('len of input df to transform : ' + str(len(df[self.filter_cols])))    
-                
-                
+                    #print('len of labels: ' + str(len(labels)))
+                    #print('len of labels_discrete: ' + str(len(labels_discrete)))
+                    #print('len of input df to transform : ' + str(len(df[self.filter_cols])))    
+                                       
+                    #print('unique labels : ')
+                    #print(np.unique(labels_discrete))
                     
                     self.reductor.fit(df[self.filter_cols].to_numpy(), labels_discrete)       
+                    #print('reductor fit called')
             
             if  (self.algorithm_to_use == 'TSNE'):
                 print('No fit for TSNE')
@@ -679,7 +729,9 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, df):
-        print('Transform Dimensionality Reductor')
+        if (DEBUG_LEVEL >= 1) :
+            print('Transform Dimensionality Reductor')
+            
         if (self.fitted == False):
             self.fit(df)
         
@@ -689,26 +741,39 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
         else:
             remaining_columns = list(set(df.columns.tolist()) - set(self.filter_cols))
             
-            print(f'Remaining columns: {remaining_columns}')
+            #print(f'Remaining columns: {remaining_columns}')
             
             if (self.algorithm_to_use == 'TSNE'):
                 # TNSE has not transform function so we have to do fit_transform directly
                 np_transformed = self.reductor.fit_transform(df[self.filter_cols].to_numpy())            
             
             else:
-                print('1')
+                #print('1')
                 np_transformed = self.reductor.transform(df[self.filter_cols].to_numpy())
-                print('2')
+                #print('2')
             
             if (remaining_columns != []):
-                print('3')
+                #print('3')
+                #print('df.index before concatenation: ')
+                #print(df.index)
                 df_transformed = pd.concat([df[remaining_columns].reset_index(drop=True), pd.DataFrame(np_transformed)], axis=1)
-                print('4')
+                #print('Print 1 line of Df after concat and before reindex :')
+                #print(df_transformed.head(1))
+                
+                # Added to be able to extract index (customer IDs) for labels after
+                # Needs to be tested again with the notebook
+                df_transformed.set_index(df.index, inplace=True) 
+                
+                #print('df_transformed.index after concatenation: ')
+                #print(df_transformed.index)
+                #print('Print 1 line of Df after concat and after reindex :') # => result : nan values, not good
+                #print(df_transformed.head(1))
+                #print('4')
                 
             else:
                 df_transformed = pd.DataFrame(np_transformed)
 
-        print('5')
+        #print('5')
         return(df_transformed)    
 
  
@@ -719,6 +784,9 @@ def load_data(in_file):
         
     return(df)
     
+'''
+This function splits training and test set with a stratify strategy on 1 feature
+'''    
 def custom_train_test_split_sample(df, split_feature, SAMPLED_DATA=False):
     from sklearn.model_selection import train_test_split
     
@@ -745,8 +813,12 @@ def custom_train_test_split_sample(df, split_feature, SAMPLED_DATA=False):
     
     return df, df_train, df_test
 
-
-
+'''
+This class does a bag of words encoding : which means for each possible word in
+the feature to encode, a column called featurename_word is created in the dataframe.
+#
+You can select which features to encode (others are left untouched)
+'''
 class BowEncoder(BaseEstimator, TransformerMixin):
     #def __init__(self, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):
     def __init__(self, min_df=0.001):
@@ -759,8 +831,10 @@ class BowEncoder(BaseEstimator, TransformerMixin):
     
     #def fit(self, df, labels=None):      
     def fit(self, df, labels=None, categorical_features_totransform=['DescriptionNormalized']):      
-        print('BowEncoder : Fit data')
-        print(f'categorical_features_totransform == {categorical_features_totransform}')
+        if (DEBUG_LEVEL >= 1) :
+            print('BowEncoder : Fit data')
+            
+        #print(f'categorical_features_totransform == {categorical_features_totransform}')
         self.categorical_features_totransform = categorical_features_totransform
         #print('!! categorical_features_totransform' + str(self.categorical_features_totransform))
 
@@ -776,13 +850,16 @@ class BowEncoder(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, df):
+        if (DEBUG_LEVEL >= 1) :
+            print('BowEncoder : transform data')
+            
         if (self.fitted == False):
             self.fit(df)
         
         if (self.categorical_features_totransform != None):
             #df = df.copy(deep=True)                                                                 
             
-            print('Transform data')
+            #print('Transform data')
             for feature_name in self.categorical_features_totransform:
                 matrix_vectorized = self.vectorizers[feature_name].transform(df[feature_name])
                 
@@ -791,7 +868,7 @@ class BowEncoder(BaseEstimator, TransformerMixin):
                 df_vectorized = pd.DataFrame(matrix_vectorized.todense(), columns=bow_features, dtype='int8')
                 del matrix_vectorized
                 
-                df = pd.concat([df, df_vectorized], axis=1)            
+                df = pd.concat([df.reset_index(), df_vectorized], axis=1)            
         
             return(df)
 
@@ -821,8 +898,10 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         self.compute_rfm = compute_rfm
     
     def fit(self, df, labels=None):      
-        print('AgregateToClientLevel : Fit data')
-        print('compute_rfm :' + str(self.compute_rfm))
+        if (DEBUG_LEVEL >= 1) :
+            print('AgregateToClientLevel : Fit data')
+            
+        #print('compute_rfm :' + str(self.compute_rfm))
 
         #print('trace1')
         self.max_order_date = df['InvoiceDate'].astype(str).max()
@@ -832,6 +911,9 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, df):
+        if (DEBUG_LEVEL >= 1) :
+            print('AgregateToClientLevel : Transform data')
+            
         if (self.fitted == False):
             self.fit(df)
         
@@ -852,7 +934,7 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
 
         # Remove cancellations
         df_nocancel = df[df['InvoiceNo'].str.startswith('C') == False]
-        df_nocancel.reset_index(inplace=True)
+        #df_nocancel.reset_index(inplace=True)  # TRY not to reset index :   put back if bug occurs
         
         # Calculate number of months for each client max(last month - first month ordered, 1 month)
         series_gbclient_nbmonths = np.maximum(\
@@ -897,7 +979,7 @@ class AgregateToClientLevel(BaseEstimator, TransformerMixin):
             df_gbcust_nocancel.loc[:, 'TotalQuantityPerMonth'] = df_nocancel[['CustomerID', 'Quantity']].groupby('CustomerID').sum()['Quantity'] / series_gbclient_nbmonths
             df_gbcust_nocancel.loc[:, 'RfmScore'] = get_rfm_scores(df_gbcust_nocancel)  # This line when added, created "local copy slice dataframe" error
             
-        print('Trace 7 before end')
+        #print('Trace 7 before end')
         return(df_gbcust_nocancel) 
         
         
@@ -950,7 +1032,12 @@ def get_rfm_scores(df):
     return(df_rfmtable.loc[:, 'RFMScore'].copy(deep=True))
     
     
-    
+'''
+This class wraps clustering algorithms
+
+It also implements a predict method for Ward algorithm (which does not have
+a predict implementation in scikit learn) 
+'''    
 class Clusterer(BaseEstimator, TransformerMixin):
     def __init__(self, algorithm_to_use='KMEANS', n_clusters=10):
         self.clusterer = None
@@ -962,7 +1049,8 @@ class Clusterer(BaseEstimator, TransformerMixin):
         self.n_clusters = n_clusters
     
     def fit(self, df, labels=None):              
-        print('Fit method of Clusterer')
+        if (DEBUG_LEVEL >= 1) :
+            print('Fit method of Clusterer')
         
         if (self.algorithm_to_use == 'KMEANS'):
             self.clusterer = KMeans(n_clusters=self.n_clusters, random_state=42)
@@ -981,7 +1069,8 @@ class Clusterer(BaseEstimator, TransformerMixin):
         return self
 
     def predict(self, df):
-        print('Predict method of Clusterer')
+        if (DEBUG_LEVEL >= 1) :
+            print('Predict method of Clusterer')
         
         if (self.algorithm_to_use in self.algos_without_transform):
             # First, get closest instances from training set, to the instances we're predicting
@@ -1003,7 +1092,8 @@ class Clusterer(BaseEstimator, TransformerMixin):
         
     # If there are less than 2 labels : silhouette score will be -1
     def score(self, X, y=None):
-        print('Score method of Clusterer')
+        if (DEBUG_LEVEL >= 1) :
+            print('Score method of Clusterer')
         
         predicted_labels = self.predict(X)
         
@@ -1014,6 +1104,10 @@ class Clusterer(BaseEstimator, TransformerMixin):
         else:
             return(silhouette_score(X, predicted_labels))
         
+'''
+This function is abled to either save a grid search result, or load it 
+(depending on SAVE_GRID_RESULTS)
+'''
 def save_or_load_search_params(grid_search, save_file_suffix):
     if (SAVE_GRID_RESULTS == True):
         #df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)

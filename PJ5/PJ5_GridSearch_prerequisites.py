@@ -222,6 +222,8 @@ preparation_pipeline = Pipeline([
 df_train = preparation_pipeline.fit_transform(df_train)
 df_test = preparation_pipeline.transform(df_test)
 
+print('End of preparation pipeline transform')
+
 kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_train.loc[:, 0].to_numpy().reshape(-1,1))
                 for k in range(1, 50)]
 
@@ -248,6 +250,8 @@ for model in kmeans_per_k[1:]:
     
 entropy_mean_score_per_k_test = []
 
+print('Next')
+
 for labels_test in labels_test_per_k:
     unique_labels = np.unique(labels_test)
     
@@ -259,8 +263,15 @@ for labels_test in labels_test_per_k:
     
     entropy_mean_score_per_k_test.append(entropy_sum)    
     
+# Cluster corresponding to kmeans_per_k[10] has the best silhouette score
 bow_labels_train = kmeans_per_k[10].labels_  # sample : [4 7 8 ... 4 8 1]
 bow_labels_test = kmeans_per_k[10].predict(df_test.loc[:, 0].to_numpy().reshape(-1,1))
+
+series_bow_labels_train = pd.Series(bow_labels_train)
+series_bow_labels_test = pd.Series(bow_labels_test)
+
+series_bow_labels_train.set_axis(df_train.index, axis=0, inplace=True)
+series_bow_labels_test.set_axis(df_test.index, axis=0, inplace=True)
 
 rfm_score_train = df_train['RfmScore']
 rfm_score_test = df_test['RfmScore']
