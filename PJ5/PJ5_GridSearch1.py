@@ -49,6 +49,26 @@ complete_pipeline = Pipeline([
 ])
 
 
+complete_pipeline_nobow = Pipeline([
+    #('features_selector', FeaturesSelector(features_toselect=MODEL_FEATURES)),
+    #('bow_encoder', BowEncoder()),
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+    ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 
+                                                              'RfmScore', 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
+    
+    # > To improve model with grid search : integrate log scaler in feature_selector
+    #('scaler', LogScalerMultiple(features_toscale=['RfmScore'])), 
+    
+    
+    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
+   
+    #('minmaxscaler', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+    #('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+    #                                                        algorithm_to_use='NCA', n_dim=3, labels_featurename=None)),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+    ('clusterer', Clusterer(n_clusters=11, algorithm_to_use='WARD'))
+])
+
 param_grid_bow_always_NCA_ideal = [
     #{'agregate_to_client_level__top_value_products' : [
     #    
@@ -239,8 +259,10 @@ param_grid = [
 
     },
     
+]
 
-    {'features_selector__features_toselect': [
+
+param_grid2 =     {'features_selector__features_toselect': [
         ['BoughtTopValueProduct', 'HasEverCancelled', 
         'RfmScore']  ,
 
@@ -261,28 +283,7 @@ param_grid = [
         'TotalPricePerMonth', 'TotalQuantityPerMonth']  ,
 
     ],
-
-     'minmaxscaler__features_toscale' : [  
-         'ALL_FEATURES', 
-     ],
-     
-     'dimensionality_reductor__features_totransform' : [  
-         None,
-     ],
-     
-     'dimensionality_reductor__algorithm_to_use' : [  
-         'NCA', 
-     ],
-
-     'dimensionality_reductor__n_dim' : [  
-         3, 10, 200
-     ],
-     
-     #'dimensionality_reductor__labels_featurename': [
-     #    'RfmScore',
-     #     bow_labels_train,
-     #],
-
+          
     'minmaxscaler_final__features_toscale' : [  
              'ALL_FEATURES', 
          ],
@@ -297,7 +298,110 @@ param_grid = [
      ],
 
     },
+
+
+param_grid3 = [
+    #{'agregate_to_client_level__top_value_products' : [
+    #    
+    #],
+    {'features_selector__features_toselect': [
+        ['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 
+        'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']  ,
+
+        ['DescriptionNormalized',
+        'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']  ,
+         
+    ],
+
+     'minmaxscaler__features_toscale' : [  
+         'ALL_FEATURES', 
+     ],
+     
+     'dimensionality_reductor__features_totransform' : [  
+         ['DescriptionNormalized'], 
+     ],
+     
+     'dimensionality_reductor__algorithm_to_use' : [  
+         'NCA', 
+     ],
+
+     'dimensionality_reductor__n_dim' : [  
+         3, 5, 10, 200
+     ],
+     
+     #'dimensionality_reductor__labels_featurename': [
+     #    'RfmScore',
+     #     bow_labels_train,
+     #],
+
+    'minmaxscaler_final__features_toscale' : [  
+             'ALL_FEATURES', 
+         ],
+    
+     'clusterer__algorithm_to_use' : [  
+         'KMEANS' 
+     ],
+  
+     'clusterer__n_clusters' : [  
+         3, 4, 5, 6, 7, 8, 9, 10
+     ],
+
+    },
+    
 ]
+    
+    
+    
+    
+param_grid4 = [
+    #{'agregate_to_client_level__top_value_products' : [
+    #    
+    #],
+    {'features_selector__features_toselect': [
+        ['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 
+        'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']  ,
+         
+        ['DescriptionNormalized',
+        'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']  ,
+    ],
+
+     'minmaxscaler__features_toscale' : [  
+         'ALL_FEATURES', 
+     ],
+     
+     'dimensionality_reductor__features_totransform' : [  
+         ['DescriptionNormalized'], 
+     ],
+     
+     'dimensionality_reductor__algorithm_to_use' : [  
+         'PCA', 'LLE', 'ISOMAP', 'NCA'
+     ],
+
+     'dimensionality_reductor__n_dim' : [  
+         3,5,10,50,200
+     ],
+     
+     #'dimensionality_reductor__labels_featurename': [
+     #    'RfmScore',
+     #     bow_labels_train,
+     #],
+
+    'minmaxscaler_final__features_toscale' : [  
+             'ALL_FEATURES', 
+         ],
+    
+     'clusterer__algorithm_to_use' : [  
+         'KMEANS', 'WARD' 
+     ],
+  
+     'clusterer__n_clusters' : [  
+         4, 6, 8
+     ],
+
+    },
+    
+]
+
     
 '''    
 # For debug
@@ -437,9 +541,41 @@ if (RECOMPUTE_GRIDSEARCH == True):
 
 
     
+    '''
+    # First run of GridSearch : bow features only
     
     grid_search = GridSearchCV(model, param_grid, cv=5, verbose=10, error_score=np.nan, scoring=None, iid=False) # TO CHANGE back to cv=5
     grid_search.fit(df_train, dimensionality_reductor__labels=rfm_score_train)
 
     grid_search_res, df_grid_search_results_res = save_or_load_search_params(grid_search, 'gridsearch_BoWAlways_NCAAlways_NCARFMlabels')
+    '''
+
     
+    # Second run of GridSearch : no bow features
+    '''
+    model = complete_pipeline_nobow
+    
+    grid_search = GridSearchCV(model, param_grid2, cv=5, verbose=10, error_score=np.nan, scoring=None, iid=False)
+    grid_search.fit(df_train)
+
+    grid_search_res, df_grid_search_results_res = save_or_load_search_params(grid_search, 'gridsearch_NOBoW_NoDimReduction')
+    '''
+
+    '''
+    # Third run of GridSearch : bow features, with bow labels for NCA
+    model = complete_pipeline
+    
+    grid_search = GridSearchCV(model, param_grid3, cv=5, verbose=10, error_score=np.nan, scoring=None, iid=False)
+    grid_search.fit(df_train, dimensionality_reductor__labels=series_bow_labels_train)
+
+    grid_search_res, df_grid_search_results_res = save_or_load_search_params(grid_search, 'gridsearch_BoWAlways_NCAAlways_NCAbowlabels')
+    '''
+
+    # 4th run of GridSearch : bow features, comparison of several dimensionality reduction algorithms
+    model = complete_pipeline
+    
+    grid_search = GridSearchCV(model, param_grid4, cv=5, verbose=10, error_score=np.nan, scoring=None, iid=False)
+    grid_search.fit(df_train, dimensionality_reductor__labels=rfm_score_train)
+
+    grid_search_res, df_grid_search_results_res = save_or_load_search_params(grid_search, 'gridsearch_BoWAlways_SeveralDimReductors_NCArfmlabels')
+

@@ -641,7 +641,7 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
               
         if (self.features_totransform == None):
             self.fitted = True
-            return(df)
+            return(self)
             
         else:            
             if (self.algorithm_to_use == 'PCA'):
