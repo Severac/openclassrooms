@@ -5,7 +5,6 @@ Created on Fri Apr 24 15:45:19 2020
 
 @author: francois
 """
-
 DEBUG_LEVEL = 0  # 1 = Main steps
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -45,9 +44,12 @@ import qgrid
 import numpy as np
 
 import pickle
+
+
 RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
 SAVE_GRID_RESULTS = True # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
 LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
+
 
 #GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
 
@@ -1138,4 +1140,18 @@ def save_or_load_search_params(grid_search, save_file_suffix):
             df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
             
             return(grid_search, df_grid_search_results)
+
+'''
+This function loads grid results
+'''
+def load_search_params(grid_search, save_file_suffix):
+    with open(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.pickle', 'rb') as f:
+        grid_search = pickle.load(f)
+    
+    df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["mean_test_score"])],axis=1)
+    df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["std_test_score"], columns=["std_test_score"])],axis=1)
+    df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_fit_time"], columns=["mean_fit_time"])],axis=1)
+    df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["mean_score_time"], columns=["mean_score_time"])],axis=1)
+    
+    return(grid_search, df_grid_search_results)
         

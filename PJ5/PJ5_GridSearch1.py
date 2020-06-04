@@ -18,11 +18,14 @@ Usage :
 
 import sys, importlib
 
+
 # The first time PJ5_GridSearch1.py is called by the interpretor : first "from...import" needs to be called
 # But the second time, "from...import" must be called after reload
 from functions import *
 importlib.reload(sys.modules['functions'])
 from functions import *
+
+from sklearn.model_selection import StratifiedKFold
 
 # Pipeline and GridSearch
 df_train = df_train_ori
@@ -517,8 +520,11 @@ ValueError: Input array must be 1 dimensional
 '''
 
 print('\nGrid Search launch')
+
+# USAGE : uncomment the part of code corresponding to the type of search you want to to
 if (RECOMPUTE_GRIDSEARCH == True):
     model = complete_pipeline
+    
     
     '''
     df_train, df_train1, df_train2 = custom_train_test_split_sample(df_train, 'TotalPrice')
@@ -571,6 +577,7 @@ if (RECOMPUTE_GRIDSEARCH == True):
     grid_search_res, df_grid_search_results_res = save_or_load_search_params(grid_search, 'gridsearch_BoWAlways_NCAAlways_NCAbowlabels')
     '''
 
+    '''
     # 4th run of GridSearch : bow features, comparison of several dimensionality reduction algorithms
     model = complete_pipeline
     
@@ -578,4 +585,34 @@ if (RECOMPUTE_GRIDSEARCH == True):
     grid_search.fit(df_train, dimensionality_reductor__labels=rfm_score_train)
 
     grid_search_res, df_grid_search_results_res = save_or_load_search_params(grid_search, 'gridsearch_BoWAlways_SeveralDimReductors_NCArfmlabels')
+    '''
+
+
+    '''
+    # Second run of GridSearch again (no bow features) but with different train / test split strategy : TotalPrice
+    kfolds = StratifiedKFold(5)
+    
+    model = complete_pipeline_nobow
+    
+    cats_totalprice = pd.cut(df_train['TotalPrice'], bins=10, labels=range(10))
+    
+    grid_search = GridSearchCV(model, param_grid2, verbose=10, error_score=np.nan, scoring=None, cv=kfolds.split(df_train, cats_totalprice), iid=False)
+    grid_search.fit(df_train)
+
+    grid_search_res, df_grid_search_results_res = save_or_load_search_params(grid_search, 'gridsearch_NOBoW_NoDimReduction_splitbyTotalPrice')
+    '''
+    
+    # Second run of GridSearch again (no bow features) but with different train / test split strategy : InvoiceDate
+    kfolds = StratifiedKFold(5)
+    
+    model = complete_pipeline_nobow
+    
+    #cats_invoicemonth = pd.cut(df_train['InvoiceMonth'], bins=10, labels=range(10))
+    cats_invoicemonth = df_train['InvoiceMonth']
+    
+    grid_search = GridSearchCV(model, param_grid2, verbose=10, error_score=np.nan, scoring=None, cv=kfolds.split(df_train, cats_invoicemonth), iid=False)
+    grid_search.fit(df_train)
+
+    grid_search_res, df_grid_search_results_res = save_or_load_search_params(grid_search, 'gridsearch_NOBoW_NoDimReduction_splitbyInvoiceMonth')
+
 

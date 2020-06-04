@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ5 : Online Retail dataset :  modelisation notebook 
 
-# In[1]:
+# In[6]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -86,9 +86,9 @@ LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from pi
 '''
 
 
-RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
-SAVE_GRID_RESULTS = True # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
-LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
+RECOMPUTE_GRIDSEARCH = False  # CAUTION : computation is several hours long
+SAVE_GRID_RESULTS = False # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
+LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
 
 #GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
 
@@ -120,38 +120,38 @@ API_MODEL_PICKLE_FILE = 'API_model_PJ5.pickle'
 
 # # Load data
 
-# In[2]:
+# In[7]:
 
 
 df = load_data(DATA_PATH_FILE_INPUT)
 
 
-# In[3]:
+# In[8]:
 
 
 df.info()
 
 
-# In[4]:
+# In[9]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df, 'TotalPrice')
 
 
-# In[5]:
+# In[10]:
 
 
 df_train.reset_index(inplace=True)
 df_test.reset_index(inplace=True)
 
 
-# In[6]:
+# In[11]:
 
 
 df_train.info()
 
 
-# In[7]:
+# In[12]:
 
 
 df_train_ori = df_train.copy(deep=True)
@@ -160,7 +160,7 @@ df_test_ori = df_test.copy(deep=True)
 
 # # Top value products (must be saved with the model, and passed to it)
 
-# In[8]:
+# In[13]:
 
 
 df_nocancel = df_train[df_train['InvoiceNo'].str.startswith('C') == False]
@@ -169,14 +169,14 @@ df_nocancel.reset_index(inplace=True)
 df_gbproduct = df_nocancel[['StockCode', 'TotalPrice']].groupby('StockCode').sum()['TotalPrice']
 
 
-# In[9]:
+# In[14]:
 
 
 TOP_VALUE_PRODUCT_THRESHOLD = 20
 top_value_products = df_gbproduct.sort_values(ascending=False).head(TOP_VALUE_PRODUCT_THRESHOLD).index  # Get top value products
 
 
-# In[10]:
+# In[15]:
 
 
 top_value_products
@@ -184,21 +184,21 @@ top_value_products
 
 # # Preparation pipeline : model with bow features + TotalPricePerMonth + BoughtTopValueProduct + HasEverCancelled
 
-# In[11]:
+# In[16]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[12]:
+# In[17]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[13]:
+# In[18]:
 
 
 preparation_pipeline = Pipeline([
@@ -217,31 +217,31 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[14]:
+# In[19]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 
 
-# In[15]:
+# In[20]:
 
 
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[16]:
+# In[21]:
 
 
 df_train
 
 
-# In[17]:
+# In[22]:
 
 
 df_train.info()
 
 
-# In[18]:
+# In[23]:
 
 
 series_total_price_per_month_train = df_train['TotalPricePerMonth']
@@ -256,14 +256,14 @@ series_boughttopvalueproduct_test = df_test['BoughtTopValueProduct']
 
 # # Explained variance of bag of words features
 
-# In[19]:
+# In[24]:
 
 
 from display_factorial import *
 importlib.reload(sys.modules['display_factorial'])
 
 
-# In[20]:
+# In[25]:
 
 
 display_scree_plot(preparation_pipeline['dimensionality_reductor'].reductor)
@@ -271,7 +271,7 @@ display_scree_plot(preparation_pipeline['dimensionality_reductor'].reductor)
 
 # # 2D visualization
 
-# In[21]:
+# In[26]:
 
 
 pca = PCA(n_components=2, random_state=42)
@@ -279,13 +279,13 @@ X_transformed = pca.fit_transform(df_train)
 X_test_transformed = pca.fit_transform(df_test)
 
 
-# In[22]:
+# In[27]:
 
 
 X_transformed[:,1]
 
 
-# In[23]:
+# In[28]:
 
 
 print('Binarisation of color categories')
@@ -303,7 +303,7 @@ labels = [0, 1, 2, 3]
 df_score_cat_test = pd.cut(df_test['TotalPricePerMonth'], bins=bins, labels=labels)
 
 
-# In[24]:
+# In[29]:
 
 
 fig = plt.figure()
@@ -318,7 +318,7 @@ plt.ylabel("Axe 2")
 #plt.yscale('log')
 
 
-# In[25]:
+# In[30]:
 
 
 import plotly as py
@@ -347,7 +347,7 @@ fig = go.Figure(data = [trace_1], layout = layout)
 py.offline.plot(fig, filename='clusters_plot_clients.html') 
 
 
-# In[26]:
+# In[31]:
 
 
 fig = plt.figure()
@@ -364,21 +364,21 @@ plt.ylabel("Axe 2")
 
 # # Generate bow colors
 
-# In[27]:
+# In[32]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[28]:
+# In[33]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[29]:
+# In[34]:
 
 
 preparation_pipeline = Pipeline([
@@ -398,53 +398,53 @@ preparation_pipeline = Pipeline([
 ])
 
 
-# In[30]:
+# In[35]:
 
 
 df_train = preparation_pipeline.fit_transform(df_train)
 df_test = preparation_pipeline.transform(df_test)
 
 
-# In[31]:
+# In[36]:
 
 
 df_train.loc[:, 0].to_numpy()
 
 
-# In[32]:
+# In[37]:
 
 
 kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_train.loc[:, 0].to_numpy().reshape(-1,1))
                 for k in range(1, 50)]
 
 
-# In[33]:
+# In[38]:
 
 
 labels_test_per_k = [model.predict(df_test.loc[:, 0].to_numpy().reshape(-1,1)) for model in kmeans_per_k[1:]]
 
 
-# In[34]:
+# In[39]:
 
 
 silhouette_scores = [silhouette_score(df_train.loc[:, 0].to_numpy().reshape(-1,1), model.labels_)
                      for model in kmeans_per_k[1:]]
 
 
-# In[35]:
+# In[40]:
 
 
 silhouette_scores_test = [silhouette_score(df_test.loc[:, 0].to_numpy().reshape(-1,1), labels_test) for labels_test in labels_test_per_k]
 
 
-# In[36]:
+# In[41]:
 
 
 # Model corresponding to max silhouette score. We add +1 because "for model in kmeans_per_k[1:] above has suppressed one indice"
 # kmeans_per_k[silhouette_scores.index(max(silhouette_scores)) + 1].labels_
 
 
-# In[37]:
+# In[42]:
 
 
 entropy_mean_score_per_k_train = []
@@ -476,7 +476,7 @@ for labels_test in labels_test_per_k:
     
 
 
-# In[38]:
+# In[43]:
 
 
 plt.figure(figsize=(8, 3))
@@ -488,7 +488,7 @@ plt.ylabel("Silhouette score on training set", fontsize=14)
 plt.show()
 
 
-# In[39]:
+# In[44]:
 
 
 plt.figure(figsize=(8, 3))
@@ -500,13 +500,13 @@ plt.ylabel("Silhouette score on test set", fontsize=14)
 plt.show()
 
 
-# In[40]:
+# In[45]:
 
 
 bow_labels_train = kmeans_per_k[10].labels_
 
 
-# In[41]:
+# In[46]:
 
 
 bow_labels_test = kmeans_per_k[10].predict(df_test.loc[:, 0].to_numpy().reshape(-1,1))
@@ -5292,7 +5292,7 @@ fig = go.Figure(data = [trace_1], layout = layout)
 py.offline.plot(fig, filename='clusters_plot_clients_sne_allFeatswithRFMscore_color_RFM_final_isomap.html') 
 
 
-# # Model with all features and RFM score (concat) (not individual RFM feats), and NCA (BEST)
+# # Model with all features and RFM score (cocncat) (not individual RFM feats), and NCA (BEST)
 
 # In[112]:
 
@@ -7567,217 +7567,122 @@ bow_labels_train = kmeans_per_k[10].labels_
 bow_labels_test = kmeans_per_k[10].predict(df_test.loc[:, 0].to_numpy().reshape(-1,1))
 
 
-# # Pipeline with clustering
+# # Pipeline with clustering, and GridSearch to select the best model
 
-# In[56]:
-
-
-importlib.reload(sys.modules['functions'])
-from functions import *
-
-
-# In[57]:
-
-
-df_train = df_train_ori
-df_test = df_test_ori
-
-
-# In[58]:
-
-
-complete_pipeline = Pipeline([
-    #('features_selector', FeaturesSelector(features_toselect=MODEL_FEATURES)),
-    ('bow_encoder', BowEncoder()),
-    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
-    ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 
-                                                              'RfmScore', 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
-    #('scaler', LogScalerMultiple(features_toscale=['RfmScore'])),
-    
-    
-    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
-   
-    ('minmaxscaler', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
-    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
-                                                        algorithm_to_use='NCA', n_dim=3, labels_featurename='RfmScore')),
-    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
-    ('clusterer', Clusterer(n_clusters=11, algorithm_to_use='WARD'))
-])
-
-
-# /!\ RfmScore doit être dans le DataFrame pour qu'il puise servir de label à NCA or ce n'est pas toujours le cas
-# /!\ Quand je passe les labels bow au NCA, je passe les labels de tout le training set, ça ne va pas aller
+# A GridSearch using pipeline is implemented separately, in .py files  
+# To run the gridsearch, open a python3 console and :
 # 
-# => Systématiquement recalculer les labels bow et RfmScore à partir du training set fourni en entrée du pipeline
+# 1/ Launch a python3 console  
+# 2/ Run PJ5_GridSearch_prerequisites.py : exec(open('PJ5_GridSearch_prerequisites.py').read())  
+# 3/ Run PJ5_GridSearch1.py : exec(open('PJ5_GridSearch1.py').read())  
+# 
+# Before 3, you can edit source code of PJ5_GridSearch1.py, and uncomment the GridSearch code you want to run.
 
-# In[59]:
+# # Visualize best models found via GridSearch
+# Generate pickle files with PJ5_GridSearch1.py before running this part  (see §above : Pipeline with clustering, and GridSearch to select the best model) 
 
-
-param_grid = [
-    #{'agregate_to_client_level__top_value_products' : [
-    #    
-    #],
-    {'features_selector__features_toselect': [
-        ['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 
-        'RfmScore']  ,
-
-        ['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 
-        'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']  ,
-        
-        ['DescriptionNormalized', 
-        'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']  ,
-
-        ['DescriptionNormalized', 
-        'RfmScore']  ,
-
-        ['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled']  ,
-
-        ['DescriptionNormalized', 'HasEverCancelled']  ,
-
-        ['DescriptionNormalized', 'BoughtTopValueProduct']  ,
-                   
-        ['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 
-        'TotalPricePerMonth', 'TotalQuantityPerMonth']  ,
-
-    ],
-     
-     'dimensionality_reductor__features_totransform' : [  
-         ['DescriptionNormalized'], 
-         'ALL',
-     ],
-     
-     'dimensionality_reductor__algorithm_to_use' : [  
-         'NCA', 
-     ],
-
-     'dimensionality_reductor__n_dim' : [  
-         3, 10, 50, 100, 150, 200, 300
-     ],
-     
-     'dimensionality_reductor__labels_featurename': [
-         'RfmScore',
-          bow_labels_train,
-     ],
-
-     
-     'clusterer__algorithm_to_use' : [  
-         'WARD', 
-         'KMEANS' 
-     ],
-  
-     'clusterer__n_clusters' : [  
-         3, 4, 5, 6, 7, 8, 9, 10, 11, 20, 30, 40, 50
-     ],
-
-    },
-    
-
-    {'features_selector__features_toselect': [
-        ['BoughtTopValueProduct', 'HasEverCancelled', 
-        'RfmScore']  ,
-
-        ['BoughtTopValueProduct', 'HasEverCancelled', 
-        'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']  ,
-        
-        ['TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']  ,
-
-        ['RfmScore']  ,
-
-        ['BoughtTopValueProduct', 'HasEverCancelled']  ,
-
-        ['HasEverCancelled']  ,
-
-        ['BoughtTopValueProduct']  ,
-                   
-        ['BoughtTopValueProduct', 'HasEverCancelled', 
-        'TotalPricePerMonth', 'TotalQuantityPerMonth']  ,
-
-    ],
-     
-     'dimensionality_reductor__features_totransform' : [  
-         None,
-     ],
-     
-     'dimensionality_reductor__algorithm_to_use' : [  
-         'NCA', 
-     ],
-
-     'dimensionality_reductor__n_dim' : [  
-         3, 10, 50, 100, 150, 200, 300
-     ],
-     
-     'dimensionality_reductor__labels_featurename': [
-         'RfmScore',
-          bow_labels_train,
-     ],
-
-     
-     'clusterer__algorithm_to_use' : [  
-         'WARD', 
-         'KMEANS' 
-     ],
-  
-     'clusterer__n_clusters' : [  
-         3, 4, 5, 6, 7, 8, 9, 10, 11, 20, 30, 40, 50
-     ],
-
-    },
-]
+# In[53]:
 
 
-# In[46]:
-
-
-type(df_train['InvoiceDate'][0])
-
-
-# In[47]:
-
-
-complete_pipeline_debug = Pipeline([
-    #('features_selector', FeaturesSelector(features_toselect=MODEL_FEATURES)),
-    ('bow_encoder', BowEncoder()),
-    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
-    ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 'RfmScore'])),
-    #('scaler', LogScalerMultiple(features_toscale=['RfmScore'])),
-    
-    
-    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
-   
-    ('minmaxscaler', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
-    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
-                                                        algorithm_to_use='NCA', n_dim=3, labels_featurename='RfmScore')),
-    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
-    ('clusterer', Clusterer(n_clusters=3, algorithm_to_use='WARD'))
-])
-
-
-# In[48]:
-
-
-complete_pipeline_debug.fit(df_train)
-df_train_res = complete_pipeline_debug.predict(df_train)
-
-
-# In[60]:
-
-
+from functions import *
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[61]:
+# ## First model
+
+# In[115]:
 
 
-#complete_pipeline_debug.fit(df_test)
-df_test_res = complete_pipeline_debug.predict(df_test)
+model_agregate = AgregateToClientLevel(top_value_products, compute_rfm=True)
 
 
-# In[ ]:
+# In[116]:
 
 
-get_ipython().run_cell_magic('time', '', "\nif (RECOMPUTE_GRIDSEARCH == True):\n    model = complete_pipeline\n        \n    # error_score = np.nan means an error on 1 combination does is not blocking every other models.  scoring=None means our predictor's score method will be used\n    # For later : try custom cv splitter\n    grid_search = GridSearchCV(model, param_grid, cv=5, verbose=51, error_score=np.nan, scoring=None)\n    grid_search.fit(df_train)")
+model_agregate.fit(df_train)
 
+
+# In[117]:
+
+
+df_clients_test = model_agregate.transform(df_test)
+
+
+# In[119]:
+
+
+df_clients_test.shape
+
+
+# In[105]:
+
+
+model = Pipeline([
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+    ('features_selector', FeaturesSelector(features_toselect=['BoughtTopValueProduct', 'HasEverCancelled', 'RfmScore'])),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+    ('clusterer', Clusterer(n_clusters=4, algorithm_to_use='WARD'))
+])
+
+
+# In[106]:
+
+
+model.fit(df_train)
+
+
+# Score verification on final test set :
+
+# In[109]:
+
+
+score_test = model.score(df_test)
+
+
+# In[110]:
+
+
+score_test
+
+
+# In[111]:
+
+
+cluster_labels_test = model.predict(df_test)
+
+
+# S'inspirer de : # Model with all features and RFM score (concat) (not individual RFM feats), and NCA (BEST)# 
+
+# In[121]:
+
+
+model_beforecluster = Pipeline([
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+    ('features_selector', FeaturesSelector(features_toselect=['BoughtTopValueProduct', 'HasEverCancelled', 'RfmScore'])),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+])
+
+
+# In[122]:
+
+
+model_beforecluster.fit(df_train)
+
+
+# In[123]:
+
+
+df_test_transformed = model_beforecluster.transform(df_test)
+
+
+# In[124]:
+
+
+df_test_transformed
+
+
+# A FAIRE : renvoyer un dataframe en sorte de predict() du modèle final, 
 
 # # Annex
 
