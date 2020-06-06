@@ -7682,7 +7682,7 @@ df_test_transformed = model_beforecluster.transform(df_test)
 df_test_transformed
 
 
-# A FAIRE : renvoyer un dataframe en sorte de predict() du modèle final, 
+# A FAIRE : renvoyer un dataframe en sorte de predict() du modèle final, indexé avec les identifiants de client
 
 # # Annex
 
