@@ -697,7 +697,7 @@ class DimensionalityReductor(BaseEstimator, TransformerMixin):
             else:
                 self.filter_cols = [col for col in df if (col.startswith(tuple(self.features_totransform)))]            
 
-            self.filter_cols.sort()
+            self.filter_cols.sort(key=lambda v: (isinstance(v, str), v))
             
             #print('1')
             #print("Features selected (in order): " + str(df.loc[:, self.filter_cols].columns))            
@@ -1083,12 +1083,18 @@ class Clusterer(BaseEstimator, TransformerMixin):
             # > Convert to simple array : [indice_0, indice_1, ...]
             array_train_nearest_neighbors_indices = [df_train_nn[0] for df_train_nn in df_train_nearest_neighbors_indices]
 
-            # Return cluster labels from these instances on training set            
-            return(self.clusterer.labels_[array_train_nearest_neighbors_indices])
+            df_predictions = pd.DataFrame(index=df.index, data=self.clusterer.labels_[array_train_nearest_neighbors_indices])
+
+            # Return cluster labels from these instances on training set, as a series with customer id as index
+            #return(self.clusterer.labels_[array_train_nearest_neighbors_indices])
+            return(df_predictions[0])
             
         else:
             # Code
-            return(self.clusterer.predict(df))
+            df_predictions = pd.DataFrame(index=df.index, data=self.clusterer.predict(df))
+            
+            #return(self.clusterer.predict(df))
+            return(df_predictions[0])
 
         #return(labels_predicted)
         
