@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ5 : Online Retail dataset :  modelisation notebook 
 
-# In[42]:
+# In[104]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -59,6 +59,8 @@ from scipy.stats import entropy
 
 from sklearn.feature_selection import RFE
 
+from sklearn.tree import DecisionTreeClassifier
+from sklearn import tree
 
 DATA_PATH = os.path.join("datasets", "onlineretail")
 DATA_PATH = os.path.join(DATA_PATH, "out")
@@ -7585,7 +7587,7 @@ bow_labels_test = kmeans_per_k[10].predict(df_test.loc[:, 0].to_numpy().reshape(
 # # Visualize best models found via GridSearch
 # Generate pickle files with PJ5_GridSearch1.py before running this part  (see §above : Pipeline with clustering, and GridSearch to select the best model) 
 
-# In[119]:
+# In[90]:
 
 
 from functions import *
@@ -7593,61 +7595,67 @@ importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[120]:
+# In[91]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# ## Agregate to client level to get text labels for visualisation
+# ## Agregate to client level to get text labels for visualisation, and interprete model with surrogate Decision Tree
 
-# In[78]:
-
-
-model_agregate = AgregateToClientLevel(top_value_products, compute_rfm=True)
+# In[92]:
 
 
-# In[79]:
+#model_agregate = AgregateToClientLevel(top_value_products, compute_rfm=True)
+model_agregate = Pipeline([
+    ('bow_encoder', BowEncoder()),
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                                algorithm_to_use='ISOMAP', n_dim=3)),
+])
+
+
+# In[93]:
 
 
 model_agregate.fit(df_train)
 
 
-# In[80]:
+# In[94]:
 
 
 df_clients_train_agreg = model_agregate.transform(df_train)
 
 
-# In[81]:
+# In[95]:
 
 
 df_clients_test_agreg = model_agregate.transform(df_test)
 
 
-# In[82]:
+# In[96]:
 
 
 df_clients_test_agreg
 
 
-# In[65]:
+# In[97]:
 
 
-df_clients_test.shape
+df_clients_test_agreg.shape
 
 
 # ## Loop on top 4 models
 
-# In[121]:
+# In[107]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[122]:
+# In[108]:
 
 
 models = [
@@ -7735,7 +7743,7 @@ models_clustering = [
 ]
 
 
-# In[ ]:
+# In[114]:
 
 
 model_number = 0
@@ -7745,7 +7753,7 @@ for model_prep, model_clusterer in zip(models_before_clustering, models_clusteri
     df_train = df_train_ori
     df_test = df_test_ori    
     
-    print('First model : \n' + str(model_prep) + '\n' + str(model_clusterer))
+    print('Model ' + str(model_number) + ':\n' + str(model_prep) + '\n' + str(model_clusterer))
     
     print('Running preparation model')
     
@@ -7759,13 +7767,13 @@ for model_prep, model_clusterer in zip(models_before_clustering, models_clusteri
     df_clients_test = model_prep.transform(df_test)
         
     print('Running clusterer model : calculating cluster labels and test set score')
-    print('1')
+    #print('1')
     model_clusterer.fit(df_clients_train)
     
-    print('2')
+    #print('2')
     df_predictions_test = model_clusterer.predict(df_clients_test)
     
-    print('3')
+    #print('3')
     score_test = model_clusterer.score(df_clients_test)
     print(f'> Score on test set : {score_test}')
     
@@ -7799,53 +7807,84 @@ for model_prep, model_clusterer in zip(models_before_clustering, models_clusteri
     #py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
 
     py.offline.plot(fig, filename='clusters_model' + str(model_number) + '.html') 
+    
+    print('Interpreted clusters with decision tree:')
+    dt = DecisionTreeClassifier()
+    dt.fit(df_clients_test_agreg, df_predictions_test)
+    
+    for col, val in sorted(zip(df_clients_test_agreg.columns, dt.feature_importances_), key=lambda col_val: col_val[1], reverse=True):
+        print(f'{col:10} {val:10.3f}')
+        
+    print('Draw decision tree')
+    from io import StringIO
+    import pydotplus
+    dot_data = StringIO()
+    tree.export_graphviz(
+        dt,
+        out_file=dot_data,
+        feature_names=df_clients_test_agreg.columns,
+        #class_names=["0", "1"],
+        class_names=df_predictions_test.astype(str).unique(),
+        max_depth=2,
+        filled=True,
+    )
+    g = pydotplus.graph_from_dot_data(
+        dot_data.getvalue()
+    )
+    g.write_png('graph_cluster' + str(model_number) + '.png')
 
     
 
 
-# In[ ]:
+# In[113]:
+
+
+df_predictions_test.astype(str).unique()
+
+
+# In[88]:
 
 
 reductor
 
 
-# In[98]:
+# In[89]:
 
 
 df_clients_test.dtypes
 
 
-# In[99]:
+# In[67]:
 
 
 tsne = TSNE(n_components=2, random_state=42)
 
 
-# In[100]:
+# In[68]:
 
 
 tsne.fit_transform(df_clients_test.to_numpy())
 
 
-# In[115]:
+# In[69]:
 
 
 filter_cols = [col for col in df_clients_test]
 
 
-# In[118]:
+# In[70]:
 
 
 filter_cols
 
 
-# In[117]:
+# In[71]:
 
 
 filter_cols.sort(key=lambda v: (isinstance(v, str), v))
 
 
-# In[ ]:
+# In[72]:
 
 
 df_clients_test_reduced.loc[:,0]
@@ -7853,7 +7892,7 @@ df_clients_test_reduced.loc[:,0]
 
 # S'inspirer de : # Model with all features and RFM score (concat) (not individual RFM feats), and NCA (BEST)# 
 
-# In[ ]:
+# In[73]:
 
 
 model_beforecluster = Pipeline([
@@ -7863,19 +7902,19 @@ model_beforecluster = Pipeline([
 ])
 
 
-# In[122]:
+# In[74]:
 
 
 model_beforecluster.fit(df_train)
 
 
-# In[123]:
+# In[75]:
 
 
 df_test_transformed = model_beforecluster.transform(df_test)
 
 
-# In[124]:
+# In[76]:
 
 
 df_test_transformed
