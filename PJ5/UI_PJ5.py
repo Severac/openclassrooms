@@ -75,16 +75,17 @@ model = model_object['model']
 model_agregate = model_object['model_agregate']
 model_before_clustering = model_object['model_before_clustering']
 
-st.title('Openclassrooms training projet 5 : e-commerce clients segmentation (François BOYER)') 
+st.title('Openclassrooms Data Science training project 5 : e-commerce clients segmentation') 
+st.title('François BOYER')
 
 st.write('\n')
 
-'''
-image = Image.open('plane_image.png')
+
+image = Image.open('ecommerce.png')
 st.image(image,
-         width=300, format='PNG')
+         width=200)
          #use_column_width=True)
-'''
+
 
 
 st.sidebar.title('Order characteristics')
@@ -93,7 +94,7 @@ st.sidebar.title('Order characteristics')
 st.sidebar.markdown('By default, predictions are made from template input data')
 st.sidebar.markdown('To change input data: export csv template, update csv, and import')
 
-df_template = pd.read_csv('UI_input_sample.csv', encoding='utf-8', converters={'InvoiceNo': str, 'StockCode':str, 'Description': str, \
+df_template = pd.read_csv('UI_input_template.csv', encoding='utf-8', converters={'InvoiceNo': str, 'StockCode':str, 'Description': str, \
                                    'CustomerID':str, 'Country': str})
 
 st.sidebar.markdown(get_table_download_link(df_template), unsafe_allow_html=True)
@@ -103,64 +104,51 @@ uploaded_file = st.sidebar.file_uploader("Import CSV input file", type="csv")
 if uploaded_file is not None:
     df_input = pd.read_csv(uploaded_file, encoding='utf-8', converters={'InvoiceNo': str, 'StockCode':str, 'Description': str, \
                                        'CustomerID':str, 'Country': str})
+    
+    st.header('Input data for clustering : data loaded by user')    
 
 
 else:
     df_input = df_template
+    st.header('Input data applied for clustering : data loaded from default template')    
+    st.write('(To change data : go the left panel)')
 
-
-st.header('Assigned clusters')    
+st.header('Assigned clusters for input data :')    
 series_predictions = model.predict(df_input)   
 
 st.dataframe(pd.DataFrame(series_predictions).reset_index().rename(columns={0 : 'Cluster number'}), width=1000, height=1000)
 #st.write(pd.DataFrame(series_predictions).rename(columns={0 : 'Cluster number'}))
 
 
-df_clients = model_before_clustering.transform(df_input)
+####### Old code copied to UI_PJ5_oldcode.py ########"
 
-reductor = DimensionalityReductor(algorithm_to_use='TSNE', n_dim=2, features_totransform='ALL')
-df_clients_reduced = reductor.fit_transform(df_clients)
+st.sidebar.header('Model analysis')
 
-#chart = alt.Chart(df_clients_reduced, width=1000, height=600).mark_circle().encode(alt.X('0'), alt.Y('1')).properties(title=f'Clients')
+display_interpretation_tree = st.sidebar.checkbox('Display interpretation tree', value=False)
 
-df_clients_reduced.rename(columns={0: 'X', 1 : 'Y'}, inplace=True)
-
-st.table(df_clients)
-
-plt.rcParams["figure.figsize"] = [16,9]
-plt.scatter(df_clients_reduced['X'], df_clients_reduced['Y'])
-st.pyplot()
-
-chart = alt.Chart(df_clients_reduced).mark_circle(size=60).encode(
-    x='X',
-    y='Y',
-).interactive()
-
-
-text = chart.mark_text(
-    align='left',
-    baseline='middle',
-    dx=7
-).encode(
-    text='label'
-)
-st.altair_chart(chart + text, use_container_width=True)
-
-st.header('Tree interpretation of clusters (simplified to depth 3)')
-image = Image.open('graph_model2.png')
-st.image(image,
-         width=2251)
+if (display_interpretation_tree == True):
+    st.header('Tree interpretation of clusters (simplified to depth 3)')
+    image = Image.open('graph_model2.png')
+    st.image(image,
+             width=2251)
     
-    
-debug_mode = st.checkbox('Display input data', value=False)
+
+debug_mode = st.sidebar.checkbox('Display debug data', value=False)
 
 if (debug_mode == True):
     st.header('Input data')
     st.table(df_input)
+    
+    st.header('Data before clustering, at client level')
+    df_clients = model_before_clustering.transform(df_input)
+    st.table(df_clients)
 
 
-
-
+del model_object
+# Manual memory cleaning at the of the program is necessary to avoid memory leak 
+# (due to streamlit bug ?)
+import gc
+gc.collect()
 
 
 

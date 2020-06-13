@@ -7449,7 +7449,7 @@ bow_labels_test = kmeans_per_k[10].predict(df_test.loc[:, 0].to_numpy().reshape(
 # # Visualize best models found via GridSearch
 # Generate pickle files with PJ5_GridSearch1.py before running this part  (see §above : Pipeline with clustering, and GridSearch to select the best model) 
 
-# In[842]:
+# In[46]:
 
 
 from functions import *
@@ -7457,7 +7457,7 @@ importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[843]:
+# In[47]:
 
 
 df_train = df_train_ori
@@ -7466,7 +7466,7 @@ df_test = df_test_ori
 
 # ## Agregate to client level to get text labels for visualisation, and interprete model with surrogate Decision Tree
 
-# In[844]:
+# In[48]:
 
 
 #model_agregate = AgregateToClientLevel(top_value_products, compute_rfm=True)
@@ -7478,46 +7478,46 @@ model_agregate = Pipeline([
 ])
 
 
-# In[845]:
+# In[49]:
 
 
 model_agregate.fit(df_train)
 
 
-# In[846]:
+# In[50]:
 
 
 df_clients_train_agreg = model_agregate.transform(df_train)
 
 
-# In[847]:
+# In[51]:
 
 
 df_clients_test_agreg = model_agregate.transform(df_test)
 
 
-# In[848]:
+# In[52]:
 
 
 df_clients_test_agreg
 
 
-# In[849]:
+# In[53]:
 
 
 df_clients_test_agreg.shape
 
 
-# ## Loop on top 4 models
+# ## Loop on top 6 models
 
-# In[850]:
+# In[54]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[851]:
+# In[55]:
 
 
 models = [
@@ -7531,6 +7531,7 @@ models = [
     Pipeline([
     ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
     ('features_selector', FeaturesSelector(features_toselect=['BoughtTopValueProduct', 'HasEverCancelled', 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
+    ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
     ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
     ('clusterer', Clusterer(n_clusters=8, algorithm_to_use='KMEANS'))
     ]),
@@ -7551,13 +7552,38 @@ models = [
         ('bow_encoder', BowEncoder()),
         ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
         ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
-
+        ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
         ('minmaxscaler', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
         ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
                                                                 algorithm_to_use='ISOMAP', n_dim=3)),
         ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
         ('clusterer', Clusterer(n_clusters=6, algorithm_to_use='KMEANS'))
         ]),
+    
+    Pipeline([
+        ('bow_encoder', BowEncoder()),
+        ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+        ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
+        ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
+        ('minmaxscaler', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+        ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                                algorithm_to_use='ISOMAP', n_dim=3)),
+        ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+        ('clusterer', Clusterer(n_clusters=6, algorithm_to_use='KMEANS'))
+        ]),
+
+    Pipeline([
+        ('bow_encoder', BowEncoder()),
+        ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+        ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'RfmScore'])),
+
+        ('minmaxscaler', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+        ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                                algorithm_to_use='NCA', n_dim=3, labels_featurename=None)),
+        ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+        ('clusterer', Clusterer(n_clusters=4, algorithm_to_use='KMEANS'))
+        ]),
+
 ]
 
 
@@ -7571,6 +7597,7 @@ models_before_clustering = [
     Pipeline([
     ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
     ('features_selector', FeaturesSelector(features_toselect=['BoughtTopValueProduct', 'HasEverCancelled', 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
+    ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
     ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
     ]),
         
@@ -7589,23 +7616,80 @@ models_before_clustering = [
         ('bow_encoder', BowEncoder()),
         ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
         ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'BoughtTopValueProduct', 'HasEverCancelled', 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
-
+        ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
         ('minmaxscaler', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
         ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
                                                                 algorithm_to_use='ISOMAP', n_dim=3)),
         ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
         ]),
+    
+    Pipeline([
+        ('bow_encoder', BowEncoder()),
+        ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+        ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
+        ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
+        ('minmaxscaler', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+        ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                                algorithm_to_use='ISOMAP', n_dim=3)),
+        ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+        ]),
+
+    Pipeline([
+        ('bow_encoder', BowEncoder()),
+        ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+        ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized', 'RfmScore'])),
+
+        ('minmaxscaler', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+        ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                                algorithm_to_use='NCA', n_dim=3, labels_featurename=None)),
+        ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+        ]),
+
 ]
 
 models_clustering = [
         Clusterer(n_clusters=4, algorithm_to_use='WARD'),
         Clusterer(n_clusters=8, algorithm_to_use='KMEANS'),
         Clusterer(n_clusters=4, algorithm_to_use='WARD'),
-        Clusterer(n_clusters=6, algorithm_to_use='KMEANS')
+        Clusterer(n_clusters=6, algorithm_to_use='KMEANS'),
+        Clusterer(n_clusters=6, algorithm_to_use='KMEANS'),
+        Clusterer(n_clusters=4, algorithm_to_use='KMEANS'),
 ]
 
 
-# In[852]:
+# In[56]:
+
+
+# Below code can be uncommented to run only one model with code in next cell
+'''
+models = [
+    Pipeline([
+        ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+        ('features_selector', FeaturesSelector(features_toselect=['TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
+        ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
+        ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+        ('clusterer', Clusterer(n_clusters=4, algorithm_to_use='KMEANS'))
+        ]),
+
+]
+
+
+models_before_clustering = [
+    Pipeline([
+        ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+        ('features_selector', FeaturesSelector(features_toselect=['TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
+        ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
+        ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+        ]),
+    ]
+
+models_clustering = [
+        Clusterer(n_clusters=4, algorithm_to_use='KMEANS'),
+]
+'''
+
+
+# In[57]:
 
 
 model_number = 0
@@ -7619,7 +7703,7 @@ for model_prep, model_clusterer in zip(models_before_clustering, models_clusteri
     
     print('Running preparation model')
     
-    if (model_number == 3): # For NCA we must pass a dimensionality reductor label
+    if ((model_number == 3) or (model_number == 6)): # For NCA we must pass a dimensionality reductor label
         model_prep.fit(df_train, dimensionality_reductor__labels=df_clients_train_agreg['RfmScore'])
         
     else:
@@ -7671,7 +7755,7 @@ for model_prep, model_clusterer in zip(models_before_clustering, models_clusteri
     py.offline.plot(fig, filename='clusters_model' + str(model_number) + '.html') 
     
     print('Interpreted clusters with decision tree:')
-    dt = DecisionTreeClassifier()
+    dt = DecisionTreeClassifier(max_depth=3)
     dt.fit(df_clients_test_agreg, df_predictions_test)
     
     for col, val in sorted(zip(df_clients_test_agreg.columns, dt.feature_importances_), key=lambda col_val: col_val[1], reverse=True):
@@ -7687,21 +7771,152 @@ for model_prep, model_clusterer in zip(models_before_clustering, models_clusteri
         feature_names=df_clients_test_agreg.columns,
         #class_names=["0", "1"],
         class_names=df_predictions_test.astype(str).unique(),
-        max_depth=2,
+        max_depth=3,
         filled=True,
     )
     g = pydotplus.graph_from_dot_data(
         dot_data.getvalue()
     )
-    g.write_png('graph_model' + str(model_number) + '.png')
+    g.write_png('graph_model' + str(model_number) + '_logscale.png')
+    #g.write_png('graph_model_rfm_basic_logscale.png') # Uncomment to run only 1 model (and also uncomment previous cell)
 
     
+
+
+# In[58]:
+
+
+len(bow_labels_test)
+
+
+# In[901]:
+
+
+trace_1 = go.Scatter(x = df_clients_test_reduced.loc[:,0], y = df_clients_test_reduced.loc[:,1],
+                    name = 'Clients',
+                    mode = 'markers',
+                    marker=dict(color=bow_labels_test),
+                    #text = rfm_scores_train,
+                    #text = [('Bought top value product' if (boughttopvalueproduct == 1) else 'dit NOT buy top value product') for boughttopvalueproduct in df_train['BoughtTopValueProduct']],
+                    text = list(map(str, zip('RFM: ' + df_clients_test_agreg['RfmScore'].astype(str),\
+                                             'BoughtTopValueProduct: ' + df_clients_test_agreg['BoughtTopValueProduct'].astype(str),\
+                                              'HasEverCancelled: '  + df_clients_test_agreg['HasEverCancelled'].astype(str),\
+                                            ))\
+                                        )
+                    )
+
+
+layout = go.Layout(title = 'Model ' + str(model_number) + ' : client representation, colored by bow',
+                   hovermode = 'closest',
+)
+
+fig = go.Figure(data = [trace_1], layout = layout)
+
+#py.offline.iplot(fig) # Display in the notebook works with jupyter notebook, but not with jupyter lab
+
+py.offline.plot(fig, filename='clusters_model' + str(model_number) + '.html') 
 
 
 # In[853]:
 
 
 df_predictions_test.astype(str).unique()
+
+
+# # Export to pickle
+
+# ## Export sample input file for the UI
+
+# In[85]:
+
+
+df_train_ori[['InvoiceNo','StockCode','Quantity','InvoiceDate','CustomerID','TotalPrice','DescriptionNormalized','InvoiceMonth']].sort_values(by='CustomerID').head(1000).to_csv('UI_input_sample.csv')
+
+
+# ## Retrain model
+
+# In[63]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori    
+    
+model_final = Pipeline([
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+    ('features_selector', FeaturesSelector(features_toselect=['BoughtTopValueProduct', 'HasEverCancelled', 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
+    ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+    ('clusterer', Clusterer(n_clusters=8, algorithm_to_use='KMEANS'))
+    ])
+
+
+# In[64]:
+
+
+model_final.fit(df_train)
+
+
+# In[88]:
+
+
+model_before_clustering_final = Pipeline([
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+    ('features_selector', FeaturesSelector(features_toselect=['BoughtTopValueProduct', 'HasEverCancelled', 'TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency'])),
+    ('scaler', LogScalerMultiple(features_toscale=['TotalPricePerMonth', 'TotalQuantityPerMonth'])),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+    ])
+
+
+# In[89]:
+
+
+model_before_clustering_final.fit(df_train)
+
+
+# In[90]:
+
+
+model_agregate_final = Pipeline([
+    ('bow_encoder', BowEncoder()),
+    ('agregate_to_client_level', AgregateToClientLevel(top_value_products, compute_rfm=True)),
+    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                                algorithm_to_use='ISOMAP', n_dim=3)),
+])
+
+
+# In[78]:
+
+
+df_test.loc[[4]]
+
+
+# In[76]:
+
+
+df_test.columns
+
+
+# In[80]:
+
+
+model_final.predict(df_test.loc[[4]])
+
+
+# In[91]:
+
+
+if (SAVE_API_MODEL == True):    
+    API_model = {}
+    API_model['model'] = model_final
+    API_model['model_agregate'] = model_agregate_final
+    API_model['model_before_clustering'] = model_before_clustering_final
+    
+    '''
+    API_model = model_final
+    '''
+    
+    with open(API_MODEL_PICKLE_FILE, 'wb') as f:
+        pickle.dump(API_model, f, pickle.HIGHEST_PROTOCOL)  
 
 
 # In[854]:

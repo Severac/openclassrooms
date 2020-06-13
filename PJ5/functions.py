@@ -39,7 +39,7 @@ from scipy import sparse
 
 import pandas as pd
 
-import qgrid
+#import qgrid
 
 import numpy as np
 
