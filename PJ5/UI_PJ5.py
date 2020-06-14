@@ -149,7 +149,7 @@ display_interpretation_tree = st.sidebar.checkbox('Interpretation tree', value=F
 
 if (display_interpretation_tree == True):
     st.header('Tree interpretation of clusters (simplified to depth 3)')
-    st.write('This tree helps to interpret which steps are processed by the model when it guesses which cluster to assign to a client')
+    st.write('This tree helps to interpret which main steps are processed by the model in most cases when it guesses which cluster to assign to a client')
     image = Image.open(GRAPH_MODEL_FILE)
     st.image(image)
     #st.image(image,
