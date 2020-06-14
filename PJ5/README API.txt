@@ -4,7 +4,7 @@ https://pj5.analysons.com/
 To install the UI :
 
 Run an AWS EC2 instance (Ubuntu) and configure it  
-(add streamlit listen port 8501 on IP filtering.  Configure fixed IP for the instance.  Generate key .PEM file to be able to connect via SSH)
+(add streamlit listen port 8504 on IP filtering.  Configure fixed IP for the instance.  Generate key .PEM file to be able to connect via SSH)
 
 Create a directory streamlit_OC_PJ5 and upload following files on it :
 - UI_PJ5.py

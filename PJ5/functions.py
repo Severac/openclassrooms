@@ -1010,6 +1010,8 @@ def FMScore(x,p,d):
 This function returns RFM score corresponding to dataframe passed as input
 The input dataframe must contain R,F,M columns previously computed by AgregateToClientLevel class
 (TotalPricePerMonth, TotalQuantityPerMonth, Recurence)
+
+The lower the RfmScore, the better it is (best scores = R very recent, F high and M high)
 '''    
 def get_rfm_scores(df):
     quantiles = df[['TotalPricePerMonth', 'TotalQuantityPerMonth', 'Recency']].quantile(q=[0.25,0.5,0.75])

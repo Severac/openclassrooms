@@ -23,6 +23,14 @@ import matplotlib.pyplot as plt
 
 API_MODEL_PICKLE_FILE = 'API_model_PJ5.pickle'
 
+LOGO_IMAGE_FILE = 'ecommerce.png'
+TEMPLATE_FILE = 'UI_input_template.csv'
+GRAPH_MODEL_FILE = 'graph_model_ui.png'
+FEATURE_FILE_NAMES = ['model2_featuredistribution_Recency.png',\
+                      'model2_featuredistribution_RfmScore.png',
+                      'model2_featuredistribution_BoughtTopValueProduct.png',\
+                      'model2_featuredistribution_HasEverCancelled.png',]
+
 # This function is a hack to be able to start streamlit in "wide mode" by default
 def _max_width_():
     max_width_str = f"max-width: 2000px;"
@@ -81,20 +89,20 @@ st.title('François BOYER')
 st.write('\n')
 
 
-image = Image.open('ecommerce.png')
+image = Image.open(LOGO_IMAGE_FILE)
 st.image(image,
          width=200)
          #use_column_width=True)
 
 
-
+######################" Left Panel : options ##############################################"
 st.sidebar.title('Order characteristics')
 
 
 st.sidebar.markdown('By default, predictions are made from template input data')
-st.sidebar.markdown('To change input data: export csv template, update csv, and import')
+st.sidebar.markdown('To change input data: download template file, update downloaded file with CSV/text editor, and import')
 
-df_template = pd.read_csv('UI_input_template.csv', encoding='utf-8', converters={'InvoiceNo': str, 'StockCode':str, 'Description': str, \
+df_template = pd.read_csv(TEMPLATE_FILE, encoding='utf-8', converters={'InvoiceNo': str, 'StockCode':str, 'Description': str, \
                                    'CustomerID':str, 'Country': str})
 
 st.sidebar.markdown(get_table_download_link(df_template), unsafe_allow_html=True)
@@ -113,6 +121,7 @@ else:
     st.header('Input data applied for clustering : data loaded from default template')    
     st.write('(To change data : go the left panel)')
 
+######################" Main Panel : prédictions ###############################"
 st.header('Assigned clusters for input data :')    
 series_predictions = model.predict(df_input)   
 
@@ -122,26 +131,44 @@ st.dataframe(pd.DataFrame(series_predictions).reset_index().rename(columns={0 : 
 
 ####### Old code copied to UI_PJ5_oldcode.py ########"
 
+
+######################" Left Panel : model analysis ##############################################"
+
 st.sidebar.header('Model analysis')
 
-display_interpretation_tree = st.sidebar.checkbox('Display interpretation tree', value=False)
+display_clustesrfeatures = st.sidebar.checkbox('Clusters/features distribution', value=False)
+
+if (display_clustesrfeatures == True):
+    st.header('Distribution of features accross clusters')
+    st.write('25-75% of the values are located in colored part of the boxes below')
+    for feature in FEATURE_FILE_NAMES:
+        image = Image.open(feature)
+        st.image(image, width=800)
+
+display_interpretation_tree = st.sidebar.checkbox('Interpretation tree', value=False)
 
 if (display_interpretation_tree == True):
     st.header('Tree interpretation of clusters (simplified to depth 3)')
-    image = Image.open('graph_model2.png')
-    st.image(image,
-             width=2251)
+    st.write('This tree helps to interpret which steps are processed by the model when it guesses which cluster to assign to a client')
+    image = Image.open(GRAPH_MODEL_FILE)
+    st.image(image)
+    #st.image(image,
+    #         width=2251)
     
 
 debug_mode = st.sidebar.checkbox('Display debug data', value=False)
 
 if (debug_mode == True):
-    st.header('Input data')
+    st.header('Step 0 : Input data')
     st.table(df_input)
     
-    st.header('Data before clustering, at client level')
+    st.header('Step 1 : Data agregated at client level (Unscaled feature)')
+    df_clients_agg = model_agregate.transform(df_input)
+    st.table(df_clients_agg.reset_index())
+    
+    st.header('Step 2 : Data before clustering, at client level (scaled features)')
     df_clients = model_before_clustering.transform(df_input)
-    st.table(df_clients)
+    st.table(df_clients.reset_index())
 
 
 del model_object
