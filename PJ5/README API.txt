@@ -11,8 +11,9 @@ Create a directory streamlit_OC_PJ5 and upload following files on it :
 - functions.py
 - API_model_PJ5.pickle
 - UI_input_template.csv
-- graph_model2.png
+- graph_model_ui.png
 - ecommerce.png
+- 
 
 Connected as ssh and run commands :
 
