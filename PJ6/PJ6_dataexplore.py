@@ -337,6 +337,8 @@ plt.plot(range(cnt_docs), cnt_distinct_tags_history)
 {k: v for k, v in sorted(tokens_tags.items(), key=lambda item: item[1], reverse=True)}
 
 
+# # Cumulated number of posts agains
+
 # In[26]:
 
 

@@ -142,7 +142,7 @@ API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 
 # # Doc2vec settings
 
-# In[2]:
+# In[80]:
 
 
 DOC2VEC_TRAINING_SAVE_FILE = 'doc2vec_model'
@@ -152,6 +152,8 @@ from gensim.models.doc2vec import TaggedDocument, Doc2Vec
 import time
 
 from gensim.test.utils import get_tmpfile
+
+import gensim
 
 #model.save(fname)
 #model = Doc2Vec.load(fname)  # you can continue training with the loaded model!
@@ -315,17 +317,18 @@ df_test_ori = df_test.copy(deep=True)
 
 # # Doc2Vec training
 
-# In[24]:
+# In[82]:
 
 
 cnt_label = 0
 InputDocs = []
-for document in df['all_text']:
-    InputDocs.append(TaggedDocument(document,[cnt_label]))
+for document in df_train['all_text']:  # TO DO : relaunch this training with df_train
+    #InputDocs.append(TaggedDocument(document,[cnt_label]))
+    InputDocs.append(TaggedDocument(gensim.utils.simple_preprocess(document),[cnt_label]))    
     cnt_label += 1
 
 
-# In[ ]:
+# In[83]:
 
 
 start = time.time()
@@ -335,15 +338,75 @@ end = time.time()
 print('Durée doc2vec training: ' + str(end - start) + ' secondes')    
 
 
-# In[ ]:
+# In[84]:
 
 
 #model_doc2vec.save(doc2vec_fname)
 model_doc2vec.save(DOC2VEC_TRAINING_SAVE_FILE)
 
 
-# In[ ]:
+# In[81]:
 
 
+TaggedDocument(gensim.utils.simple_preprocess(df_train.iloc[0]['all_text']), [0])
 
+
+# In[86]:
+
+
+gensim.utils.simple_preprocess("Hello this is a new text")
+
+
+# In[91]:
+
+
+[model_doc2vec.infer_vector(gensim.utils.simple_preprocess(text)) for text in ['hello this is', 'second text']]
+
+
+# In[27]:
+
+
+df_train.shape
+
+
+# In[44]:
+
+
+df_train.iloc[0]
+
+
+# In[40]:
+
+
+df_train.loc[:5,'all_text']
+
+
+# In[49]:
+
+
+a = [document for document in df_train.loc[:,'all_text'] ]
+
+
+# In[51]:
+
+
+df_train.shape
+
+
+# In[50]:
+
+
+len(a)
+
+
+# In[54]:
+
+
+X_vectorized = [model_doc2vec.infer_vector(TaggedDocument(document)) for document in df_train.loc[:, 'all_text']]
+
+
+# In[33]:
+
+
+X_vectorized
 
