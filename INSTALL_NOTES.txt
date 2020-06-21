@@ -20,3 +20,9 @@ c.FileContentsManager.post_save_hook = post_save
 Packages installés, à noter :
 
 conda install qgrid
+
+
+Installation du plugin jupyter notebook pour spyder :
+conda install spyder-notebook -c spyder-ide
+
+conda install gensim

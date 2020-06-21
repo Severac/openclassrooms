@@ -4,6 +4,16 @@
 Created on Sat Jun 13 11:42:51 2020
 
 @author: francois
+
+
+PJ5 Openclassrooms : this code is the graphical user interface 
+It takes orders as input,  and outputs client IDs and their assigned clusters.
+
+Interface is hosted here :  https://pj5.analysons.com/
+
+See "README API.txt" for installation instructions :
+    https://github.com/Severac/openclassrooms/blob/master/PJ5/README%20API.txt
+
 """
 
 import streamlit as st

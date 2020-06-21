@@ -11,7 +11,7 @@ Results are saved in pickle file and loadable in notebook PJ5_modelisation
 Usage :
     Launch a python3 console
     Run PJ5_GridSearch_prerequisites.py
-    Run this script
+    Run this script (uncomment the validation run you want to pass)
 
 1 candidate (2 validations) launched in 2.5 min
 """
