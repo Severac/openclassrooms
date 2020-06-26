@@ -3,7 +3,7 @@
 
 # # Global settings
 
-# In[6]:
+# In[60]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -73,6 +73,10 @@ from nltk import pos_tag, sent_tokenize, wordpunct_tokenize
 
 import pandas_profiling
 
+from bs4 import BeautifulSoup
+
+from yellowbrick.text.freqdist import FreqDistVisualizer
+from sklearn.feature_extraction.text import CountVectorizer
 
 DATA_PATH = os.path.join("datasets", "stackexchange")
 #DATA_PATH = os.path.join(DATA_PATH, "out")
@@ -140,7 +144,7 @@ SAVE_API_MODEL = True # If True : API model ill be saved
 API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 
 
-# In[7]:
+# In[2]:
 
 
 ALL_FILES_LIST
@@ -148,7 +152,7 @@ ALL_FILES_LIST
 
 # # Load data
 
-# In[8]:
+# In[3]:
 
 
 import pandas as pd
@@ -169,34 +173,78 @@ def load_data(data_path=DATA_PATH):
     return pd.concat(df_list)
 
 
-# In[9]:
+# In[4]:
 
 
 df = load_data()
 df.reset_index(inplace=True)
 
 
-# In[10]:
+# In[5]:
 
 
 df
 
 
-# ## Remove html tags
+# ## Drop NA on body and remove html tags
 
-# In[11]:
-
-
-df.loc[:, 'Body'] = df['Body'].str.replace('<[^<]+?>', '') 
+# In[7]:
 
 
-# In[12]:
+df.dropna(subset=['Body'], axis=0, inplace=True)
+
+
+# In[6]:
+
+
+# Manually with a regexp
+#df.loc[:, 'Body'] = df['Body'].str.replace('<[^<]+?>', '') 
+
+
+# In[8]:
+
+
+# Or with beautifulsoup
+df.loc[:, 'Body'] = df['Body'].apply(lambda x: BeautifulSoup(x, 'lxml').get_text())
+
+
+# In[9]:
 
 
 df
 
 
-# In[13]:
+# In[25]:
+
+
+print(df['Body'].loc[0])
+
+
+# In[26]:
+
+
+print(df['Body'].loc[10000])
+
+
+# In[27]:
+
+
+print(df['Body'].loc[100000])
+
+
+# In[40]:
+
+
+print(df[df['Body'].str.contains('html')]['Body'].iloc[2])
+
+
+# In[ ]:
+
+
+
+
+
+# In[41]:
 
 
 # Converting tags from <tag 1><tag2><tag3> to tag1 tag2 tag3
@@ -205,41 +253,33 @@ df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.replace('>', ' ')
 df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.rstrip()
 
 
-# In[14]:
+# In[42]:
 
 
 df.info()
 
 
-# In[15]:
+# In[43]:
 
 
 df.sample(100)
 
 
-# In[16]:
+# In[44]:
 
 
 df
-
-
-# # Drop NA on body text
-
-# In[17]:
-
-
-df.dropna(subset=['Body'], axis=0, inplace=True)
 
 
 # # Global counts
 
-# In[18]:
+# In[45]:
 
 
 df
 
 
-# In[19]:
+# In[46]:
 
 
 #pandas_profiling.ProfileReport(df)
@@ -247,7 +287,7 @@ df
 
 # ## Tokens and vocabulary count
 
-# In[20]:
+# In[65]:
 
 
 counts_body  = nltk.FreqDist()
@@ -263,7 +303,7 @@ print('Number of tokens : ' + str(counts_body['words']))
 print('Number of distinct tokens (vocabulary): ' + str(len(tokens_body)))
 
 
-# In[21]:
+# In[48]:
 
 
 counts_tags  = nltk.FreqDist()
@@ -279,79 +319,35 @@ print('Number of tokens : ' + str(counts_tags['words']))
 print('Number of distinct tokens (vocabulary): ' + str(len(tokens_tags)))
 
 
-# In[22]:
+# In[49]:
 
 
 tokens_tags = nltk.FreqDist()
-
-
-# ## Distinct tags covered against post numbers
-
-# In[23]:
-
-
-cnt_docs = 0
-cnt_nulltags = 0
-
-cnt_distinct_tags_history = []
-cnt_distinct_tags_current = 0
-
-tokens_tags = nltk.FreqDist()
-
-for tag_line in df['Tags']:
-    '''
-    if (cnt_docs < 10):
-        print(tag_line)
-        print(type(tag_line))
-    '''
-    
-    if (str(tag_line) == 'nan'):
-        cnt_nulltags +=1
-    
-    else:
-        for word in tag_line.split():
-            if (tokens_tags[word] == 0):
-                cnt_distinct_tags_current += 1
-                
-            tokens_tags[word] += 1    
-        
-    cnt_distinct_tags_history.append(cnt_distinct_tags_current)
-    
-    cnt_docs += 1
-
-
-# In[24]:
-
-
-plt.title('Cumulated number of distinct tags against post numbers')
-plt.xlabel('Post ID')
-plt.ylabel('Cumulated number of distinct tags represented')
-plt.plot(range(cnt_docs), cnt_distinct_tags_history)
 
 
 # ## Most represented tags
 
-# In[25]:
+# In[52]:
 
 
 {k: v for k, v in sorted(tokens_tags.items(), key=lambda item: item[1], reverse=True)}
 
 
-# # Cumulated number of posts agains
+# # Cumulated number of posts against tags
 
-# In[26]:
+# In[53]:
 
 
 tags_represented_posts_cumulated = np.cumsum([v for k, v in sorted(tokens_tags.items(), key=lambda item: item[1], reverse=True)])
 
 
-# In[27]:
+# In[54]:
 
 
 tags_represented_posts_cumulated.max()*0.8
 
 
-# In[28]:
+# In[55]:
 
 
 plt.title('Cumulated number of posts against tags')
@@ -362,19 +358,82 @@ plt.legend()
 plt.plot(range(len(tags_represented_posts_cumulated)), tags_represented_posts_cumulated)
 
 
-# In[29]:
+# In[56]:
 
 
 tags_represented_posts_cumulated[1500]
 
 
+# # Frequency visualisation of tokens
+
+# In[84]:
+
+
+#vectorizer = CountVectorizer(token_pattern = r"(?u)\b\w+\b") # this token pattern overrides default of min 2 letters for a word
+vectorizer = CountVectorizer(token_pattern=r"(?u)\b\w\w+\b|!|\?|\"|\'")
+docs = vectorizer.fit_transform(df['Body'])
+
+
+# In[85]:
+
+
+features = vectorizer.get_feature_names()
+visualizer = FreqDistVisualizer(features=features)
+visualizer.fit(docs)
+visualizer.poof()
+
+
+# In[81]:
+
+
+np.min([len(f) for f in features])
+
+
 # ## Most represented tokens
 
-# In[30]:
+# In[83]:
 
 
 {k: v for k, v in sorted(tokens_body.items(), key=lambda item: item[1], reverse=True)}
 
+
+# # Annex
+
+# ## Distinct tags covered against post numbers
+
+# cnt_docs = 0
+# cnt_nulltags = 0
+# 
+# cnt_distinct_tags_history = []
+# cnt_distinct_tags_current = 0
+# 
+# tokens_tags = nltk.FreqDist()
+# 
+# for tag_line in df['Tags']:
+#     '''
+#     if (cnt_docs < 10):
+#         print(tag_line)
+#         print(type(tag_line))
+#     '''
+#     
+#     if (str(tag_line) == 'nan'):
+#         cnt_nulltags +=1
+#     
+#     else:
+#         for word in tag_line.split():
+#             if (tokens_tags[word] == 0):
+#                 cnt_distinct_tags_current += 1
+#                 
+#             tokens_tags[word] += 1    
+#         
+#     cnt_distinct_tags_history.append(cnt_distinct_tags_current)
+#     
+#     cnt_docs += 1
+
+# plt.title('Cumulated number of distinct tags against post numbers')
+# plt.xlabel('Post ID')
+# plt.ylabel('Cumulated number of distinct tags represented')
+# plt.plot(range(cnt_docs), cnt_distinct_tags_history)
 
 # In[ ]:
 

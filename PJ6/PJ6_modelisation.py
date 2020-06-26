@@ -302,13 +302,25 @@ df['all_text']
 df, df_train, df_test = custom_train_test_split_sample(df, None)
 
 
-# In[20]:
+# In[96]:
+
+
+df_train.reset_index(drop=True, inplace=True)
+
+
+# In[97]:
 
 
 df_train
 
 
-# In[21]:
+# In[98]:
+
+
+df_test.reset_index(drop=True, inplace=True)
+
+
+# In[99]:
 
 
 df_train_ori = df_train.copy(deep=True)
