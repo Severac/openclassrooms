@@ -143,7 +143,7 @@ API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 
 # # Doc2vec settings
 
-# In[27]:
+# In[2]:
 
 
 DOC2VEC_TRAINING_SAVE_FILE = 'doc2vec_model'
@@ -206,26 +206,26 @@ df
 
 # ## Drop NA and Remove html tags
 
-# In[8]:
+# In[7]:
 
 
 df.dropna(subset=['Body'], axis=0, inplace=True)
 
 
-# In[9]:
+# In[8]:
 
 
 # Or with beautifulsoup
 df.loc[:, 'Body'] = df['Body'].apply(lambda x: BeautifulSoup(x, 'lxml').get_text())
 
 
-# In[10]:
+# In[9]:
 
 
 df
 
 
-# In[12]:
+# In[10]:
 
 
 # Converting tags from <tag 1><tag2><tag3> to tag1 tag2 tag3
@@ -234,7 +234,7 @@ df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.replace('>', ' ')
 df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.rstrip()
 
 
-# In[13]:
+# In[11]:
 
 
 df
@@ -246,7 +246,7 @@ df
 
 
 
-# In[14]:
+# In[12]:
 
 
 df.info()
@@ -258,7 +258,7 @@ df.info()
 
 
 
-# In[15]:
+# In[13]:
 
 
 df.sample(100)
@@ -270,7 +270,7 @@ df.sample(100)
 
 
 
-# In[16]:
+# In[14]:
 
 
 df
@@ -278,19 +278,19 @@ df
 
 # # Regroup text features and clean
 
-# In[17]:
+# In[15]:
 
 
 df.loc[:, 'Title'].fillna(value='', inplace=True)
 
 
-# In[18]:
+# In[16]:
 
 
 df['all_text'] = df['Title'].astype(str) + '. ' +  df['Body'].astype(str)
 
 
-# In[19]:
+# In[17]:
 
 
 df['all_text']
@@ -298,31 +298,31 @@ df['all_text']
 
 # # Split training set, test set
 
-# In[20]:
+# In[18]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df, None)
 
 
-# In[21]:
+# In[19]:
 
 
 df_train.reset_index(drop=True, inplace=True)
 
 
-# In[22]:
+# In[20]:
 
 
 df_train
 
 
-# In[23]:
+# In[21]:
 
 
 df_test.reset_index(drop=True, inplace=True)
 
 
-# In[24]:
+# In[22]:
 
 
 df_train_ori = df_train.copy(deep=True)
@@ -443,33 +443,46 @@ X_vectorized
 
 # # Doc2vec loading
 
-# In[35]:
+# In[53]:
 
 
 df
 
 
-# In[55]:
+# In[78]:
 
 
 from functions import *
 importlib.reload(sys.modules['functions'])
+from functions import *
 
 
-# In[57]:
+# In[79]:
 
 
 doc2vec = Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')
 
 
-# In[64]:
+# In[80]:
 
 
-df_train_transformed = doc2vec.transform(df_train)
+df_train_transformed = doc2vec.transform(df_train.loc[0:1000, :])
 
 
-# In[65]:
+# In[81]:
+
+
+df_train_transformed.shape
+
+
+# In[82]:
 
 
 df_train_transformed
+
+
+# In[ ]:
+
+
+
 

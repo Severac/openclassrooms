@@ -68,9 +68,11 @@ from gensim.test.utils import get_tmpfile
 
 import gensim
 
+
 #model.save(fname)
 #model = Doc2Vec.load(fname)  # you can continue training with the loaded model!
 
+from tqdm import tqdm_notebook as tqdm
 
 def gini(array):
     """Calculate the Gini coefficient of a numpy array."""
@@ -1103,5 +1105,20 @@ class Doc2Vec_Vectorizer(BaseEstimator, TransformerMixin):
             return (df)
 
         else:
-            return([self.model.infer_vector(gensim.utils.simple_preprocess(text)) for text in df[self.feature_totransform]])
- 
+            #return([self.model.infer_vector(gensim.utils.simple_preprocess(text)) for text in df[self.feature_totransform]])
+            df_out = pd.DataFrame()
+            cnt = 0
+            progbar = tqdm(range(df.shape[0]))
+            
+            for text in df[self.feature_totransform]:
+                #df_out.loc[cnt] = self.model.infer_vector(gensim.utils.simple_preprocess(text))
+                #print(self.model.infer_vector(gensim.utils.simple_preprocess(text)).tolist())
+                #df_out.append(self.model.infer_vector(gensim.utils.simple_preprocess(text)).tolist())
+                
+                df_out = df_out.append(pd.Series(self.model.infer_vector(gensim.utils.simple_preprocess(text))), ignore_index=True)
+                
+                progbar.update(1)
+                cnt += 1
+            
+            return(df_out)
+    
