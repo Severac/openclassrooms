@@ -3,7 +3,7 @@
 
 # # Global settings
 
-# In[60]:
+# In[31]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -188,13 +188,13 @@ df
 
 # ## Drop NA on body and remove html tags
 
-# In[7]:
+# In[6]:
 
 
 df.dropna(subset=['Body'], axis=0, inplace=True)
 
 
-# In[6]:
+# In[7]:
 
 
 # Manually with a regexp
@@ -214,25 +214,25 @@ df.loc[:, 'Body'] = df['Body'].apply(lambda x: BeautifulSoup(x, 'lxml').get_text
 df
 
 
-# In[25]:
+# In[10]:
 
 
 print(df['Body'].loc[0])
 
 
-# In[26]:
+# In[11]:
 
 
 print(df['Body'].loc[10000])
 
 
-# In[27]:
+# In[12]:
 
 
 print(df['Body'].loc[100000])
 
 
-# In[40]:
+# In[13]:
 
 
 print(df[df['Body'].str.contains('html')]['Body'].iloc[2])
@@ -244,7 +244,7 @@ print(df[df['Body'].str.contains('html')]['Body'].iloc[2])
 
 
 
-# In[41]:
+# In[14]:
 
 
 # Converting tags from <tag 1><tag2><tag3> to tag1 tag2 tag3
@@ -253,19 +253,19 @@ df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.replace('>', ' ')
 df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.rstrip()
 
 
-# In[42]:
+# In[15]:
 
 
 df.info()
 
 
-# In[43]:
+# In[16]:
 
 
 df.sample(100)
 
 
-# In[44]:
+# In[17]:
 
 
 df
@@ -273,13 +273,13 @@ df
 
 # # Global counts
 
-# In[45]:
+# In[18]:
 
 
 df
 
 
-# In[46]:
+# In[19]:
 
 
 #pandas_profiling.ProfileReport(df)
@@ -287,7 +287,7 @@ df
 
 # ## Tokens and vocabulary count
 
-# In[65]:
+# In[20]:
 
 
 counts_body  = nltk.FreqDist()
@@ -303,7 +303,7 @@ print('Number of tokens : ' + str(counts_body['words']))
 print('Number of distinct tokens (vocabulary): ' + str(len(tokens_body)))
 
 
-# In[48]:
+# In[21]:
 
 
 counts_tags  = nltk.FreqDist()
@@ -319,15 +319,15 @@ print('Number of tokens : ' + str(counts_tags['words']))
 print('Number of distinct tokens (vocabulary): ' + str(len(tokens_tags)))
 
 
-# In[49]:
+# In[22]:
 
 
-tokens_tags = nltk.FreqDist()
+
 
 
 # ## Most represented tags
 
-# In[52]:
+# In[23]:
 
 
 {k: v for k, v in sorted(tokens_tags.items(), key=lambda item: item[1], reverse=True)}
@@ -335,19 +335,19 @@ tokens_tags = nltk.FreqDist()
 
 # # Cumulated number of posts against tags
 
-# In[53]:
+# In[26]:
 
 
 tags_represented_posts_cumulated = np.cumsum([v for k, v in sorted(tokens_tags.items(), key=lambda item: item[1], reverse=True)])
 
 
-# In[54]:
+# In[27]:
 
 
-tags_represented_posts_cumulated.max()*0.8
+tags_represented_posts_cumulated.max()
 
 
-# In[55]:
+# In[28]:
 
 
 plt.title('Cumulated number of posts against tags')
@@ -358,7 +358,7 @@ plt.legend()
 plt.plot(range(len(tags_represented_posts_cumulated)), tags_represented_posts_cumulated)
 
 
-# In[56]:
+# In[ ]:
 
 
 tags_represented_posts_cumulated[1500]
@@ -366,21 +366,52 @@ tags_represented_posts_cumulated[1500]
 
 # # Frequency visualisation of tokens
 
-# In[84]:
+# In[29]:
 
 
 #vectorizer = CountVectorizer(token_pattern = r"(?u)\b\w+\b") # this token pattern overrides default of min 2 letters for a word
-vectorizer = CountVectorizer(token_pattern=r"(?u)\b\w\w+\b|!|\?|\"|\'")
+#vectorizer = CountVectorizer(token_pattern=r"(?u)\b\w\w+\b|!|\?|\"|\'") # Allows 1 word tokens like !, ?, ", '
+vectorizer = CountVectorizer()
 docs = vectorizer.fit_transform(df['Body'])
 
 
-# In[85]:
+# In[32]:
 
 
 features = vectorizer.get_feature_names()
 visualizer = FreqDistVisualizer(features=features)
 visualizer.fit(docs)
 visualizer.poof()
+
+
+# In[33]:
+
+
+#vectorizer = CountVectorizer(token_pattern = r"(?u)\b\w+\b") # this token pattern overrides default of min 2 letters for a word
+#vectorizer = CountVectorizer(token_pattern=r"(?u)\b\w\w+\b|!|\?|\"|\'") # Allows 1 word tokens like !, ?, ", '
+vectorizer = CountVectorizer(stop_words='english')
+docs = vectorizer.fit_transform(df['Body'])
+
+
+# In[34]:
+
+
+features = vectorizer.get_feature_names()
+visualizer = FreqDistVisualizer(features=features)
+visualizer.fit(docs)
+visualizer.poof()
+
+
+# In[36]:
+
+
+
+
+
+# In[35]:
+
+
+docs
 
 
 # In[81]:

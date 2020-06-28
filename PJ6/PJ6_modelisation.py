@@ -73,6 +73,7 @@ from nltk import pos_tag, sent_tokenize, wordpunct_tokenize
 
 import pandas_profiling
 
+from bs4 import BeautifulSoup
 
 DATA_PATH = os.path.join("datasets", "stackexchange")
 #DATA_PATH = os.path.join(DATA_PATH, "out")
@@ -142,13 +143,15 @@ API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 
 # # Doc2vec settings
 
-# In[80]:
+# In[27]:
 
 
 DOC2VEC_TRAINING_SAVE_FILE = 'doc2vec_model'
 #doc2vec_fname = get_tmpfile(DOC2VEC_TRAINING_SAVE_FILE)
 
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
+from gensim.parsing.preprocessing import remove_stopwords
+
 import time
 
 from gensim.test.utils import get_tmpfile
@@ -201,21 +204,28 @@ df.reset_index(inplace=True)
 df
 
 
-# ## Remove html tags
-
-# In[7]:
-
-
-df.loc[:, 'Body'] = df['Body'].str.replace('<[^<]+?>', '') 
-
+# ## Drop NA and Remove html tags
 
 # In[8]:
+
+
+df.dropna(subset=['Body'], axis=0, inplace=True)
+
+
+# In[9]:
+
+
+# Or with beautifulsoup
+df.loc[:, 'Body'] = df['Body'].apply(lambda x: BeautifulSoup(x, 'lxml').get_text())
+
+
+# In[10]:
 
 
 df
 
 
-# In[9]:
+# In[12]:
 
 
 # Converting tags from <tag 1><tag2><tag3> to tag1 tag2 tag3
@@ -224,19 +234,19 @@ df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.replace('>', ' ')
 df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.rstrip()
 
 
+# In[13]:
+
+
+df
+
+
 # In[ ]:
 
 
 
 
 
-# In[ ]:
-
-
-
-
-
-# In[10]:
+# In[14]:
 
 
 df.info()
@@ -248,7 +258,7 @@ df.info()
 
 
 
-# In[11]:
+# In[15]:
 
 
 df.sample(100)
@@ -260,35 +270,27 @@ df.sample(100)
 
 
 
-# In[12]:
+# In[16]:
 
 
 df
 
 
-# # Drop NA on body text
-
-# In[13]:
-
-
-df.dropna(subset=['Body'], axis=0, inplace=True)
-
-
 # # Regroup text features and clean
 
-# In[16]:
+# In[17]:
 
 
 df.loc[:, 'Title'].fillna(value='', inplace=True)
 
 
-# In[17]:
+# In[18]:
 
 
 df['all_text'] = df['Title'].astype(str) + '. ' +  df['Body'].astype(str)
 
 
-# In[18]:
+# In[19]:
 
 
 df['all_text']
@@ -296,31 +298,31 @@ df['all_text']
 
 # # Split training set, test set
 
-# In[19]:
+# In[20]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df, None)
 
 
-# In[96]:
+# In[21]:
 
 
 df_train.reset_index(drop=True, inplace=True)
 
 
-# In[97]:
+# In[22]:
 
 
 df_train
 
 
-# In[98]:
+# In[23]:
 
 
 df_test.reset_index(drop=True, inplace=True)
 
 
-# In[99]:
+# In[24]:
 
 
 df_train_ori = df_train.copy(deep=True)
@@ -329,15 +331,31 @@ df_test_ori = df_test.copy(deep=True)
 
 # # Doc2Vec training
 
-# In[82]:
+# In[29]:
 
 
 cnt_label = 0
 InputDocs = []
 for document in df_train['all_text']:  # TO DO : relaunch this training with df_train
     #InputDocs.append(TaggedDocument(document,[cnt_label]))
-    InputDocs.append(TaggedDocument(gensim.utils.simple_preprocess(document),[cnt_label]))    
+    
+    doc_transformed = remove_stopwords(document)
+    doc_toappend = gensim.utils.simple_preprocess(doc_transformed)
+    
+    InputDocs.append(TaggedDocument(doc_toappend,[cnt_label]))    
     cnt_label += 1
+
+
+# In[26]:
+
+
+InputDocs
+
+
+# In[30]:
+
+
+InputDocs
 
 
 # In[83]:
@@ -421,4 +439,37 @@ X_vectorized = [model_doc2vec.infer_vector(TaggedDocument(document)) for documen
 
 
 X_vectorized
+
+
+# # Doc2vec loading
+
+# In[35]:
+
+
+df
+
+
+# In[55]:
+
+
+from functions import *
+importlib.reload(sys.modules['functions'])
+
+
+# In[57]:
+
+
+doc2vec = Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')
+
+
+# In[64]:
+
+
+df_train_transformed = doc2vec.transform(df_train)
+
+
+# In[65]:
+
+
+df_train_transformed
 

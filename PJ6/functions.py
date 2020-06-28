@@ -55,6 +55,23 @@ LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from pi
 
 GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
 
+### Doc2vec settings
+
+#DOC2VEC_TRAINING_SAVE_FILE = 'doc2vec_model'
+
+from gensim.models.doc2vec import TaggedDocument, Doc2Vec
+from gensim.parsing.preprocessing import remove_stopwords
+
+import time
+
+from gensim.test.utils import get_tmpfile
+
+import gensim
+
+#model.save(fname)
+#model = Doc2Vec.load(fname)  # you can continue training with the loaded model!
+
+
 def gini(array):
     """Calculate the Gini coefficient of a numpy array."""
     # https://github.com/oliviaguest/gini
@@ -1015,13 +1032,12 @@ def load_search_params(grid_search, save_file_suffix):
 '''
 This class is a wrapper for doc2vec (gensim)
 
-At init, it can be passed an already trained doc2vec with gensim library
+At init, it can be passed an already trained doc2vec with gensim library (optional)
 
 In and out data : pandas DataFrame
 '''
 class Doc2Vec_Vectorizer(BaseEstimator, TransformerMixin):
-    def __init__(self, features_totransform=None, algorithm_to_use='PCA', n_dim=20, labels_featurename=None,
-                 n_neighbors=10):
+    def __init__(self, model_path=None, model_save_path=None, feature_totransform=None, n_dim=200, window=5, min_count=5, remove_stopwords=True):
         # Passing labels_featurename here for NCA is a mistake :(  it should be passed as a label to fit function, for
         # gridsearch to correctly split labels associated with folds.
         # So, I kept labels_featurenamesfor backwards compatibility with the rest of the notebook.
@@ -1029,150 +1045,63 @@ class Doc2Vec_Vectorizer(BaseEstimator, TransformerMixin):
 
         # labels_featurename can be a feature name and also a list of discrete labels
         self.fitted = False
-        self.features_totransform = features_totransform
-        self.algorithm_to_use = algorithm_to_use
+        self.feature_totransform = 'all_text'
         self.n_dim = n_dim
-        self.labels_featurename = labels_featurename  # For NCA
-        self.n_neighbors = n_neighbors  # For LLE
+        self.window = window
+        self.min_count = min_count
+        self.model_path = model_path
+        self.model = None
 
     def fit(self, df,
             labels=None):  # Labels=None added to attempt to remove weird error fit() takes 2 positional arguments but 3 were given
         if (DEBUG_LEVEL >= 1):
-            print('Fit Dimensionality Reductor')
+            print('Fit Doc2vec_Vectorizer')
 
-        if (self.features_totransform == None):
+        if (self.feature_totransform == None):
             self.fitted = True
             return (self)
+        
+        if (self.model_path == None): # If no model file to load : we train the model from scratch
+            # Constructing tokens
+            cnt_label = 0
+            InputDocs = []
+    
+            for document in df[self.feature_totransform ]:            
+                doc_transformed = remove_stopwords(document)
+                doc_toappend = gensim.utils.simple_preprocess(doc_transformed)
+                
+                InputDocs.append(TaggedDocument(doc_toappend,[cnt_label]))    
+                cnt_label += 1    
+    
+            # Training model
+            start = time.time()
+            self.model = Doc2Vec(InputDocs, vector_size=self.n_dim, window=self.window, min_count=self.min_count, workers=4)  # All input docs loaded in memory
+            end = time.time()
+            
+            print('Duration of doc2vec training: ' + str(end - start) + ' seconds')       
+            
+            # Saving model to file
+            if (self.model_save_path != None):
+                print('Saving model to file...')
+                model.save(self.model_save_path)
+            
+        else: # Loading model from file
+            self.model = Doc2Vec.load(self.model_path)
 
-        else:
-            if (self.algorithm_to_use == 'PCA'):
-                self.reductor = PCA(n_components=self.n_dim, random_state=42)
-
-            if (self.algorithm_to_use == 'NCA'):
-                '''
-                if (self.labels == None):
-                    self.labels = df['TotalPricePerMonth']
-                '''
-
-                if (self.labels_featurename != None):
-                    if isinstance(self.labels_featurename, str):
-                        self.labels_discrete = pd.cut(df[self.labels_featurename], bins=10, right=True).astype(
-                            str).tolist()
-
-                    else:
-                        # self.labels_discrete = self.labels_featurename
-                        self.labels_discrete = pd.cut(self.labels_featurename, bins=10, right=True).astype(str).tolist()
-
-                else:  # For use with GridSearchCV : in this case, labels variable has been passed to fit()
-                    # print('df indexes :')
-                    # print(df.index)
-
-                    labels = labels[df.index]  # Select only labels in df (which is a fold of the training set)
-                    # print('labels sliced successfuly')
-                    # print('Printing labels sliced :')
-                    # print(labels)
-
-                    labels_discrete = pd.cut(labels, bins=10, right=True).astype(str).tolist()
-                    # print('labels discretized successfuly')
-                    # print(labels_discrete)
-
-                self.reductor = NeighborhoodComponentsAnalysis(random_state=42, n_components=self.n_dim)
-
-            if (self.algorithm_to_use == 'TSNE'):
-                self.reductor = TSNE(n_components=self.n_dim, random_state=42)
-
-            if (self.algorithm_to_use == 'LLE'):
-                self.reductor = LocallyLinearEmbedding(n_components=self.n_dim, n_neighbors=self.n_neighbors,
-                                                       random_state=42)
-
-            if (self.algorithm_to_use == 'ISOMAP'):
-                self.reductor = Isomap(n_components=self.n_dim)
-
-            if (self.features_totransform == 'ALL'):
-                self.filter_cols = [col for col in df]
-
-            else:
-                self.filter_cols = [col for col in df if (col.startswith(tuple(self.features_totransform)))]
-
-            self.filter_cols.sort(key=lambda v: (isinstance(v, str), v))
-
-            # print('1')
-            # print("Features selected (in order): " + str(df.loc[:, self.filter_cols].columns))
-            # print('2')
-
-            if ((self.algorithm_to_use == 'PCA') or (self.algorithm_to_use == 'LLE') or (
-                    self.algorithm_to_use == 'ISOMAP')):
-                self.reductor.fit(df[self.filter_cols].to_numpy())
-
-            if (self.algorithm_to_use == 'NCA'):
-                if (self.labels_featurename != None):  # Backwards compatibility. For use without GridSearchCV
-                    self.reductor.fit(df[self.filter_cols].to_numpy(), self.labels_discrete)
-
-                else:  # For use with GridSearchCV : labels passed to fit
-                    # print('self.labels_featurename != None : for gridsearch')
-
-                    # print('len of labels: ' + str(len(labels)))
-                    # print('len of labels_discrete: ' + str(len(labels_discrete)))
-                    # print('len of input df to transform : ' + str(len(df[self.filter_cols])))
-
-                    # print('unique labels : ')
-                    # print(np.unique(labels_discrete))
-
-                    self.reductor.fit(df[self.filter_cols].to_numpy(), labels_discrete)
-                    # print('reductor fit called')
-
-            if (self.algorithm_to_use == 'TSNE'):
-                print('No fit for TSNE')
-
-            self.fitted = True
+        self.fitted = True
 
         return self
 
     def transform(self, df):
         if (DEBUG_LEVEL >= 1):
-            print('Transform Dimensionality Reductor')
+            print('Transform Doc2vec_Vectorizer')
 
         if (self.fitted == False):
             self.fit(df)
 
-        if (self.features_totransform == None):
+        if (self.feature_totransform == None):
             return (df)
 
         else:
-            remaining_columns = list(set(df.columns.tolist()) - set(self.filter_cols))
-
-            # print(f'Remaining columns: {remaining_columns}')
-
-            if (self.algorithm_to_use == 'TSNE'):
-                # TNSE has not transform function so we have to do fit_transform directly
-                np_transformed = self.reductor.fit_transform(df[self.filter_cols].to_numpy())
-
-            else:
-                # print('1')
-                np_transformed = self.reductor.transform(df[self.filter_cols].to_numpy())
-                # print('2')
-
-            if (remaining_columns != []):
-                # print('3')
-                # print('df.index before concatenation: ')
-                # print(df.index)
-                df_transformed = pd.concat([df[remaining_columns].reset_index(drop=True), pd.DataFrame(np_transformed)],
-                                           axis=1)
-                # print('Print 1 line of Df after concat and before reindex :')
-                # print(df_transformed.head(1))
-
-                # Added to be able to extract index (customer IDs) for labels after
-                # Needs to be tested again with the notebook
-                df_transformed.set_index(df.index, inplace=True)
-
-                # print('df_transformed.index after concatenation: ')
-                # print(df_transformed.index)
-                # print('Print 1 line of Df after concat and after reindex :') # => result : nan values, not good
-                # print(df_transformed.head(1))
-                # print('4')
-
-            else:
-                df_transformed = pd.DataFrame(np_transformed)
-
-        # print('5')
-        return (df_transformed)
+            return([self.model.infer_vector(gensim.utils.simple_preprocess(text)) for text in df[self.feature_totransform]])
+ 
