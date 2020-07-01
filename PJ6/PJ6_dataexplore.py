@@ -3,7 +3,7 @@
 
 # # Global settings
 
-# In[31]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -303,14 +303,14 @@ print('Number of tokens : ' + str(counts_body['words']))
 print('Number of distinct tokens (vocabulary): ' + str(len(tokens_body)))
 
 
-# In[21]:
+# In[20]:
 
 
 counts_tags  = nltk.FreqDist()
 tokens_tags  = nltk.FreqDist()
 
 for tag_line in df.dropna(subset=['Tags'], axis=0)['Tags']:
-    for word in tag_line.split():
+    for word in tag_line.split(' '):
         counts_tags['words'] += 1
         tokens_tags[word] += 1
         
@@ -319,15 +319,16 @@ print('Number of tokens : ' + str(counts_tags['words']))
 print('Number of distinct tokens (vocabulary): ' + str(len(tokens_tags)))
 
 
-# In[22]:
+# In[36]:
 
 
-
+#for token in tokens_tags:
+#    print(token)
 
 
 # ## Most represented tags
 
-# In[23]:
+# In[21]:
 
 
 {k: v for k, v in sorted(tokens_tags.items(), key=lambda item: item[1], reverse=True)}
@@ -335,19 +336,19 @@ print('Number of distinct tokens (vocabulary): ' + str(len(tokens_tags)))
 
 # # Cumulated number of posts against tags
 
-# In[26]:
+# In[22]:
 
 
 tags_represented_posts_cumulated = np.cumsum([v for k, v in sorted(tokens_tags.items(), key=lambda item: item[1], reverse=True)])
 
 
-# In[27]:
+# In[23]:
 
 
 tags_represented_posts_cumulated.max()
 
 
-# In[28]:
+# In[24]:
 
 
 plt.title('Cumulated number of posts against tags')
@@ -358,7 +359,7 @@ plt.legend()
 plt.plot(range(len(tags_represented_posts_cumulated)), tags_represented_posts_cumulated)
 
 
-# In[ ]:
+# In[25]:
 
 
 tags_represented_posts_cumulated[1500]
@@ -366,7 +367,7 @@ tags_represented_posts_cumulated[1500]
 
 # # Frequency visualisation of tokens
 
-# In[29]:
+# In[26]:
 
 
 #vectorizer = CountVectorizer(token_pattern = r"(?u)\b\w+\b") # this token pattern overrides default of min 2 letters for a word
@@ -375,7 +376,7 @@ vectorizer = CountVectorizer()
 docs = vectorizer.fit_transform(df['Body'])
 
 
-# In[32]:
+# In[27]:
 
 
 features = vectorizer.get_feature_names()
@@ -384,7 +385,7 @@ visualizer.fit(docs)
 visualizer.poof()
 
 
-# In[33]:
+# In[28]:
 
 
 #vectorizer = CountVectorizer(token_pattern = r"(?u)\b\w+\b") # this token pattern overrides default of min 2 letters for a word
@@ -393,19 +394,13 @@ vectorizer = CountVectorizer(stop_words='english')
 docs = vectorizer.fit_transform(df['Body'])
 
 
-# In[34]:
+# In[29]:
 
 
 features = vectorizer.get_feature_names()
 visualizer = FreqDistVisualizer(features=features)
 visualizer.fit(docs)
 visualizer.poof()
-
-
-# In[36]:
-
-
-
 
 
 # In[35]:

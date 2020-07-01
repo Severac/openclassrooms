@@ -867,7 +867,7 @@ class BowEncoder(BaseEstimator, TransformerMixin):
 
         if (self.categorical_features_totransform != None):
             for feature_name in self.categorical_features_totransform:
-                self.vectorizers[feature_name] = CountVectorizer(min_df=self.min_df)
+                self.vectorizers[feature_name] = CountVectorizer(tokenizer=(lambda x : x.split(' ')), min_df=self.min_df)
                 #print('track1')
                 matrix_vectorized = self.vectorizers[feature_name].fit(df[feature_name].astype(str))
                 #print('track2')

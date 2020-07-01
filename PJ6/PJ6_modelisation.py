@@ -3,7 +3,7 @@
 
 # # Global settings
 
-# In[58]:
+# In[2]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -148,7 +148,7 @@ API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 
 # # Doc2vec settings
 
-# In[2]:
+# In[3]:
 
 
 DOC2VEC_TRAINING_SAVE_FILE = 'doc2vec_model'
@@ -167,7 +167,7 @@ import gensim
 #model = Doc2Vec.load(fname)  # you can continue training with the loaded model!
 
 
-# In[3]:
+# In[4]:
 
 
 ALL_FILES_LIST
@@ -175,7 +175,7 @@ ALL_FILES_LIST
 
 # # Load data
 
-# In[4]:
+# In[5]:
 
 
 import pandas as pd
@@ -196,14 +196,14 @@ def load_data(data_path=DATA_PATH):
     return pd.concat(df_list)
 
 
-# In[5]:
+# In[6]:
 
 
 df = load_data()
-df.reset_index(inplace=True)
+df.reset_index(inplace=True, drop=True)
 
 
-# In[6]:
+# In[7]:
 
 
 df
@@ -211,27 +211,27 @@ df
 
 # ## Drop NA and Remove html tags
 
-# In[7]:
+# In[8]:
 
 
 df.dropna(subset=['Body'], axis=0, inplace=True)
 df.dropna(subset=['Tags'], axis=0, inplace=True)
 
 
-# In[8]:
+# In[9]:
 
 
 # Or with beautifulsoup
 df.loc[:, 'Body'] = df['Body'].apply(lambda x: BeautifulSoup(x, 'lxml').get_text())
 
 
-# In[9]:
+# In[10]:
 
 
 df
 
 
-# In[10]:
+# In[11]:
 
 
 # Converting tags from <tag 1><tag2><tag3> to tag1 tag2 tag3
@@ -260,19 +260,19 @@ df.sample(100)
 
 # # Regroup text features and clean
 
-# In[15]:
+# In[14]:
 
 
 df.loc[:, 'Title'].fillna(value='', inplace=True)
 
 
-# In[16]:
+# In[15]:
 
 
 df['all_text'] = df['Title'].astype(str) + '. ' +  df['Body'].astype(str)
 
 
-# In[17]:
+# In[16]:
 
 
 df['all_text']
@@ -280,25 +280,31 @@ df['all_text']
 
 # # Split training set, test set
 
-# In[63]:
+# In[17]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df, None)
 
 
-# In[64]:
+# In[18]:
 
 
 df_train.reset_index(drop=True, inplace=True)
 
 
-# In[65]:
+# In[19]:
 
 
 df_train
 
 
-# In[66]:
+# In[20]:
+
+
+df_test
+
+
+# In[21]:
 
 
 df_test.reset_index(drop=True, inplace=True)
@@ -306,107 +312,111 @@ df_test.reset_index(drop=True, inplace=True)
 
 # # 1 hot encode tags (= labels)
 
-# In[67]:
+# In[22]:
 
 
 #df_train.dropna(subset=['Tags'], axis=0, inplace=True)  # Can be removed later  (NA already dropped on df first place)
 #df_test.dropna(subset=['Tags'], axis=0, inplace=True)  # Can be removed later  (NA already dropped on df first place)
 
 
-# In[68]:
+# In[23]:
 
 
 bowencoder = BowEncoder()
 
 
-# In[69]:
+# In[24]:
 
 
 bowencoder.fit(df_train, categorical_features_totransform=['Tags'])
 
 
-# In[70]:
+# In[25]:
 
 
 df_train = bowencoder.transform(df_train)
 
 
-# ## 2 problèmes à régler : le clip à 1, et le fait que le séparateur doit uniquement être l'espace pour CountVectorizer, pas les tirets
-
-# In[74]:
+# In[28]:
 
 
-df_train[['Body', 'Tags', 'Tags_javascript', 'Tags_flutter', 'Tags_python', 'Tags_html', 'Tags_java', 'Tags_amazon', 'Tags_web', 'Tags_chrome']]
-
-
-# In[27]:
-
-
-df_test = bowencoder.transform(df_test)
+df_train[['Body', 'Tags', 'Tags_javascript', 'Tags_jquery', 'Tags_python', 'Tags_html', 'Tags_java', 'Tags_docker', 'Tags_android']]
 
 
 # In[29]:
 
 
+df_train
+
+
+# In[30]:
+
+
+df_test = bowencoder.transform(df_test)
+
+
+# In[31]:
+
+
 filter_col_labels = [col for col in df_train if col.startswith('Tags')]
 
 
-# In[52]:
+# In[32]:
 
 
 df_train_labels = df_train[filter_col_labels].copy(deep=True)
 
 
-# In[53]:
+# In[33]:
 
 
 df_train_labels.drop(columns=['Tags'], inplace=True)
 
 
-# In[54]:
+# In[34]:
 
 
 df_test_labels = df_test[filter_col_labels].copy(deep=True)
 
 
-# In[55]:
+# In[35]:
 
 
 df_test_labels.drop(columns=['Tags'], inplace=True)
 
 
-# In[41]:
+# In[36]:
 
 
 df_train_ori = df_train.copy(deep=True)
 df_test_ori = df_test.copy(deep=True)
 
 
-# In[42]:
+# In[37]:
 
 
 df_train.shape
 
 
-# In[43]:
+# In[38]:
 
 
 df_test.shape
 
 
-# In[44]:
+# In[39]:
 
 
 df_train_labels.shape
 
 
-# In[45]:
+# In[40]:
 
 
 df_test_labels.shape
 
 
-# In[46]:
+# In[41]:
 
 
 df_train_labels
