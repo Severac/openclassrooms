@@ -137,6 +137,11 @@ import statsmodels.formula.api as smf
 import statsmodels.api as sm
 from scipy import stats
 
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+from nltk.cluster import KMeansClusterer # NLTK algorithm will be useful for cosine distance
+
 SAVE_API_MODEL = True # If True : API model ill be saved
 API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 
@@ -443,13 +448,20 @@ X_vectorized
 
 # # Doc2vec loading
 
-# In[53]:
+# In[23]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+
+# In[24]:
 
 
 df
 
 
-# In[78]:
+# In[25]:
 
 
 from functions import *
@@ -457,29 +469,159 @@ importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[79]:
+# In[26]:
 
 
 doc2vec = Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')
 
 
-# In[80]:
+# In[27]:
 
 
-df_train_transformed = doc2vec.transform(df_train.loc[0:1000, :])
+doc2vec.fit(df_train)
 
 
-# In[81]:
+# In[28]:
+
+
+doc2vec.model.docvecs.vectors_docs
+
+
+# In[29]:
+
+
+# Use this to infer vectors :  needed for test set, but not mandatory for training set (we alredy have trained vectors available)
+#df_train_transformed = doc2vec.transform(df_train.loc[0:1000, :])
+#df_train_transformed = doc2vec.transform(df_train)
+
+# Use this to get already trained vectors in training set
+df_train_transformed = doc2vec.model.docvecs.vectors_docs
+
+
+# In[30]:
 
 
 df_train_transformed.shape
 
 
-# In[82]:
+# In[31]:
 
 
 df_train_transformed
 
+
+# In[32]:
+
+
+df_train = df_train_transformed
+
+
+# # First clustering attempts
+
+# In[33]:
+
+
+df_train.shape
+
+
+# In[34]:
+
+
+kmeans_per_k = [KMeans(n_clusters=k, random_state=42).fit(df_train)
+                for k in range(1, 20)]
+
+
+# In[39]:
+
+
+'''
+kmeans_model_nltk = KMeansClusterer(
+            10, distance=nltk.cluster.util.cosine_distance, avoid_empty_clusters=True, repeats=10) 
+'''
+
+
+# In[40]:
+
+
+'''
+clusters = kmeans_model_nltk.cluster(df_train.to_numpy(), assign_clusters = True)    
+'''
+
+
+# In[41]:
+
+
+kmeans_nltk_per_k = [KMeansClusterer(
+            k, distance=nltk.cluster.util.cosine_distance, avoid_empty_clusters=True, repeats=10) for k in range(1,20)]
+
+
+# In[ ]:
+
+
+# If df_train is a dataframe  (when vectors have been infered) :
+#kmeans_nltk_labels_train_per_k = [model.cluster(df_train.to_numpy(), assign_clusters = True) for model in kmeans_nltk_per_k]
+
+# If df_train is an ndarray (when we directly got training labels):
+kmeans_nltk_labels_train_per_k = [model.cluster(df_train, assign_clusters = True) for model in kmeans_nltk_per_k]
+
+
+# In[ ]:
+
+
+#labels_test_per_k = [model.predict(df_test) for model in kmeans_per_k[1:]]
+
+
+# In[35]:
+
+
+silhouette_scores = [silhouette_score(df_train, model.labels_)
+                     for model in kmeans_per_k[1:]]
+
+
+# In[ ]:
+
+
+silhouette_scores_nltk = [silhouette_score(df_train, labels)
+                     for labels in kmeans_nltk_labels_train_per_k[1:]]
+
+
+# In[247]:
+
+
+#silhouette_scores_test = [silhouette_score(df_test, labels_test) for labels_test in labels_test_per_k]
+
+
+# In[36]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 20), silhouette_scores, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Silhouette score on training set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# In[ ]:
+
+
+plt.figure(figsize=(8, 3))
+plt.plot(range(2, 20), silhouette_scores_nltk, "bo-")
+plt.xlabel("$k$", fontsize=14)
+plt.ylabel("Silhouette score of KMeans NLTK (with cosine distance) on training set", fontsize=14)
+#plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+#save_fig("silhouette_score_vs_k_plot")
+plt.show()
+
+
+# plt.figure(figsize=(8, 3))
+# plt.plot(range(2, 50), silhouette_scores_test, "bo-")
+# plt.xlabel("$k$", fontsize=14)
+# plt.ylabel("Silhouette score on test set", fontsize=14)
+# #plt.axis([1.8, 8.5, 0.55, 0.7]) # [xmin, xmax, ymin, ymax]
+# #save_fig("silhouette_score_vs_k_plot")
+# plt.show()
 
 # In[ ]:
 

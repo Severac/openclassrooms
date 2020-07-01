@@ -1034,6 +1034,10 @@ def load_search_params(grid_search, save_file_suffix):
 '''
 This class is a wrapper for doc2vec (gensim)
 
+It admits a dataframe as input, and produces a dataframe as output
+
+Before doc2vec transformation, this class also does tokenization and removing of stop words
+
 At init, it can be passed an already trained doc2vec with gensim library (optional)
 
 In and out data : pandas DataFrame
@@ -1068,7 +1072,7 @@ class Doc2Vec_Vectorizer(BaseEstimator, TransformerMixin):
             cnt_label = 0
             InputDocs = []
     
-            for document in df[self.feature_totransform ]:            
+            for document in df[self.feature_totransform]:            
                 doc_transformed = remove_stopwords(document)
                 doc_toappend = gensim.utils.simple_preprocess(doc_transformed)
                 
