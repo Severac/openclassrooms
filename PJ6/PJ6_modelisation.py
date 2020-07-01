@@ -3,7 +3,7 @@
 
 # # Global settings
 
-# In[1]:
+# In[58]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -215,6 +215,7 @@ df
 
 
 df.dropna(subset=['Body'], axis=0, inplace=True)
+df.dropna(subset=['Tags'], axis=0, inplace=True)
 
 
 # In[8]:
@@ -239,12 +240,6 @@ df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.replace('>', ' ')
 df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.rstrip()
 
 
-# In[11]:
-
-
-df
-
-
 # In[ ]:
 
 
@@ -257,28 +252,10 @@ df
 df.info()
 
 
-# In[ ]:
-
-
-
-
-
 # In[13]:
 
 
 df.sample(100)
-
-
-# In[ ]:
-
-
-
-
-
-# In[14]:
-
-
-df
 
 
 # # Regroup text features and clean
@@ -303,35 +280,136 @@ df['all_text']
 
 # # Split training set, test set
 
-# In[18]:
+# In[63]:
 
 
 df, df_train, df_test = custom_train_test_split_sample(df, None)
 
 
-# In[19]:
+# In[64]:
 
 
 df_train.reset_index(drop=True, inplace=True)
 
 
-# In[20]:
+# In[65]:
 
 
 df_train
 
 
-# In[21]:
+# In[66]:
 
 
 df_test.reset_index(drop=True, inplace=True)
 
 
-# In[22]:
+# # 1 hot encode tags (= labels)
+
+# In[67]:
+
+
+#df_train.dropna(subset=['Tags'], axis=0, inplace=True)  # Can be removed later  (NA already dropped on df first place)
+#df_test.dropna(subset=['Tags'], axis=0, inplace=True)  # Can be removed later  (NA already dropped on df first place)
+
+
+# In[68]:
+
+
+bowencoder = BowEncoder()
+
+
+# In[69]:
+
+
+bowencoder.fit(df_train, categorical_features_totransform=['Tags'])
+
+
+# In[70]:
+
+
+df_train = bowencoder.transform(df_train)
+
+
+# ## 2 problèmes à régler : le clip à 1, et le fait que le séparateur doit uniquement être l'espace pour CountVectorizer, pas les tirets
+
+# In[74]:
+
+
+df_train[['Body', 'Tags', 'Tags_javascript', 'Tags_flutter', 'Tags_python', 'Tags_html', 'Tags_java', 'Tags_amazon', 'Tags_web', 'Tags_chrome']]
+
+
+# In[27]:
+
+
+df_test = bowencoder.transform(df_test)
+
+
+# In[29]:
+
+
+filter_col_labels = [col for col in df_train if col.startswith('Tags')]
+
+
+# In[52]:
+
+
+df_train_labels = df_train[filter_col_labels].copy(deep=True)
+
+
+# In[53]:
+
+
+df_train_labels.drop(columns=['Tags'], inplace=True)
+
+
+# In[54]:
+
+
+df_test_labels = df_test[filter_col_labels].copy(deep=True)
+
+
+# In[55]:
+
+
+df_test_labels.drop(columns=['Tags'], inplace=True)
+
+
+# In[41]:
 
 
 df_train_ori = df_train.copy(deep=True)
 df_test_ori = df_test.copy(deep=True)
+
+
+# In[42]:
+
+
+df_train.shape
+
+
+# In[43]:
+
+
+df_test.shape
+
+
+# In[44]:
+
+
+df_train_labels.shape
+
+
+# In[45]:
+
+
+df_test_labels.shape
+
+
+# In[46]:
+
+
+df_train_labels
 
 
 # # Doc2Vec training
@@ -518,10 +596,22 @@ df_train = df_train_transformed
 
 # # First clustering attempts
 
-# In[33]:
+# In[37]:
 
 
 df_train.shape
+
+
+# In[68]:
+
+
+df_train_ori.info()
+
+
+# In[69]:
+
+
+df_train
 
 
 # In[34]:
@@ -623,8 +713,40 @@ plt.show()
 # #save_fig("silhouette_score_vs_k_plot")
 # plt.show()
 
-# In[ ]:
+# # Compare 1 document to closest neighbours
+
+# In[49]:
 
 
+doc_to_compare = df_train_ori.loc[500]['Body']
 
+
+# In[50]:
+
+
+gensim.utils.simple_preprocess(remove_stopwords(doc_to_compare))
+
+
+# In[70]:
+
+
+print(doc_to_compare)
+
+
+# In[66]:
+
+
+doc2vec.model.infer_vector(gensim.utils.simple_preprocess(remove_stopwords(doc_to_compare)))
+
+
+# In[71]:
+
+
+doc2vec.model.docvecs.most_similar([doc2vec.model.infer_vector(gensim.utils.simple_preprocess(remove_stopwords(doc_to_compare)))])
+
+
+# In[81]:
+
+
+print(df_train_ori.loc[234404]['Body'])
 

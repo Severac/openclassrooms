@@ -896,6 +896,8 @@ class BowEncoder(BaseEstimator, TransformerMixin):
                 del matrix_vectorized
                 
                 df = pd.concat([df.reset_index(), df_vectorized], axis=1)            
+                
+                df.loc[:, bow_features].clip(upper=1)
         
             return(df)
 
