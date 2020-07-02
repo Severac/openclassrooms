@@ -45,6 +45,8 @@ import numpy as np
 
 import pickle
 
+from bs4 import BeautifulSoup
+
 
 RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
 SAVE_GRID_RESULTS = True # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
@@ -840,6 +842,42 @@ def custom_train_test_split_sample(df, split_feature, SAMPLED_DATA=False):
     
     return df, df_train, df_test
 
+
+'''
+This function splits training and test set with a stratify strategy on 1 feature
+'''    
+def custom_train_test_split_with_labels(df, df_labels, split_feature, SAMPLED_DATA=False):
+    from sklearn.model_selection import train_test_split
+    
+    if (SAMPLED_DATA == True):
+        df_labels_discrete = pd.cut(df[split_feature], bins=50)
+        df, df2 = train_test_split(df, df_labels, train_size=NB_SAMPLES, random_state=42, shuffle = True, stratify = df_labels_discrete)
+
+    if (split_feature != None):
+        #df_labels_discrete = pd.cut(df[split_feature], bins=50)
+        df_labels_discrete = pd.qcut(df[split_feature], 10)
+
+        df_train, df_test, df_train_labels, df_test_labels = train_test_split(df, df_labels, test_size=0.1, random_state=42, shuffle = True, stratify = df_labels_discrete)
+        #df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
+
+    else:
+        df_train, df_test, df_train_labels, df_test_labels = train_test_split(df, df_labels, test_size=0.1, random_state=42, shuffle=True)
+
+    '''
+    convert_dict = {'InvoiceNo': str, 'StockCode':str, 'Description': str, \
+                                       'CustomerID':str, 'Country': str, 'DescriptionNormalized': str}
+  
+    df_train = df_train.astype(convert_dict) 
+    df_test = df_test.astype(convert_dict)
+    '''
+
+    '''
+    df_train = df_train.copy()
+    df_test = df_test.copy()
+    '''
+    
+    return df, df_train, df_test, df_train_labels, df_test_labels
+
 '''
 This class does a bag of words encoding : which means for each possible word in
 the feature to encode, a column called featurename_word is created in the dataframe.
@@ -1127,4 +1165,40 @@ class Doc2Vec_Vectorizer(BaseEstimator, TransformerMixin):
                 cnt += 1
             
             return(df_out)
+    
+'''
+This class :
+    Removes html tags
+    Regroups Title and Body in 1 unique field
+    
+
+'''
+    
+class PrepareTextData(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.fitted = False
+    
+    def fit(self, df, labels=None):      
+        if (DEBUG_LEVEL >= 1) :
+            print('PrepareTextData : Fit data')
+            
+        self.fitted = True
+        
+        return self
+    
+    def transform(self, df):
+        if (DEBUG_LEVEL >= 1) :
+            print('PrepareTextData : Transform data')
+            
+        if (self.fitted == False):
+            self.fit(df)
+        
+        df.loc[:, 'Body'] = df['Body'].apply(lambda x: BeautifulSoup(x, 'lxml').get_text())
+        df.loc[:, 'Title'].fillna(value='', inplace=True)
+        df.loc[:, 'all_text'] = df['Title'].astype(str) + '. ' +  df['Body'].astype(str)
+       
+        #df.loc[:, 'all_text'] = (df['Title'].astype(str) + '. ' +  df['Body'].astype(str)).copy(deep=True)
+        
+        return(df[['all_text']])
+      
     

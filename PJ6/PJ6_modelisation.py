@@ -3,7 +3,7 @@
 
 # # Global settings
 
-# In[2]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -148,7 +148,7 @@ API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 
 # # Doc2vec settings
 
-# In[3]:
+# In[2]:
 
 
 DOC2VEC_TRAINING_SAVE_FILE = 'doc2vec_model'
@@ -167,7 +167,7 @@ import gensim
 #model = Doc2Vec.load(fname)  # you can continue training with the loaded model!
 
 
-# In[4]:
+# In[3]:
 
 
 ALL_FILES_LIST
@@ -175,7 +175,7 @@ ALL_FILES_LIST
 
 # # Load data
 
-# In[5]:
+# In[4]:
 
 
 import pandas as pd
@@ -196,42 +196,37 @@ def load_data(data_path=DATA_PATH):
     return pd.concat(df_list)
 
 
-# In[6]:
+# In[5]:
 
 
 df = load_data()
 df.reset_index(inplace=True, drop=True)
 
 
-# In[7]:
+# In[6]:
 
 
 df
 
 
-# ## Drop NA and Remove html tags
+# ## Drop NA
 
-# In[8]:
+# In[7]:
 
 
 df.dropna(subset=['Body'], axis=0, inplace=True)
 df.dropna(subset=['Tags'], axis=0, inplace=True)
 
 
+# In[8]:
+
+
+df.shape
+
+
+# # Encode labels (strip < and >, then 1 hot encode)
+
 # In[9]:
-
-
-# Or with beautifulsoup
-df.loc[:, 'Body'] = df['Body'].apply(lambda x: BeautifulSoup(x, 'lxml').get_text())
-
-
-# In[10]:
-
-
-df
-
-
-# In[11]:
 
 
 # Converting tags from <tag 1><tag2><tag3> to tag1 tag2 tag3
@@ -240,191 +235,193 @@ df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.replace('>', ' ')
 df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.rstrip()
 
 
-# In[ ]:
-
-
-
-
-
-# In[12]:
+# In[10]:
 
 
 df.info()
 
 
-# In[13]:
-
-
-df.sample(100)
-
-
-# # Regroup text features and clean
-
-# In[14]:
-
-
-df.loc[:, 'Title'].fillna(value='', inplace=True)
-
-
-# In[15]:
-
-
-df['all_text'] = df['Title'].astype(str) + '. ' +  df['Body'].astype(str)
-
-
-# In[16]:
-
-
-df['all_text']
-
-
-# # Split training set, test set
-
-# In[17]:
-
-
-df, df_train, df_test = custom_train_test_split_sample(df, None)
-
-
-# In[18]:
-
-
-df_train.reset_index(drop=True, inplace=True)
-
-
-# In[19]:
-
-
-df_train
-
-
-# In[20]:
-
-
-df_test
-
-
-# In[21]:
-
-
-df_test.reset_index(drop=True, inplace=True)
-
-
-# # 1 hot encode tags (= labels)
-
-# In[22]:
+# In[11]:
 
 
 #df_train.dropna(subset=['Tags'], axis=0, inplace=True)  # Can be removed later  (NA already dropped on df first place)
 #df_test.dropna(subset=['Tags'], axis=0, inplace=True)  # Can be removed later  (NA already dropped on df first place)
 
 
-# In[23]:
+# In[12]:
 
 
 bowencoder = BowEncoder()
 
 
+# In[13]:
+
+
+bowencoder.fit(df, categorical_features_totransform=['Tags'])
+
+
+# In[14]:
+
+
+df = bowencoder.transform(df)
+
+
+# In[15]:
+
+
+df[['Body', 'Tags', 'Tags_javascript', 'Tags_jquery', 'Tags_python', 'Tags_html', 'Tags_java', 'Tags_docker', 'Tags_android', 'Tags_cordova']]
+
+
+# In[16]:
+
+
+filter_col_labels = [col for col in df if col.startswith('Tags')]
+
+
+# In[17]:
+
+
+df_labels = df[filter_col_labels].copy(deep=True)
+
+
+# In[18]:
+
+
+df_labels.drop(columns=['Tags'], inplace=True)
+
+
+# In[19]:
+
+
+df_labels
+
+
+# In[20]:
+
+
+df.drop(columns=filter_col_labels, inplace=True)
+
+
+# In[21]:
+
+
+df_labels.shape
+
+
+# # Split training set, test set, and split labels
+
+# In[22]:
+
+
+df, df_train, df_test, df_train_labels, df_test_labels = custom_train_test_split_with_labels(df, df_labels, None)
+
+
+# In[23]:
+
+
+df_train.reset_index(drop=True, inplace=True)
+df_test.reset_index(drop=True, inplace=True)
+df_train_labels.reset_index(drop=True, inplace=True)
+df_test_labels.reset_index(drop=True, inplace=True)
+
+
 # In[24]:
-
-
-bowencoder.fit(df_train, categorical_features_totransform=['Tags'])
-
-
-# In[25]:
-
-
-df_train = bowencoder.transform(df_train)
-
-
-# In[28]:
-
-
-df_train[['Body', 'Tags', 'Tags_javascript', 'Tags_jquery', 'Tags_python', 'Tags_html', 'Tags_java', 'Tags_docker', 'Tags_android']]
-
-
-# In[29]:
 
 
 df_train
 
 
-# In[30]:
+# In[25]:
 
 
-df_test = bowencoder.transform(df_test)
+df_test
 
 
-# In[31]:
+# In[26]:
 
 
-filter_col_labels = [col for col in df_train if col.startswith('Tags')]
+df_train_labels
 
 
-# In[32]:
+# In[27]:
 
 
-df_train_labels = df_train[filter_col_labels].copy(deep=True)
+df_test_labels
 
 
-# In[33]:
-
-
-df_train_labels.drop(columns=['Tags'], inplace=True)
-
-
-# In[34]:
-
-
-df_test_labels = df_test[filter_col_labels].copy(deep=True)
-
-
-# In[35]:
-
-
-df_test_labels.drop(columns=['Tags'], inplace=True)
-
-
-# In[36]:
+# In[28]:
 
 
 df_train_ori = df_train.copy(deep=True)
 df_test_ori = df_test.copy(deep=True)
 
 
-# In[37]:
+# In[29]:
 
 
 df_train.shape
 
 
-# In[38]:
+# In[30]:
 
 
 df_test.shape
 
 
-# In[39]:
+# In[31]:
 
 
 df_train_labels.shape
 
 
-# In[40]:
+# In[32]:
 
 
 df_test_labels.shape
 
 
-# In[41]:
+# # Prepare text data (remove html in Body, and regroup Body + title)
+
+# In[33]:
 
 
-df_train_labels
+df_train = df_train_ori
+df_test = df_test_ori
 
 
-# # Doc2Vec training
+# In[34]:
 
-# In[29]:
+
+dataprep = PrepareTextData()
+
+
+# In[35]:
+
+
+df_train = dataprep.fit_transform(df_train)
+
+
+# In[36]:
+
+
+df_test = dataprep.transform(df_test)
+
+
+# In[37]:
+
+
+df_train
+
+
+# In[38]:
+
+
+df_test
+
+
+# # Doc2Vec training (launch only the 1st time)
+
+# In[67]:
 
 
 cnt_label = 0
@@ -439,19 +436,13 @@ for document in df_train['all_text']:  # TO DO : relaunch this training with df_
     cnt_label += 1
 
 
-# In[26]:
+# In[68]:
 
 
 InputDocs
 
 
-# In[30]:
-
-
-InputDocs
-
-
-# In[83]:
+# In[69]:
 
 
 start = time.time()
@@ -461,95 +452,77 @@ end = time.time()
 print('Durée doc2vec training: ' + str(end - start) + ' secondes')    
 
 
-# In[84]:
+# In[70]:
 
 
 #model_doc2vec.save(doc2vec_fname)
 model_doc2vec.save(DOC2VEC_TRAINING_SAVE_FILE)
 
 
-# In[81]:
+# In[71]:
 
 
 TaggedDocument(gensim.utils.simple_preprocess(df_train.iloc[0]['all_text']), [0])
 
 
-# In[86]:
+# In[72]:
 
 
 gensim.utils.simple_preprocess("Hello this is a new text")
 
 
-# In[91]:
+# In[73]:
 
 
 [model_doc2vec.infer_vector(gensim.utils.simple_preprocess(text)) for text in ['hello this is', 'second text']]
 
 
-# In[27]:
-
-
-df_train.shape
-
-
-# In[44]:
-
-
-df_train.iloc[0]
-
-
-# In[40]:
-
-
-df_train.loc[:5,'all_text']
-
-
 # In[49]:
 
 
-a = [document for document in df_train.loc[:,'all_text'] ]
+#a = [document for document in df_train.loc[:,'all_text'] ] 
 
 
 # In[51]:
 
 
-df_train.shape
+#df_train.shape
 
 
 # In[50]:
 
 
-len(a)
+#len(a)
 
 
-# In[54]:
+# In[74]:
 
 
-X_vectorized = [model_doc2vec.infer_vector(TaggedDocument(document)) for document in df_train.loc[:, 'all_text']]
+#X_vectorized = [model_doc2vec.infer_vector(TaggedDocument(document)) for document in df_train.loc[:, 'all_text']]  # Too slow on training set
 
 
-# In[33]:
+# In[76]:
 
 
-X_vectorized
+#X_vectorized
 
 
 # # Doc2vec loading
 
-# In[23]:
+# In[39]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[24]:
+# In[40]:
 
 
 df
 
 
-# In[25]:
+# In[41]:
 
 
 from functions import *
@@ -557,25 +530,25 @@ importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[26]:
+# In[42]:
 
 
 doc2vec = Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')
 
 
-# In[27]:
+# In[43]:
 
 
 doc2vec.fit(df_train)
 
 
-# In[28]:
+# In[44]:
 
 
 doc2vec.model.docvecs.vectors_docs
 
 
-# In[29]:
+# In[45]:
 
 
 # Use this to infer vectors :  needed for test set, but not mandatory for training set (we alredy have trained vectors available)
@@ -586,25 +559,25 @@ doc2vec.model.docvecs.vectors_docs
 df_train_transformed = doc2vec.model.docvecs.vectors_docs
 
 
-# In[30]:
+# In[46]:
 
 
 df_train_transformed.shape
 
 
-# In[31]:
+# In[47]:
 
 
 df_train_transformed
 
 
-# In[32]:
+# In[48]:
 
 
 df_train = df_train_transformed
 
 
-# # First clustering attempts
+# # First clustering attempts (launch only once)
 
 # In[37]:
 
@@ -725,6 +698,24 @@ plt.show()
 
 # # Compare 1 document to closest neighbours
 
+# In[61]:
+
+
+df_train_ori
+
+
+# In[63]:
+
+
+df_train.shape
+
+
+# In[64]:
+
+
+df_train_ori.shape
+
+
 # In[49]:
 
 
@@ -737,26 +728,176 @@ doc_to_compare = df_train_ori.loc[500]['Body']
 gensim.utils.simple_preprocess(remove_stopwords(doc_to_compare))
 
 
-# In[70]:
+# In[51]:
 
 
 print(doc_to_compare)
 
 
-# In[66]:
+# In[52]:
 
 
 doc2vec.model.infer_vector(gensim.utils.simple_preprocess(remove_stopwords(doc_to_compare)))
 
 
-# In[71]:
+# In[56]:
 
 
 doc2vec.model.docvecs.most_similar([doc2vec.model.infer_vector(gensim.utils.simple_preprocess(remove_stopwords(doc_to_compare)))])
 
 
-# In[81]:
+# In[60]:
 
 
-print(df_train_ori.loc[234404]['Body'])
+print(df_train_ori.loc[266450]['Body'])
+
+
+# # First implementation of a KNN classification algorithm
+
+# In[68]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[69]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+
+# In[70]:
+
+
+preparation_pipeline = Pipeline([
+    ('scaler', StandardScalerMultiple(features_toscale=['TotalPricePerMonth'])),
+    
+    
+    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
+   
+    #('minmaxscaler', MinMaxScalerMultiple(features_toscale=['TotalPricePerMonth'])),
+    ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized'])),
+    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
+                                                        algorithm_to_use='TSNE', n_dim=3)),
+    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
+])
+
+
+# In[71]:
+
+
+df_train = preparation_pipeline.fit_transform(df_train)
+
+
+# In[72]:
+
+
+df_test = preparation_pipeline.transform(df_test)
+
+
+# In[ ]:
+
+
+
+
+
+# # Annex (old code)
+
+# ## Remove html tags in Body, and regroup Body + title
+
+# In[82]:
+
+
+dataprep = PrepareTextData()
+
+
+# In[83]:
+
+
+df = dataprep.fit_transform(df)
+
+
+# ## Or with beautifulsoup
+# df.loc[:, 'Body'] = df['Body'].apply(lambda x: BeautifulSoup(x, 'lxml').get_text())
+
+# In[93]:
+
+
+pd.set_option('display.max_colwidth', None)
+print(df.loc[45000]['all_text'])
+
+
+# In[10]:
+
+
+# Converting tags from <tag 1><tag2><tag3> to tag1 tag2 tag3
+df.loc[:, 'Tags'] = df['Tags'].str.replace('<', '') 
+df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.replace('>', ' ') 
+df.loc[:, 'Tags'] = df.loc[:, 'Tags'].str.rstrip()
+
+
+# In[ ]:
+
+
+
+
+
+# In[11]:
+
+
+df.info()
+
+
+# In[12]:
+
+
+df.sample(100)
+
+
+# ## Regroup text features and clean
+
+# df.loc[:, 'Title'].fillna(value='', inplace=True)
+
+# df['all_text'] = df['Title'].astype(str) + '. ' +  df['Body'].astype(str)
+
+# ## Split training set, test set (old)
+
+# In[104]:
+
+
+df, df_train, df_test = custom_train_test_split_sample(df, None)
+
+
+# In[105]:
+
+
+df_train.reset_index(drop=True, inplace=True)
+
+
+# In[106]:
+
+
+df_train
+
+
+# In[107]:
+
+
+df_test
+
+
+# In[108]:
+
+
+df_test.reset_index(drop=True, inplace=True)
+
+
+# df['all_text']
+
+# In[ ]:
+
+
+
 
