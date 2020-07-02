@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# # Openclassrooms PJ6 : Categorize answers to questions :  modelisation notebook 
+
 # # Global settings
 
 # In[1]:
@@ -60,6 +62,7 @@ from scipy.stats import entropy
 from sklearn.feature_selection import RFE
 
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn import tree
 
 
@@ -542,7 +545,7 @@ doc2vec = Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totr
 doc2vec.fit(df_train)
 
 
-# In[44]:
+# In[131]:
 
 
 doc2vec.model.docvecs.vectors_docs
@@ -698,97 +701,206 @@ plt.show()
 
 # # Compare 1 document to closest neighbours
 
-# In[61]:
+# In[48]:
 
 
 df_train_ori
 
 
-# In[63]:
+# In[49]:
 
 
 df_train.shape
 
 
-# In[64]:
+# In[50]:
 
 
 df_train_ori.shape
 
 
-# In[49]:
+# In[122]:
 
 
-doc_to_compare = df_train_ori.loc[500]['Body']
+doc_to_compare = df_train_ori.loc[1000]['Body']
 
 
-# In[50]:
-
-
-gensim.utils.simple_preprocess(remove_stopwords(doc_to_compare))
-
-
-# In[51]:
+# In[123]:
 
 
 print(doc_to_compare)
 
 
-# In[52]:
-
-
-doc2vec.model.infer_vector(gensim.utils.simple_preprocess(remove_stopwords(doc_to_compare)))
-
-
-# In[56]:
+# In[124]:
 
 
 doc2vec.model.docvecs.most_similar([doc2vec.model.infer_vector(gensim.utils.simple_preprocess(remove_stopwords(doc_to_compare)))])
 
 
-# In[60]:
+# In[125]:
 
 
-print(df_train_ori.loc[266450]['Body'])
+doc_ids = [doc[0] for doc in doc2vec.model.docvecs.most_similar([doc2vec.model.infer_vector(gensim.utils.simple_preprocess(remove_stopwords(doc_to_compare)))])]
+
+
+# In[126]:
+
+
+doc_ids_str = [str(doc_id) for doc_id in doc_ids]
+
+
+# In[127]:
+
+
+doc_ids_str
+
+
+# In[128]:
+
+
+col_names_with_value_1 = [col for col in df_train_labels[df_train_labels.index.isin(doc_ids_str)]                          if (df_train_labels[df_train_labels.index.isin(doc_ids_str)][col] == 1).any()]
+
+
+# In[129]:
+
+
+df_train_labels[df_train_labels.index.isin(doc_ids_str)]    .loc[:,col_names_with_value_1]
 
 
 # # First implementation of a KNN classification algorithm
 
-# In[68]:
+# In[48]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[69]:
+# In[49]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
+# In[65]:
+
+
+df_train = df_train.loc[0:1000, :]
+df_train_labels = df_train_labels.loc[0:1000, :]
+
+
+# In[51]:
+
+
+df_train
+
+
+# In[52]:
+
+
+df_train
+
+
+# In[58]:
+
+
+prediction_pipeline = Pipeline([
+    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')),
+    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
+    #('scaler', StandardScaler()),
+    #('knn', KNeighborsClassifier(),)
+    ])
+
+
+# In[59]:
+
+
+prediction_pipeline.fit(df_train, df_train_labels)
+
+
+# In[61]:
+
+
+df_train_transformed = prediction_pipeline.transform(df_train)
+
+
+# In[66]:
+
+
+prediction_pipeline = Pipeline([
+    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')),
+    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier(),)
+    ])
+
+
+# In[67]:
+
+
+prediction_pipeline.fit(df_train, df_train_labels)
+
+
+# In[68]:
+
+
+predictions_train = prediction_pipeline.predict(df_train)
+
+
+# In[72]:
+
+
+df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)
+
+
+# In[73]:
+
+
+df_predictions_train
+
+
+# In[78]:
+
+
+df_train
+
+
+# In[77]:
+
+
+print(df_train.loc[0, 'all_text'])
+
+
+# In[97]:
+
+
+doc_index = 1010
+col_names_tags_value_1 = [col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()]
+
+
+# In[105]:
+
+
+df_train.loc[df_predictions_train[df_predictions_train['Tags_python'] == 1].index, :]
+
+
+# In[98]:
+
+
+col_names_tags_value_1
+
+
+# In[129]:
+
+
+df_train_labels[df_train_labels.index.isin(doc_ids_str)]    .loc[:,col_names_with_value_1]
+
+
 # In[70]:
 
 
-preparation_pipeline = Pipeline([
-    ('scaler', StandardScalerMultiple(features_toscale=['TotalPricePerMonth'])),
-    
-    
-    # Faire la réduction dimensionnelle à part pour les bag of words et pour les autres features
-   
-    #('minmaxscaler', MinMaxScalerMultiple(features_toscale=['TotalPricePerMonth'])),
-    ('features_selector', FeaturesSelector(features_toselect=['DescriptionNormalized'])),
-    ('dimensionality_reductor', DimensionalityReductor(features_totransform=['DescriptionNormalized'], \
-                                                        algorithm_to_use='TSNE', n_dim=3)),
-    ('minmaxscaler_final', MinMaxScalerMultiple(features_toscale='ALL_FEATURES')),
-])
-
-
-# In[71]:
-
-
-df_train = preparation_pipeline.fit_transform(df_train)
+predictions_train.shape
 
 
 # In[72]:

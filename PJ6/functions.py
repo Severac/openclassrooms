@@ -5,7 +5,7 @@ Created on Fri Apr 24 15:45:19 2020
 
 @author: francois
 """
-DEBUG_LEVEL = 0  # 1 = Main steps
+DEBUG_LEVEL = 2  # 1 = Main steps
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
@@ -1149,22 +1149,35 @@ class Doc2Vec_Vectorizer(BaseEstimator, TransformerMixin):
             return (df)
 
         else:
-            #return([self.model.infer_vector(gensim.utils.simple_preprocess(text)) for text in df[self.feature_totransform]])
-            df_out = pd.DataFrame()
-            cnt = 0
-            progbar = tqdm(range(df.shape[0]))
+            if (self.model.docvecs.vectors_docs.shape[0] == df.shape[0]):
+                if (DEBUG_LEVEL >= 2):
+                    print('Returning stored vectors from training set')
+                # This is a hack : if number of instances passed to transform is the same as number of instances trained in the model,
+                # then we have probably been passed with the same instances as the ones previously trained :
+                # so instead of infering vectors again (gensim's implementation of infer_vector is very slow), we use
+                # vectors stored in the model 
+                return(self.model.docvecs.vectors_docs)
             
-            for text in df[self.feature_totransform]:
-                #df_out.loc[cnt] = self.model.infer_vector(gensim.utils.simple_preprocess(text))
-                #print(self.model.infer_vector(gensim.utils.simple_preprocess(text)).tolist())
-                #df_out.append(self.model.infer_vector(gensim.utils.simple_preprocess(text)).tolist())
+            else:            
+                if (DEBUG_LEVEL >= 2):
+                    print('Infering new vectors')
+
+                #return([self.model.infer_vector(gensim.utils.simple_preprocess(text)) for text in df[self.feature_totransform]])
+                df_out = pd.DataFrame()
+                cnt = 0
+                progbar = tqdm(range(df.shape[0]))
                 
-                df_out = df_out.append(pd.Series(self.model.infer_vector(gensim.utils.simple_preprocess(text))), ignore_index=True)
+                for text in df[self.feature_totransform]:
+                    #df_out.loc[cnt] = self.model.infer_vector(gensim.utils.simple_preprocess(text))
+                    #print(self.model.infer_vector(gensim.utils.simple_preprocess(text)).tolist())
+                    #df_out.append(self.model.infer_vector(gensim.utils.simple_preprocess(text)).tolist())
+                    
+                    df_out = df_out.append(pd.Series(self.model.infer_vector(gensim.utils.simple_preprocess(text))), ignore_index=True)
+                    
+                    progbar.update(1)
+                    cnt += 1
                 
-                progbar.update(1)
-                cnt += 1
-            
-            return(df_out)
+                return(df_out)
     
 '''
 This class :
