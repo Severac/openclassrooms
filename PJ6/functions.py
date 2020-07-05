@@ -1275,8 +1275,17 @@ def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, eva
         progbar.update(1)
         #cnt += 1
 
-    plt.plot(np.sqrt(train_errors), "r-+", linewidth=2, label="train")
-    plt.plot(np.sqrt(val_errors), "b-", linewidth=3, label="test")
+    # TO TEST THIS FIX : with precision_micro, it's not np.sqrt to be plotted
+    if (evaluation_method == 'precision_micro'):
+        train_errors_toplot = train_errors
+        val_errors_toplot = val_errors
+    
+    else:
+        train_errors_toplot = np.sqrt(train_errors)
+        val_errors_toplot = np.sqrt(val_errors)
+        
+    plt.plot(train_errors_toplot, "r-+", linewidth=2, label="train")
+    plt.plot(val_errors_toplot, "b-", linewidth=3, label="test")
     plt.legend(loc="upper right", fontsize=14)   # not shown in the book
     plt.xlabel("Training set iterations", fontsize=14) # not shown
     
