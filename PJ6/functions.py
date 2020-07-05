@@ -33,11 +33,16 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.neighbors import NearestNeighbors
 #from sklearn.neighbors import KDTree
 
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import accuracy_score
+
 import statistics
 
 from scipy import sparse
 
 import pandas as pd
+import matplotlib.pyplot as plt
 
 #import qgrid
 
@@ -1215,3 +1220,71 @@ class PrepareTextData(BaseEstimator, TransformerMixin):
         return(df[['all_text']])
       
     
+def minibatch_generate_indexes(df_train_transformed, step_size):    
+    nb_instances = df_train_transformed.shape[0]
+    final_index = nb_instances - 1
+
+    print(f'nb_instances_index: {nb_instances})')
+
+    print(int(nb_instances/step_size))
+    for m in range(int(nb_instances/step_size)):
+        left_index = m*step_size
+        right_index = m*step_size + step_size - 1
+
+        yield((left_index, right_index))
+
+    # Last step :
+    if (final_index > right_index):
+        print(f'final_index: {final_index}, right_index: {right_index})')
+        yield((left_index + step_size, final_index))
+    
+    
+def plot_learning_curves(model, X_train, X_test, y_train, y_test, step_size, evaluation_method='precision_micro'):
+    train_errors, val_errors = [], []
+    
+    minibatch_indexes = minibatch_generate_indexes(X_train, step_size)
+    
+    # Initiate progress bar
+    #nb_instances = len(df_train_transformed)
+    nb_instances = X_train.shape[0]
+    nb_iter = int(nb_instances/step_size)    
+    progbar = tqdm(range(nb_iter))
+    #cnt = 0
+    print(f'Calculating learning curve for {nb_iter} iterations')
+    
+    for (left_index, right_index) in minibatch_indexes:
+        model.fit(X_train[:right_index], y_train[:right_index])
+        print('Model fitted')
+        y_train_predict = model.predict(X_train[:right_index])
+        y_test_predict = model.predict(X_test)
+        
+        if (evaluation_method == 'RMSE'):
+            train_errors.append(mean_squared_error(y_train[:right_index], y_train_predict))
+            val_errors.append(mean_squared_error(y_test, y_test_predict))
+            
+        elif (evaluation_method == 'MAE'):
+            train_errors.append(mean_absolute_error(y_train[:right_index], y_train_predict))
+            val_errors.append(mean_absolute_error(y_test, y_test_predict))            
+
+        elif (evaluation_method == 'precision_micro'):
+            train_errors.append(precision_score(y_train[:right_index], y_train_predict, average='micro'))
+            val_errors.append(precision_score(y_test, y_test_predict, average='micro'))            
+
+        
+        # Update progress bar
+        progbar.update(1)
+        #cnt += 1
+
+    plt.plot(np.sqrt(train_errors), "r-+", linewidth=2, label="train")
+    plt.plot(np.sqrt(val_errors), "b-", linewidth=3, label="test")
+    plt.legend(loc="upper right", fontsize=14)   # not shown in the book
+    plt.xlabel("Training set iterations", fontsize=14) # not shown
+    
+    if (evaluation_method == 'RMSE'):
+        plt.ylabel("RMSE", fontsize=14)              # not shown
+        
+    elif (evaluation_method == 'MAE'):
+         plt.ylabel("MAE", fontsize=14)  
+         
+    elif (evaluation_method == 'precision_micro'):
+         plt.ylabel("precision_micro", fontsize=14)           

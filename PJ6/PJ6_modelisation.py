@@ -65,6 +65,12 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn import tree
 
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import accuracy_score
+
+from yellowbrick.classifier import ROCAUC
+from sklearn.metrics import roc_auc_score
 
 import nltk
 import codecs
@@ -147,6 +153,9 @@ from nltk.cluster import KMeansClusterer # NLTK algorithm will be useful for cos
 
 SAVE_API_MODEL = True # If True : API model ill be saved
 API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
+
+
+LEARNING_CURVE_STEP_SIZE = 100
 
 
 # # Doc2vec settings
@@ -358,6 +367,9 @@ df_test_labels
 df_train_ori = df_train.copy(deep=True)
 df_test_ori = df_test.copy(deep=True)
 
+df_train_labels_ori = df_train_labels.copy(deep=True)
+df_test_labels_ori = df_test_labels.copy(deep=True)
+
 
 # In[29]:
 
@@ -424,7 +436,7 @@ df_test
 
 # # Doc2Vec training (launch only the 1st time)
 
-# In[67]:
+# In[ ]:
 
 
 cnt_label = 0
@@ -439,7 +451,7 @@ for document in df_train['all_text']:  # TO DO : relaunch this training with df_
     cnt_label += 1
 
 
-# In[68]:
+# In[ ]:
 
 
 InputDocs
@@ -512,20 +524,20 @@ gensim.utils.simple_preprocess("Hello this is a new text")
 
 # # Doc2vec loading
 
-# In[39]:
+# In[ ]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[40]:
+# In[ ]:
 
 
 df
 
 
-# In[41]:
+# In[ ]:
 
 
 from functions import *
@@ -533,19 +545,19 @@ importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[42]:
+# In[ ]:
 
 
 doc2vec = Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')
 
 
-# In[43]:
+# In[ ]:
 
 
 doc2vec.fit(df_train)
 
 
-# In[131]:
+# In[ ]:
 
 
 doc2vec.model.docvecs.vectors_docs
@@ -582,19 +594,19 @@ df_train = df_train_transformed
 
 # # First clustering attempts (launch only once)
 
-# In[37]:
+# In[39]:
 
 
 df_train.shape
 
 
-# In[68]:
+# In[40]:
 
 
 df_train_ori.info()
 
 
-# In[69]:
+# In[41]:
 
 
 df_train
@@ -769,25 +781,89 @@ df_train_labels[df_train_labels.index.isin(doc_ids_str)]    .loc[:,col_names_wit
 
 # # First implementation of a KNN classification algorithm
 
-# In[48]:
+# In[39]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[49]:
+# In[40]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
 
-# In[65]:
+
+# In[41]:
 
 
+'''
 df_train = df_train.loc[0:1000, :]
 df_train_labels = df_train_labels.loc[0:1000, :]
+'''
+
+
+# In[42]:
+
+
+df_train
+
+
+# In[43]:
+
+
+prediction_pipeline = Pipeline([
+    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')),
+    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier(),)
+    ])
+
+
+# In[44]:
+
+
+prediction_pipeline.fit(df_train, df_train_labels)
+
+
+# In[55]:
+
+
+predictions_train = prediction_pipeline.predict(df_train)
+
+
+# In[56]:
+
+
+df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)
+
+
+# In[45]:
+
+
+predictions_test = prediction_pipeline.predict(df_test)
+
+
+# In[46]:
+
+
+df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)
+
+
+# In[57]:
+
+
+df_predictions_train
+
+
+# In[47]:
+
+
+df_predictions_test
 
 
 # In[51]:
@@ -799,33 +875,174 @@ df_train
 # In[52]:
 
 
-df_train
+print(df_train.loc[0, 'all_text'])
 
 
-# In[58]:
+# In[53]:
 
 
-prediction_pipeline = Pipeline([
-    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')),
-    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
-    #('scaler', StandardScaler()),
-    #('knn', KNeighborsClassifier(),)
-    ])
+doc_index = 0
+col_names_tags_value_1 = [col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()]
+
+
+# In[54]:
+
+
+df_train.loc[df_predictions_train[df_predictions_train['Tags_python'] == 1].index, :]
+
+
+# In[55]:
+
+
+col_names_tags_value_1
 
 
 # In[59]:
 
 
-prediction_pipeline.fit(df_train, df_train_labels)
+df_train_labels
 
+
+# In[60]:
+
+
+df_predictions_train
+
+
+# ## Performance measures
 
 # In[61]:
 
 
-df_train_transformed = prediction_pipeline.transform(df_train)
+precision_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[66]:
+# In[64]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[72]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_train_labels, df_predictions_train)
+
+
+# In[62]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[63]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[67]:
+
+
+roc_auc_score(df_train_labels, df_predictions_train)
+
+
+# In[48]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[49]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[50]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_test_labels, df_predictions_test)
+
+
+# In[51]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[52]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[53]:
+
+
+roc_auc_score(df_test_labels, df_predictions_test)
+
+
+# In[54]:
+
+
+predictions_test.shape
+
+
+# In[ ]:
+
+
+fig, ax = plt.subplots(figsize=(6, 6))
+roc_viz = ROCAUC(prediction_pipeline)
+roc_viz.score(X_test, y_test)
+roc_viz.poof()
+
+
+# In[72]:
+
+
+df_test = preparation_pipeline.transform(df_test)
+
+
+# # Analyis of how much data the model uses to effecively learn more
+
+# For each step, giving more data input to the model and see evolution of performance
+
+# ## Dataset of size 1000
+
+# In[86]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+importlib.reload(sys.modules['functions'])
+
+
+# In[87]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
+
+
+# In[88]:
+
+
+DATASET_SIZE = 1000
+
+df_train = df_train.loc[0:DATASET_SIZE, :]
+df_train_labels = df_train_labels.loc[0:DATASET_SIZE, :]
+
+df_test = df_test.loc[0:DATASET_SIZE, :]
+df_test_labels = df_test_labels.loc[0:DATASET_SIZE, :]
+
+
+# In[89]:
 
 
 prediction_pipeline = Pipeline([
@@ -836,77 +1053,672 @@ prediction_pipeline = Pipeline([
     ])
 
 
-# In[67]:
+# In[90]:
 
 
-prediction_pipeline.fit(df_train, df_train_labels)
+plot_learning_curves(prediction_pipeline, df_train, df_test, df_train_labels, df_test_labels, 200)
 
 
-# In[68]:
+# ## Dataset of size 10000
+
+# In[106]:
 
 
-predictions_train = prediction_pipeline.predict(df_train)
+importlib.reload(sys.modules['functions'])
+from functions import *
+importlib.reload(sys.modules['functions'])
 
 
-# In[72]:
+# In[107]:
 
 
-df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)
+df_train = df_train_ori
+df_test = df_test_ori
+
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
 
 
-# In[73]:
+# In[108]:
 
 
-df_predictions_train
+DATASET_SIZE = 10000
+DATASET_TEST_SIZE = 1000
+
+df_train = df_train.loc[0:DATASET_SIZE, :]
+df_train_labels = df_train_labels.loc[0:DATASET_SIZE, :]
+
+df_test = df_test.loc[0:DATASET_TEST_SIZE, :]
+df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE, :]
 
 
-# In[78]:
+# In[109]:
+
+
+prediction_pipeline = Pipeline([
+    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')),
+    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier(),)
+    ])
+
+
+# In[110]:
+
+
+plot_learning_curves(prediction_pipeline, df_train, df_test, df_train_labels, df_test_labels, 2000)
+
+
+# ## Dataset of size 100000
+
+# In[39]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+importlib.reload(sys.modules['functions'])
+
+
+# In[40]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
+
+
+# In[41]:
+
+
+DATASET_SIZE = 100000
+DATASET_TEST_SIZE = 10000
+
+df_train = df_train.loc[0:DATASET_SIZE-1, :]
+df_train_labels = df_train_labels.loc[0:DATASET_SIZE-1, :]
+
+df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
+df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
+
+
+# In[42]:
+
+
+prediction_pipeline = Pipeline([
+    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')),
+    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier(),)
+    ])
+
+
+# In[43]:
+
+
+plot_learning_curves(prediction_pipeline, df_train, df_test, df_train_labels, df_test_labels, 20000)
+
+
+# # Implementation of a KNN classification algorithm on 90000 instances and check predictions
+
+# In[44]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[45]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
+
+
+# In[46]:
+
+
+DATASET_SIZE = 90000
+DATASET_TEST_SIZE = 10000
+
+df_train = df_train.loc[0:DATASET_SIZE-1, :]
+df_train_labels = df_train_labels.loc[0:DATASET_SIZE-1, :]
+
+df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
+df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
+
+
+# In[47]:
 
 
 df_train
 
 
+# In[48]:
+
+
+prediction_pipeline = Pipeline([
+    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')),
+    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier(),)
+    ])
+
+
+# In[49]:
+
+
+prediction_pipeline.fit(df_train, df_train_labels)
+
+
+# In[50]:
+
+
+get_ipython().run_cell_magic('time', '', 'predictions_train = prediction_pipeline.predict(df_train)')
+
+
+# In[51]:
+
+
+df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)
+
+
+# In[52]:
+
+
+get_ipython().run_cell_magic('time', '', 'predictions_test = prediction_pipeline.predict(df_test)')
+
+
+# In[53]:
+
+
+df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)
+
+
+# In[54]:
+
+
+df_predictions_train
+
+
+# In[55]:
+
+
+df_predictions_test
+
+
+# In[56]:
+
+
+df_train
+
+
+# ## Performance measures
+
+# In[57]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[58]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[59]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_train_labels, df_predictions_train)
+
+
+# In[60]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[61]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[67]:
+
+
+roc_auc_score(df_train_labels, df_predictions_train)
+
+
+# In[62]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[63]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[64]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_test_labels, df_predictions_test)
+
+
+# In[65]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[66]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[53]:
+
+
+roc_auc_score(df_test_labels, df_predictions_test)
+
+
+# In[54]:
+
+
+predictions_test.shape
+
+
+# ## Check how many instances have at least 1 tag predicted
+
+# In[73]:
+
+
+df_test_labels_sum = df_test_labels.sum(axis=1)
+
+
+# In[76]:
+
+
+df_test_labels_sum.shape
+
+
 # In[77]:
 
 
-print(df_train.loc[0, 'all_text'])
+df_test_labels_sum[df_test_labels_sum > 0]
+
+
+# => 90% of instances have at least 1 predicted class to true (61% precision on them)
+
+# ## Number of instances per class
+
+# In[87]:
+
+
+pd.set_option('display.max_rows', 400)
+df_train_labels.sum().sort_values(ascending=False)
 
 
 # In[97]:
 
 
-doc_index = 1010
+df_test_labels.sum().sort_values(ascending=False)
+
+
+# ## Score per class
+
+# In[96]:
+
+
+from sklearn.metrics import classification_report
+
+print(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist()))
+
+
+# In[118]:
+
+
+pd.DataFrame(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False).shape
+
+
+# In[112]:
+
+
+pd.DataFrame(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False)
+
+
+# => La majorité des classes sont au dessus de 70% de précision
+
+# In[117]:
+
+
+pd.DataFrame(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False)
+
+
+# => Overfit :  
+# Tags_python 	0.535714 	0.300000 	0.384615 	1200.0
+
+# ## Number of correct labels predicted per sample
+
+# In[126]:
+
+
+df_train_nb_correct_labels_predicted = (df_train_labels * df_predictions_train).sum(axis=1)
+
+
+# In[128]:
+
+
+df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted > 0]
+
+
+# In[122]:
+
+
+df_test_nb_correct_labels_predicted = (df_test_labels * df_predictions_test).sum(axis=1)
+
+
+# In[124]:
+
+
+df_test_nb_correct_labels_predicted[df_test_nb_correct_labels_predicted > 0]
+
+
+# In[125]:
+
+
+df_test_nb_correct_labels_predicted
+
+
+# In[139]:
+
+
+df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0]
+
+
+# In[136]:
+
+
+index_train_noclue = df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0].index
+
+
+# In[137]:
+
+
+index_train_noclue
+
+
+# In[138]:
+
+
+df_train.loc[index_train_noclue, :]
+
+
+# In[141]:
+
+
+doc_index = 0
 col_names_tags_value_1 = [col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()]
 
 
-# In[105]:
+# In[ ]:
 
 
-df_train.loc[df_predictions_train[df_predictions_train['Tags_python'] == 1].index, :]
+# Labels that model had no clue to predict (all labels that were missed, plus the model missed all of the other labels for the instance)
+col_names_tags_value_1_labels = [[col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                        if (df_train_labels[df_train_labels.index.isin([doc_index])][col] == 1).any()]  for doc_index in index_train_noclue]
 
 
-# In[98]:
+# In[147]:
+
+
+col_names_tags_value_1_labels
+
+
+# In[143]:
+
+
+'''
+#Too slow
+col_names_tags_value_1_allsamples = [[col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]\
+                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()] for doc_index in index_train_noclue]
+
+'''
+
+
+# In[142]:
 
 
 col_names_tags_value_1
 
 
-# In[129]:
+# In[ ]:
 
 
-df_train_labels[df_train_labels.index.isin(doc_ids_str)]    .loc[:,col_names_with_value_1]
+df_predictions_test
 
 
-# In[70]:
+# In[116]:
 
 
-predictions_train.shape
+df_predictions_train['Tags_electron'].sum()
 
 
-# In[72]:
+# In[104]:
 
 
-df_test = preparation_pipeline.transform(df_test)
+print(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist()))
+
+
+# In[ ]:
+
+
+
+
+
+# ## Precision / Recall curve
+
+# In[ ]:
+
+
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import plot_precision_recall_curve
+
+disp = plot_precision_recall_curve(prediction_pipeline, df_test, df_test_labels)
+
+
+# # Implementation of a Decision Tree classification algorithm
+
+# In[58]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[59]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
+
+
+# In[60]:
+
+
+DATASET_SIZE = 90000
+DATASET_TEST_SIZE = 10000
+
+df_train = df_train.loc[0:DATASET_SIZE-1, :]
+df_train_labels = df_train_labels.loc[0:DATASET_SIZE-1, :]
+
+df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
+df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
+
+
+# In[61]:
+
+
+df_train
+
+
+# In[62]:
+
+
+prediction_pipeline = Pipeline([
+    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')),
+    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
+    ('scaler', StandardScaler()),
+    ('knn', DecisionTreeClassifier(),)
+    ])
+
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', 'prediction_pipeline.fit(df_train, df_train_labels)')
+
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', 'predictions_train = prediction_pipeline.predict(df_train)')
+
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', 'df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)')
+
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', 'predictions_test = prediction_pipeline.predict(df_test)')
+
+
+# In[ ]:
+
+
+df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)
+
+
+# In[ ]:
+
+
+df_predictions_train
+
+
+# In[ ]:
+
+
+df_predictions_test
+
+
+# In[ ]:
+
+
+df_train
+
+
+# ## Performance measures
+
+# In[ ]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[ ]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[ ]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_train_labels, df_predictions_train)
+
+
+# In[ ]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[ ]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[ ]:
+
+
+roc_auc_score(df_train_labels, df_predictions_train)
+
+
+# In[ ]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[ ]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[ ]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_test_labels, df_predictions_test)
+
+
+# In[ ]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[ ]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[ ]:
+
+
+roc_auc_score(df_test_labels, df_predictions_test)
+
+
+# In[ ]:
+
+
+predictions_test.shape
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:
@@ -1007,9 +1819,3 @@ df_test.reset_index(drop=True, inplace=True)
 
 
 # df['all_text']
-
-# In[ ]:
-
-
-
-
