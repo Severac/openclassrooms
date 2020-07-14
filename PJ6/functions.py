@@ -891,13 +891,15 @@ You can select which features to encode (others are left untouched)
 '''
 class BowEncoder(BaseEstimator, TransformerMixin):
     #def __init__(self, categorical_features_totransform=['ORIGIN', 'UNIQUE_CARRIER', 'DEST']):
-    def __init__(self, min_df=0.001):
+    def __init__(self, min_df=0.001, max_features=1500):
         #self.categorical_features_totransform = categorical_features_totransform
         self.fitted = False
         self.all_feature_values = {}
         self.min_df = min_df
+        self.max_features = max_features
         self.vectorizers = {}
         #self.df_encoded = None
+        print('!!!' + str(self.max_features))
     
     #def fit(self, df, labels=None):      
     def fit(self, df, labels=None, categorical_features_totransform=['DescriptionNormalized']):      
@@ -910,7 +912,8 @@ class BowEncoder(BaseEstimator, TransformerMixin):
 
         if (self.categorical_features_totransform != None):
             for feature_name in self.categorical_features_totransform:
-                self.vectorizers[feature_name] = CountVectorizer(tokenizer=(lambda x : x.split(' ')), min_df=self.min_df)
+                self.vectorizers[feature_name] = CountVectorizer(tokenizer=(lambda x : x.split(' ')), \
+                                min_df=self.min_df, max_features=self.max_features)
                 #print('track1')
                 matrix_vectorized = self.vectorizers[feature_name].fit(df[feature_name].astype(str))
                 #print('track2')
@@ -940,7 +943,7 @@ class BowEncoder(BaseEstimator, TransformerMixin):
                 
                 df = pd.concat([df.reset_index(), df_vectorized], axis=1)            
                 
-                df.loc[:, bow_features].clip(upper=1)
+                df.loc[:, bow_features].clip(upper=1, inplace=True)
         
             return(df)
 

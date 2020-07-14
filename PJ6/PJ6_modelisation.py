@@ -5,7 +5,7 @@
 
 # # Global settings
 
-# In[67]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -65,6 +65,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.linear_model import Perceptron
 from sklearn import tree
 
 from sklearn.metrics import precision_score
@@ -76,6 +77,8 @@ from sklearn.metrics import roc_auc_score
 
 import nltk
 import codecs
+
+from sklearn.decomposition import LatentDirichletAllocation
 
 #from nltk.corpus.reader.api import CorpusReader
 #from nltk.corpus.reader.api import CategorizedCorpusReader
@@ -127,6 +130,12 @@ LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pic
 #GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
 
 GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
+
+# Set this to load (or train again / save) KNN model to disk  (in "Implementation of a KNN classification algorithm on 90000 instances" part)
+SAVE_KNN_MODEL = False
+LOAD_KNN_MODEL = True
+
+KNN_FILE_MODEL_PREFIX = 'knn_model'
 
 EXECUTE_INTERMEDIATE_MODELS = True # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
 
@@ -265,6 +274,7 @@ df.info()
 # In[12]:
 
 
+#bowencoder = BowEncoder(min_df=1, max_features=1000)
 bowencoder = BowEncoder()
 
 
@@ -301,7 +311,7 @@ df_labels = df[filter_col_labels].copy(deep=True)
 # In[18]:
 
 
-df_labels.drop(columns=['Tags'], inplace=True)
+#df_labels.drop(columns=['Tags'], inplace=True)   # will be dropped later
 
 
 # In[19]:
@@ -322,15 +332,35 @@ df.drop(columns=filter_col_labels, inplace=True)
 df_labels.shape
 
 
-# # Split training set, test set, and split labels
+# ## Percentage of posts that have no labels 
 
 # In[22]:
+
+
+df_labels_sumed = df_labels.loc[:, df_labels.columns != 'Tags'].sum(axis=1)
+
+
+# In[23]:
+
+
+df_labels_sumed
+
+
+# In[24]:
+
+
+df_labels_sumed[df_labels_sumed == 0].count() / df_labels_sumed.count()
+
+
+# # Split training set, test set, and split labels
+
+# In[25]:
 
 
 df, df_train, df_test, df_train_labels, df_test_labels = custom_train_test_split_with_labels(df, df_labels, None)
 
 
-# In[23]:
+# In[26]:
 
 
 df_train.reset_index(drop=True, inplace=True)
@@ -339,31 +369,51 @@ df_train_labels.reset_index(drop=True, inplace=True)
 df_test_labels.reset_index(drop=True, inplace=True)
 
 
-# In[24]:
+# In[27]:
 
 
 df_train
 
 
-# In[25]:
+# In[28]:
 
 
 df_test
 
 
-# In[26]:
+# In[29]:
 
 
 df_train_labels
 
 
-# In[27]:
+# In[30]:
 
 
 df_test_labels
 
 
-# In[28]:
+# In[31]:
+
+
+df_train_tags = df_train_labels[['Tags']].copy(deep=True)
+
+
+# In[32]:
+
+
+df_test_tags = df_test_labels[['Tags']].copy(deep=True)
+
+
+# In[33]:
+
+
+df_labels.drop(columns=['Tags'], inplace=True)
+df_train_labels.drop(columns=['Tags'], inplace=True)
+df_test_labels.drop(columns=['Tags'], inplace=True)
+
+
+# In[34]:
 
 
 df_train_ori = df_train.copy(deep=True)
@@ -373,25 +423,25 @@ df_train_labels_ori = df_train_labels.copy(deep=True)
 df_test_labels_ori = df_test_labels.copy(deep=True)
 
 
-# In[29]:
+# In[35]:
 
 
 df_train.shape
 
 
-# In[30]:
+# In[36]:
 
 
 df_test.shape
 
 
-# In[31]:
+# In[37]:
 
 
 df_train_labels.shape
 
 
-# In[32]:
+# In[38]:
 
 
 df_test_labels.shape
@@ -399,41 +449,47 @@ df_test_labels.shape
 
 # # Prepare text data (remove html in Body, and regroup Body + title)
 
-# In[33]:
+# In[39]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[34]:
+# In[40]:
 
 
 dataprep = PrepareTextData()
 
 
-# In[35]:
+# In[41]:
 
 
 df_train = dataprep.fit_transform(df_train)
 
 
-# In[36]:
+# In[42]:
 
 
 df_test = dataprep.transform(df_test)
 
 
-# In[37]:
+# In[43]:
 
 
 df_train
 
 
-# In[38]:
+# In[44]:
 
 
 df_test
+
+
+# In[45]:
+
+
+df_train_tags
 
 
 # # Doc2Vec training (launch only the 1st time)
@@ -443,7 +499,7 @@ df_test
 
 cnt_label = 0
 InputDocs = []
-for document in df_train['all_text']:  # TO DO : relaunch this training with df_train
+for document in df_train['all_text']:
     #InputDocs.append(TaggedDocument(document,[cnt_label]))
     
     doc_transformed = remove_stopwords(document)
@@ -1161,16 +1217,16 @@ prediction_pipeline = Pipeline([
 plot_learning_curves(prediction_pipeline, df_train, df_test, df_train_labels, df_test_labels, 20000)
 
 
-# # Implementation of a KNN classification algorithm on 90000 instances and check predictions
+# # Implementation of unsupervised LDA on 90000 instances
 
-# In[44]:
+# In[163]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[45]:
+# In[164]:
 
 
 df_train = df_train_ori
@@ -1180,7 +1236,7 @@ df_train_labels = df_train_labels_ori
 df_test_labels = df_test_labels_ori
 
 
-# In[46]:
+# In[165]:
 
 
 DATASET_SIZE = 90000
@@ -1193,13 +1249,149 @@ df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
 df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
 
 
-# In[47]:
+# In[166]:
+
+
+df_train_tags = df_train_tags.loc[0:DATASET_SIZE-1, :]
+df_test_tags = df_test_tags.loc[0:DATASET_SIZE-1, :]
+
+
+# In[167]:
 
 
 df_train
 
 
+# In[168]:
+
+
+'''
+bow_encoder = BowEncoder(max_features=10)
+bow_encoder.fit(df_train, categorical_features_totransform=['all_text'])
+'''
+
+
+# In[169]:
+
+
+bow_encoder = CountVectorizer(tokenizer=(lambda x : x.split(' ')),                                 max_features=200, stop_words='english')
+
+
+# In[170]:
+
+
+df_train['all_text']
+
+
+# In[171]:
+
+
+bow_encoder.fit(df_train['all_text'])
+
+
+# In[172]:
+
+
+df_train = bow_encoder.transform(df_train['all_text'])
+
+
+# In[173]:
+
+
+df_train
+
+
+# In[174]:
+
+
+len(bow_encoder.vocabulary_)
+
+
+# In[175]:
+
+
+lda = LatentDirichletAllocation(n_components=50)
+
+
+# In[178]:
+
+
+res_lda = lda.fit_transform(df_train)
+
+
+# In[179]:
+
+
+res_lda
+
+
+# In[180]:
+
+
+def print_top_words(model, feature_names, n_top_words):
+    for topic_idx, topic in enumerate(model.components_):
+        message = "Topic #%d: " % topic_idx
+        message += " ".join([feature_names[i]
+                             for i in topic.argsort()[:-n_top_words - 1:-1]])
+        print(message)
+    print()
+
+
+# In[181]:
+
+
+tf_feature_names = bow_encoder.get_feature_names()
+print_top_words(lda, tf_feature_names, 5)
+
+
+# => We see that fully unsupervised approach, strictly using words in the text (using tags somehow would be using some supervision level), we don't get good enough topic modelisation
+
+# # Implementation of a KNN classification algorithm on 90000 instances and check predictions
+
+# In[46]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[47]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
+
+
 # In[48]:
+
+
+DATASET_SIZE = 90000
+DATASET_TEST_SIZE = 10000
+
+df_train = df_train.loc[0:DATASET_SIZE-1, :]
+df_train_labels = df_train_labels.loc[0:DATASET_SIZE-1, :]
+
+df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
+df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
+
+
+# In[49]:
+
+
+df_train_tags = df_train_tags.loc[0:DATASET_SIZE-1, :]
+df_test_tags = df_test_tags.loc[0:DATASET_SIZE-1, :]
+
+
+# In[50]:
+
+
+df_train
+
+
+# In[51]:
 
 
 prediction_pipeline = Pipeline([
@@ -1210,49 +1402,37 @@ prediction_pipeline = Pipeline([
     ])
 
 
-# In[49]:
-
-
-prediction_pipeline.fit(df_train, df_train_labels)
-
-
-# In[50]:
-
-
-get_ipython().run_cell_magic('time', '', 'predictions_train = prediction_pipeline.predict(df_train)')
-
-
-# In[51]:
-
-
-df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)
-
-
 # In[52]:
 
 
-get_ipython().run_cell_magic('time', '', 'predictions_test = prediction_pipeline.predict(df_test)')
+get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL == True):\n    prediction_pipeline.fit(df_train, df_train_labels)\n    \n    with open(KNN_FILE_MODEL_PREFIX + 'prediction_pipeline' + '.pickle', 'wb') as f:\n        pickle.dump(prediction_pipeline, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX + 'prediction_pipeline' + '.pickle', 'rb') as f:\n        prediction_pipeline = pickle.load(f)")
 
 
 # In[53]:
 
 
-df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)
+get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL == True):\n    predictions_train = prediction_pipeline.predict(df_train)\n    df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX + 'predictions_train' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_train, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX + 'predictions_train' + '.pickle', 'rb') as f:\n        df_predictions_train = pickle.load(f)")
 
 
 # In[54]:
 
 
-df_predictions_train
+get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL == True):\n    predictions_test = prediction_pipeline.predict(df_test)\n    df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX + 'predictions_test' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_test, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX + 'predictions_test' + '.pickle', 'rb') as f:\n        df_predictions_test = pickle.load(f)")
 
 
 # In[55]:
 
 
-df_predictions_test
+df_predictions_train
 
 
 # In[56]:
+
+
+df_predictions_test
+
+
+# In[57]:
 
 
 df_train
@@ -1260,81 +1440,81 @@ df_train
 
 # ## Performance measures
 
-# In[57]:
+# In[53]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[58]:
+# In[54]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[59]:
+# In[55]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_train_labels, df_predictions_train)
 
 
-# In[60]:
+# In[56]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[61]:
+# In[57]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[67]:
+# In[58]:
 
 
 roc_auc_score(df_train_labels, df_predictions_train)
 
 
-# In[62]:
+# In[107]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[63]:
+# In[60]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[64]:
+# In[61]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_test_labels, df_predictions_test)
 
 
-# In[65]:
+# In[62]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[66]:
+# In[63]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[53]:
+# In[64]:
 
 
 roc_auc_score(df_test_labels, df_predictions_test)
 
 
-# In[54]:
+# In[65]:
 
 
 predictions_test.shape
@@ -1342,19 +1522,19 @@ predictions_test.shape
 
 # ## Check how many instances have at least 1 tag predicted
 
-# In[73]:
+# In[66]:
 
 
 df_test_labels_sum = df_test_labels.sum(axis=1)
 
 
-# In[76]:
+# In[67]:
 
 
 df_test_labels_sum.shape
 
 
-# In[77]:
+# In[68]:
 
 
 df_test_labels_sum[df_test_labels_sum > 0]
@@ -1362,16 +1542,213 @@ df_test_labels_sum[df_test_labels_sum > 0]
 
 # => 90% of instances have at least 1 predicted class to true (61% precision on them)
 
-# ## Number of instances per class
+# ## Check tags that have never been predicted
+
+# In[69]:
+
+
+df_first = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6], 'c': [7,8,9]})
+
+
+# In[70]:
+
+
+df_toy = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
+
+
+# In[71]:
+
+
+df_toy
+
+
+# In[72]:
+
+
+df_toy > 2
+
+
+# In[73]:
+
+
+(df_toy > 4).any()
+
+
+# In[74]:
+
+
+df_toy.loc[:, (df_toy > 4).any(axis=0)]
+
+
+# In[75]:
+
+
+df_toy.loc[:, (df_toy > 4).any(axis=0)].shape
+
+
+# In[76]:
+
+
+df_first[df_toy.columns].loc[:, (df_toy > 5).any(axis=0)]
+
+
+# In[77]:
+
+
+df_first[df_toy.columns].loc[:, (df_toy > 5).any(axis=0)] > 5
+
+
+# In[78]:
+
+
+(df_first[df_toy.columns].loc[:, (df_toy > 5).any(axis=0)] > 5).any(axis=1)
+
+
+# In[79]:
+
+
+df_first
+
+
+# In[80]:
+
+
+df_first[df_toy.columns].loc[(df_toy > 5).any(axis=1), :]
+
+
+# In[81]:
+
+
+df_train_labels_sum = df_train_labels.sum(axis=0)
+
+
+# In[82]:
+
+
+df_train_labels_sum.shape
+
+
+# In[83]:
+
+
+df_predictions_train_sum = df_predictions_train.sum(axis=0)
+
+
+# In[84]:
+
+
+df_predictions_train_sum[df_predictions_train_sum == 0]
+
+
+# In[85]:
+
+
+(df_train_labels.loc[:, df_predictions_train_sum[df_predictions_train_sum == 0].index] > 0).any()
+
+
+# In[86]:
+
+
+df_train_labels[df_predictions_train_sum[df_predictions_train_sum == 0].index]
+
 
 # In[87]:
+
+
+# all indexes in df_train_labels that have at least 1 column with no predicted labels  (such as df_predictions_train_sum == 0)
+df_train_labels[df_predictions_train_sum[df_predictions_train_sum == 0].index].loc[(df_train_labels.loc[:, df_predictions_train_sum[df_predictions_train_sum == 0].index] > 0).any(axis=1), :]
+
+
+# In[88]:
+
+
+indexes_train_containing_non_predicted_labels = df_train_labels[df_predictions_train_sum[df_predictions_train_sum == 0].index].loc[(df_train_labels.loc[:, df_predictions_train_sum[df_predictions_train_sum == 0].index] > 0).any(axis=1), :].index
+
+
+# In[93]:
+
+
+df_train_tags.shape
+
+
+# In[111]:
+
+
+df_train_tags
+
+
+# In[114]:
+
+
+df_train_tags_containing_keyword = df_train_tags.loc[indexes_train_containing_non_predicted_labels, :]['Tags'].str.contains('unix')
+
+
+# In[117]:
+
+
+df_train_tags_containing_keyword[df_train_tags_containing_keyword].index
+
+
+# In[129]:
+
+
+df_train_labels.loc[df_train_tags_containing_keyword[df_train_tags_containing_keyword].index, :][['Tags_unix', 'Tags_linux']]
+
+
+# In[89]:
+
+
+df_train_labels.loc[indexes_train_containing_non_predicted_labels, :]
+
+
+# In[1]:
+
+
+# To continue :  add something like [''.join(str(l)) for l in y]  to join tag columns and see clearly 1 values
+
+
+# In[150]:
+
+
+df_predictions_train['Tags_memory'].sum()
+
+
+# In[138]:
+
+
+df_train_labels_sum.sort_values(ascending=True)
+
+
+# In[139]:
+
+
+df_test_labels_sum = df_test_labels.sum(axis=0)
+df_test_labels_sum.shape
+
+
+# In[140]:
+
+
+df_test_labels_sum.sort_values(ascending=True)
+
+
+# ## Number of instances per class
+
+# In[69]:
 
 
 pd.set_option('display.max_rows', 400)
 df_train_labels.sum().sort_values(ascending=False)
 
 
-# In[97]:
+# In[70]:
+
+
+pd.set_option('display.max_rows', 400)
+df_train_labels.sum().sort_values(ascending=False)
+
+
+# In[71]:
 
 
 df_test_labels.sum().sort_values(ascending=False)
@@ -1379,7 +1756,7 @@ df_test_labels.sum().sort_values(ascending=False)
 
 # ## Score per class
 
-# In[96]:
+# In[58]:
 
 
 from sklearn.metrics import classification_report
@@ -1387,74 +1764,124 @@ from sklearn.metrics import classification_report
 print(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist()))
 
 
-# In[118]:
+# In[59]:
 
 
 pd.DataFrame(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False).shape
 
 
-# In[112]:
+# In[60]:
 
 
-pd.DataFrame(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False)
+df_train_labels['Tags_plot'].sum()
+
+
+# In[ ]:
+
+
+
+
+
+# In[99]:
+
+
+df_classif_train_report = pd.DataFrame(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False)
 
 
 # => La majorité des classes sont au dessus de 70% de précision
 
-# In[117]:
+# In[103]:
 
 
-pd.DataFrame(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False)
+df_classif_train_report[df_classif_train_report['precision'] == 0].shape
+
+
+# In[101]:
+
+
+df_classif_train_report.shape
+
+
+# In[100]:
+
+
+df_classif_train_report['precision'].hist()
+
+
+# In[104]:
+
+
+df_classif_test_report = pd.DataFrame(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False)
 
 
 # => Overfit :  
 # Tags_python 	0.535714 	0.300000 	0.384615 	1200.0
 
+# In[113]:
+
+
+df_classif_test_report['precision'][df_classif_test_report['precision'] == 0]
+
+
+# In[112]:
+
+
+df_classif_test_report['precision'][df_classif_test_report['precision'] > 0]
+
+
+# => 213 tags with 0 precision on test set !
+
+# In[108]:
+
+
+df_classif_test_report['precision'].hist()
+
+
 # ## Number of correct labels predicted per sample
 
-# In[126]:
+# In[76]:
 
 
 df_train_nb_correct_labels_predicted = (df_train_labels * df_predictions_train).sum(axis=1)
 
 
-# In[128]:
+# In[77]:
 
 
 df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted > 0]
 
 
-# In[122]:
+# In[78]:
 
 
 df_test_nb_correct_labels_predicted = (df_test_labels * df_predictions_test).sum(axis=1)
 
 
-# In[124]:
+# In[79]:
 
 
 df_test_nb_correct_labels_predicted[df_test_nb_correct_labels_predicted > 0]
 
 
-# In[125]:
+# In[80]:
 
 
 df_test_nb_correct_labels_predicted
 
 
-# In[139]:
+# In[81]:
 
 
 df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0]
 
 
-# In[136]:
+# In[82]:
 
 
 index_train_noclue = df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0].index
 
 
-# In[137]:
+# In[83]:
 
 
 index_train_noclue
@@ -1462,60 +1889,73 @@ index_train_noclue
 
 # For instance 0, model is not totally out of the truth :  tag pycharm predicted :
 
-# In[74]:
+# In[84]:
 
 
 df_train_labels.loc[0, :]['Tags_python']
 
 
-# In[82]:
+# In[85]:
 
 
 df_predictions_train.loc[0,:][df_predictions_train.loc[0,:] > 0]
 
 
-# In[138]:
+# In[86]:
 
 
 df_train.loc[index_train_noclue, :]
 
 
-# In[141]:
+# In[87]:
 
 
 doc_index = 0
 col_names_tags_value_1 = [col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()]
 
 
-# In[150]:
+# In[88]:
 
 
 df_train_labels[df_train_labels == 1]
 
 
-# In[155]:
+# In[89]:
 
 
 (df_train_labels == 1)
 
 
-# In[151]:
+# In[90]:
 
 
 df_train_labels
 
 
-# In[148]:
+# In[99]:
+
+
+df_train_labels.loc[1]['Tags_java']
+
+
+# In[91]:
 
 
 # Labels that model had no clue to predict (all labels that were missed, plus the model missed all of the other labels for the instance) => too slow
 col_names_tags_value_1_labels = [[col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                        if (df_train_labels[df_train_labels.index.isin([doc_index])][col] == 1).any()]  for doc_index in index_train_noclue]
 
 
-# In[147]:
+# In[92]:
 
 
 col_names_tags_value_1_labels
+
+
+# In[93]:
+
+
+with open(KNN_FILE_MODEL_PREFIX + 'col_names_tags_value_1_labels' + '.pickle', 'wb') as f:
+    pickle.dump(col_names_tags_value_1_labels, f, pickle.HIGHEST_PROTOCOL)
 
 
 # In[143]:
@@ -1553,10 +1993,149 @@ df_predictions_train['Tags_electron'].sum()
 print(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist()))
 
 
-# In[ ]:
+# In[101]:
 
 
+df_predictions_train
 
+
+# ## Compare model precision score with instance representations
+
+# In[74]:
+
+
+df_test_classif_dict = classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist(), output_dict=True)
+
+
+# In[75]:
+
+
+df_train_classif_dict = classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)
+
+
+# In[76]:
+
+
+#print(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist()))
+
+
+# In[77]:
+
+
+del df_test_classif_dict['micro avg']
+del df_test_classif_dict['macro avg']
+del df_test_classif_dict['weighted avg']
+del df_test_classif_dict['samples avg']
+
+
+# In[78]:
+
+
+del df_train_classif_dict['micro avg']
+del df_train_classif_dict['macro avg']
+del df_train_classif_dict['weighted avg']
+del df_train_classif_dict['samples avg']
+
+
+# In[79]:
+
+
+len(df_test_classif_dict)
+
+
+# In[95]:
+
+
+df_classif_test_report = pd.DataFrame(df_test_classif_dict).transpose()    .sort_values(by='precision', ascending=False)
+
+
+# In[98]:
+
+
+df_classif_test_report['precision'][df_classif_test_report['precision'] == 0]
+
+
+# In[80]:
+
+
+df_test_classif_dict
+
+
+# In[81]:
+
+
+df_test_classif_dict['Tags_.htaccess']['precision']
+
+
+# In[85]:
+
+
+df_train_labels_count_dict = df_train_labels.sum().to_dict()
+
+
+# In[86]:
+
+
+df_train_labels_count_dict
+
+
+# In[87]:
+
+
+count_values = [df_train_labels_count_dict[key] for key in df_train_labels_count_dict]
+
+
+# In[88]:
+
+
+precision_values = [df_test_classif_dict[key]['precision'] for key in df_train_labels_count_dict]
+
+
+# In[89]:
+
+
+precision_values_train = [df_train_classif_dict[key]['precision'] for key in df_train_labels_count_dict]
+
+
+# In[90]:
+
+
+precision_values
+
+
+# In[91]:
+
+
+#plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
+#sns.set(rc={'figure.figsize':(50,9)})
+import seaborn as sns
+
+#fig = plt.figure()
+
+fig = plt.gcf()
+#fig.set_size_inches(16, 10) # Does not work. Onlyly heiht  
+
+#plt.scatter(count_values, precision_values_train)
+g = sns.jointplot(count_values, precision_values, color='blue', height=13)
+g.set_axis_labels("Number of tag occurence on training set", "Precision on test set")
+plt.subplots_adjust(top=0.9)
+plt.suptitle('Precision (test) against instance representation (train)')
+
+
+# In[92]:
+
+
+#plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
+#sns.set(rc={'figure.figsize':(50,9)})
+import seaborn as sns
+
+fig = plt.figure()
+
+#plt.scatter(count_values, precision_values_train)
+g = sns.jointplot(count_values, precision_values_train, color='blue', height=10)
+g.set_axis_labels("Number of tag occurence on training set", "Precision on training set")
+plt.subplots_adjust(top=0.9)
+plt.suptitle('Precision (train) against instance representation (train)')
 
 
 # ## Precision / Recall curve
@@ -1763,14 +2342,14 @@ predictions_test.shape
 
 # # Implementation of a MultinomialNB with partial fit
 
-# In[50]:
+# In[78]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[51]:
+# In[79]:
 
 
 df_train = df_train_ori
@@ -1780,7 +2359,7 @@ df_train_labels = df_train_labels_ori
 df_test_labels = df_test_labels_ori
 
 
-# In[86]:
+# In[80]:
 
 
 DATASET_SIZE = 90000
@@ -1794,12 +2373,12 @@ df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
 df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
 
 
-# In[52]:
+# In[81]:
 
 
-DATASET_SIZE = 1000
-DATASET_TEST_SIZE = 100
-STEP_SIZE = 200 # Mini batch step size
+DATASET_SIZE = 3000
+DATASET_TEST_SIZE = 300
+STEP_SIZE = 10 # Mini batch step size
 
 df_train = df_train.loc[0:DATASET_SIZE-1, :]
 df_train_labels = df_train_labels.loc[0:DATASET_SIZE-1, :]
@@ -1808,13 +2387,13 @@ df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
 df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
 
 
-# In[53]:
+# In[82]:
 
 
 df_train
 
 
-# In[68]:
+# In[84]:
 
 
 preparation_pipeline = Pipeline([
@@ -1824,37 +2403,109 @@ preparation_pipeline = Pipeline([
     ('scaler', MinMaxScaler()),  # MinMaxScaler to have only positive values required by Naive Bayes
     ])
 
-prediction_model = MultiOutputClassifier(MultinomialNB())
+prediction_model = MultiOutputClassifier(MultinomialNB(alpha=0.01))
 
 
-# In[55]:
+# In[85]:
 
 
 get_ipython().run_cell_magic('time', '', 'df_train = preparation_pipeline.fit_transform(df_train, df_train_labels)')
 
 
-# In[56]:
+# In[86]:
 
 
 get_ipython().run_cell_magic('time', '', 'df_test = preparation_pipeline.transform(df_test)')
 
 
-# In[81]:
+# In[87]:
+
+
+df_train_labels.shape
+
+
+# In[93]:
+
+
+prediction_model = MultiOutputClassifier(MultinomialNB(alpha=0.0000001))
+
+
+# In[94]:
+
+
+prediction_model.fit(df_train, df_train_labels)
+
+
+# In[95]:
+
+
+predictions_train = prediction_model.predict(df_train)
+
+
+# In[96]:
+
+
+predictions_train
+
+
+# In[97]:
+
+
+predictions_train.sum(axis=1)[predictions_train.sum(axis=1) > 0]
+
+
+# In[46]:
 
 
 minibatch_indexes = minibatch_generate_indexes(df_train, STEP_SIZE)
 
 
-# In[82]:
+# In[47]:
 
 
-np.unique(df_train_labels.loc[left_index:right_index])
+get_ipython().run_cell_magic('time', '', 'nb_iter = int(DATASET_SIZE / STEP_SIZE)\nprogbar = tqdm(range(nb_iter))\n\ntrain_errors, val_errors = [], []\n\nfor (left_index, right_index) in minibatch_indexes:\n    print(\'Partial fit\')\n    # right_index+1 because df_train is in numpy format, right bound is not included (but in pandas, right bound is included)\n    \n    # Below does not work : 3rd parameters (classes) can\'t be strings :(\n    #prediction_model.partial_fit(df_train[left_index:right_index+1], df_train_labels.loc[left_index:right_index], df_train_labels.columns.tolist())\n    \n    prediction_model.partial_fit(df_train[left_index:right_index+1],\\\n                                 df_train_labels.loc[left_index:right_index],\\\n                                 [df_train_labels[c].unique() for c in df_train_labels])\n    \n    print(\'Intermediate prediction\')\n    #print(\'1\\n\')\n    predictions_train = prediction_model.predict(df_train[left_index:right_index+1])\n    #print(\'2\\n\')\n    predictions_test = prediction_model.predict(df_test)\n    #print(\'3\\n\')\n    \n    train_errors.append(precision_score(df_train_labels.loc[left_index:right_index], predictions_train, average=\'micro\'))\n    #val_errors.append(precision_score(df_test_labels.loc[left_index:right_index], predictions_test, average=\'micro\'))   \n    val_errors.append(precision_score(df_test_labels, predictions_test, average=\'micro\'))   \n    \n    print(\'Train errors : \' + str(train_errors))\n    print(\'Test errors : \' + str(val_errors))\n    \n    progbar.update(1)\n    \nplt.plot(train_errors, "r-+", linewidth=2, label="train")\nplt.plot(val_errors, "b-", linewidth=3, label="test")\nplt.legend(loc="upper right", fontsize=14)   # not shown in the book\nplt.xlabel("Training set iterations", fontsize=14) # not shown\n\nplt.ylabel("precision_micro", fontsize=14)      ')
 
 
-# In[83]:
+# In[48]:
 
 
-get_ipython().run_cell_magic('time', '', 'nb_iter = int(DATASET_SIZE / STEP_SIZE)\nprogbar = tqdm(range(nb_iter))\n\ntrain_errors, val_errors = [], []\n\nfor (left_index, right_index) in minibatch_indexes:\n    print(\'Partial fit\')\n    # right_index+1 because df_train is in numpy format, right bound is not included (but in pandas, right bound is included)\n    \n    # Below does not work : 3rd parameters (classes) can\'t be strings :(\n    #prediction_model.partial_fit(df_train[left_index:right_index+1], df_train_labels.loc[left_index:right_index], df_train_labels.columns.tolist())\n    \n    prediction_model.partial_fit(df_train[left_index:right_index+1],\\\n                                 df_train_labels.loc[left_index:right_index],\\\n                                 np.unique(df_train_labels.loc[left_index:right_index]))\n    \n    print(\'Intermediate prediction\')\n    predictions_train = prediction_model.predict(df_train[left_index:right_index+1])\n    predictions_test = prediction_model.predict(df_test)\n    \n    train_errors.append(precision_score(df_train_labels.loc[left_index:right_index], predictions_train, average=\'micro\'))\n    val_errors.append(precision_score(df_test_labels.loc[left_index:right_index], predictions_test, average=\'micro\'))   \n    \n    print(\'Train errors : \' + str(train_errors))\n    print(\'Test errors : \' + str(val_errors))\n    \n    progbar.update(1)\n    \nplt.plot(train_errors, "r-+", linewidth=2, label="train")\nplt.plot(val_errors, "b-", linewidth=3, label="test")\nplt.legend(loc="upper right", fontsize=14)   # not shown in the book\nplt.xlabel("Training set iterations", fontsize=14) # not shown\n\nplt.ylabel("precision_micro", fontsize=14)      ')
+df_train_labels.sum(axis=1)[df_train_labels.sum(axis=1) > 0]
+
+
+# In[49]:
+
+
+predictions_train.shape
+
+
+# In[50]:
+
+
+predictions_test.shape
+
+
+# In[53]:
+
+
+predictions_test_df=pd.DataFrame(predictions_test)
+
+
+# In[55]:
+
+
+predictions_test_df.sum(axis=1)[predictions_test_df.sum(axis=1) > 0]
+
+
+# In[108]:
+
+
+df_tmp = pd.DataFrame(predictions_test).prod(axis=1)
+
+
+# In[109]:
+
+
+df_tmp[df_tmp > 0]
 
 
 # In[96]:
@@ -1882,128 +2533,6 @@ df_train_ori
 df_train_labels
 
 
-# In[99]:
-
-
-df_train_labels_binarized = mlb.fit_transform(df_train_labels)
-
-
-# In[97]:
-
-
-prediction_model.partial_fit(df_train[0:5+1],                             df_train_labels.loc[0:5],                             np.unique(df_train_labels.loc[0:5]))
-
-
-# In[101]:
-
-
-df_train
-
-
-# In[61]:
-
-
-df_train_labels.loc[left_index:right_index].shape
-
-
-# ### MultinomialNB does not seem to support multi label :(
-
-# In[63]:
-
-
-predictions_train
-
-
-# In[66]:
-
-
-pd.DataFrame(prediction_model.predict_proba(df_train[left_index:right_index+1])).shape
-
-
-# In[59]:
-
-
-precision_score(df_train_labels.loc[left_index:right_index], predictions_train, average='micro')
-
-
-# In[ ]:
-
-
-right_index
-
-
-# In[ ]:
-
-
-df_train.shape[0]
-
-
-# In[ ]:
-
-
-len(df_train[0:5])
-
-
-# In[ ]:
-
-
-df_train[left_index:right_index].shape[0]
-
-
-# In[ ]:
-
-
-df_train_labels.loc[left_index:right_index].shape[0]
-
-
-# In[ ]:
-
-
-df_train_labels.loc[left_index:right_index]
-
-
-# In[ ]:
-
-
-get_ipython().run_cell_magic('time', '', 'predictions_train = prediction_model.predict(df_train)')
-
-
-# In[ ]:
-
-
-get_ipython().run_cell_magic('time', '', 'df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)')
-
-
-# In[ ]:
-
-
-get_ipython().run_cell_magic('time', '', 'predictions_test = prediction_model.predict(df_test)')
-
-
-# In[ ]:
-
-
-df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)
-
-
-# In[ ]:
-
-
-df_predictions_train
-
-
-# In[ ]:
-
-
-df_predictions_test
-
-
-# In[ ]:
-
-
-df_train
-
-
 # ## Performance measures
 
 # In[ ]:
@@ -2019,6 +2548,317 @@ precision_score(df_train_labels, df_predictions_train, average='macro')
 
 
 # In[ ]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_train_labels, df_predictions_train)
+
+
+# In[ ]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[ ]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[ ]:
+
+
+roc_auc_score(df_train_labels, df_predictions_train)
+
+
+# In[ ]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[ ]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[ ]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_test_labels, df_predictions_test)
+
+
+# In[ ]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[ ]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[ ]:
+
+
+roc_auc_score(df_test_labels, df_predictions_test)
+
+
+# In[ ]:
+
+
+predictions_test.shape
+
+
+# # Implementation of a Perceptron Classifier with MultiOutputClassifier and partial fit
+
+# In[152]:
+
+
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[153]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
+
+
+# In[142]:
+
+
+DATASET_SIZE = 90000
+DATASET_TEST_SIZE = 10000
+STEP_SIZE = 10000 # Mini batch step size
+
+df_train = df_train.loc[0:DATASET_SIZE-1, :]
+df_train_labels = df_train_labels.loc[0:DATASET_SIZE-1, :]
+
+df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
+df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
+
+
+# In[102]:
+
+
+DATASET_SIZE = 3000
+DATASET_TEST_SIZE = 300
+STEP_SIZE = 10 # Mini batch step size
+
+df_train = df_train.loc[0:DATASET_SIZE-1, :]
+df_train_labels = df_train_labels.loc[0:DATASET_SIZE-1, :]
+
+df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
+df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
+
+
+# In[143]:
+
+
+df_train
+
+
+# In[154]:
+
+
+preparation_pipeline = Pipeline([
+    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')),
+    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
+    #('scaler', StandardScaler()),
+    ('scaler', MinMaxScaler()),  # MinMaxScaler to have only positive values required by Naive Bayes
+    ])
+
+prediction_model = MultiOutputClassifier(Perceptron())
+
+
+# In[155]:
+
+
+get_ipython().run_cell_magic('time', '', 'df_train = preparation_pipeline.fit_transform(df_train, df_train_labels)')
+
+
+# In[156]:
+
+
+get_ipython().run_cell_magic('time', '', 'df_test = preparation_pipeline.transform(df_test)')
+
+
+# In[157]:
+
+
+df_train_labels.shape
+
+
+# In[124]:
+
+
+df_train_labels_without_0 = df_train_labels[df_train_labels.sum(axis=0)[df_train_labels.sum(axis=0) > 0].index]
+
+
+# In[125]:
+
+
+df_train_labels_without_0.shape
+
+
+# In[121]:
+
+
+df_train_labels.sum(axis=0)[df_train_labels.sum(axis=0) > 0].index
+
+
+# In[ ]:
+
+
+
+
+
+# In[158]:
+
+
+prediction_model = MultiOutputClassifier(Perceptron())
+
+
+# In[159]:
+
+
+prediction_model.fit(df_train, df_train_labels)
+
+
+# In[160]:
+
+
+df_train.shape
+
+
+# In[161]:
+
+
+predictions_train = prediction_model.predict(df_train)
+
+
+# In[162]:
+
+
+predictions_train.shape
+
+
+# In[163]:
+
+
+predictions_train.sum(axis=1)[predictions_train.sum(axis=1) > 0]
+
+
+# In[164]:
+
+
+precision_score(df_train_labels, predictions_train, average='micro')
+
+
+# In[76]:
+
+
+minibatch_indexes = minibatch_generate_indexes(df_train, STEP_SIZE)
+
+
+# In[77]:
+
+
+get_ipython().run_cell_magic('time', '', 'nb_iter = int(DATASET_SIZE / STEP_SIZE)\nprogbar = tqdm(range(nb_iter))\n\ntrain_errors, val_errors = [], []\n\nfor (left_index, right_index) in minibatch_indexes:\n    print(\'Partial fit\')\n    # right_index+1 because df_train is in numpy format, right bound is not included (but in pandas, right bound is included)\n    \n    # Below does not work : 3rd parameters (classes) can\'t be strings :(\n    #prediction_model.partial_fit(df_train[left_index:right_index+1], df_train_labels.loc[left_index:right_index], df_train_labels.columns.tolist())\n    \n    prediction_model.partial_fit(df_train[left_index:right_index+1],\\\n                                 df_train_labels.loc[left_index:right_index],\\\n                                 [df_train_labels[c].unique() for c in df_train_labels])\n    \n    print(\'Intermediate prediction\')\n    #print(\'1\\n\')\n    predictions_train = prediction_model.predict(df_train[left_index:right_index+1])\n    #print(\'2\\n\')\n    predictions_test = prediction_model.predict(df_test)\n    #print(\'3\\n\')\n    \n    train_errors.append(precision_score(df_train_labels.loc[left_index:right_index], predictions_train, average=\'micro\'))\n    #val_errors.append(precision_score(df_test_labels.loc[left_index:right_index], predictions_test, average=\'micro\'))   \n    val_errors.append(precision_score(df_test_labels, predictions_test, average=\'micro\'))   \n    \n    print(\'Train errors : \' + str(train_errors))\n    print(\'Test errors : \' + str(val_errors))\n    \n    progbar.update(1)\n    \nplt.plot(train_errors, "r-+", linewidth=2, label="train")\nplt.plot(val_errors, "b-", linewidth=3, label="test")\nplt.legend(loc="upper right", fontsize=14)   # not shown in the book\nplt.xlabel("Training set iterations", fontsize=14) # not shown\n\nplt.ylabel("precision_micro", fontsize=14)      ')
+
+
+# In[48]:
+
+
+df_train_labels.sum(axis=1)[df_train_labels.sum(axis=1) > 0]
+
+
+# In[49]:
+
+
+predictions_train.shape
+
+
+# In[50]:
+
+
+predictions_test.shape
+
+
+# In[53]:
+
+
+predictions_test_df=pd.DataFrame(predictions_test)
+
+
+# In[55]:
+
+
+predictions_test_df.sum(axis=1)[predictions_test_df.sum(axis=1) > 0]
+
+
+# In[108]:
+
+
+df_tmp = pd.DataFrame(predictions_test).prod(axis=1)
+
+
+# In[109]:
+
+
+df_tmp[df_tmp > 0]
+
+
+# In[96]:
+
+
+np.unique(df_train_labels.loc[0:5])
+
+
+# In[98]:
+
+
+from sklearn.preprocessing import MultiLabelBinarizer
+mlb = MultiLabelBinarizer(classes=df_train_labels.columns.tolist())
+
+
+# In[102]:
+
+
+df_train_ori
+
+
+# In[100]:
+
+
+df_train_labels
+
+
+# ## Performance measures
+
+# In[131]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[ ]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[130]:
 
 
 # Shows exact matchs of all tags

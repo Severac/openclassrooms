@@ -3,7 +3,7 @@
 
 # # Global settings
 
-# In[1]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -144,7 +144,7 @@ SAVE_API_MODEL = True # If True : API model ill be saved
 API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 
 
-# In[2]:
+# In[ ]:
 
 
 ALL_FILES_LIST
@@ -152,7 +152,7 @@ ALL_FILES_LIST
 
 # # Load data
 
-# In[3]:
+# In[ ]:
 
 
 import pandas as pd
@@ -173,14 +173,14 @@ def load_data(data_path=DATA_PATH):
     return pd.concat(df_list)
 
 
-# In[4]:
+# In[ ]:
 
 
 df = load_data()
 df.reset_index(inplace=True)
 
 
-# In[5]:
+# In[ ]:
 
 
 df
@@ -188,45 +188,45 @@ df
 
 # ## Drop NA on body and remove html tags
 
-# In[6]:
+# In[ ]:
 
 
 df.dropna(subset=['Body'], axis=0, inplace=True)
 
 
-# In[7]:
+# In[ ]:
 
 
 # Manually with a regexp
 #df.loc[:, 'Body'] = df['Body'].str.replace('<[^<]+?>', '') 
 
 
-# In[8]:
+# In[ ]:
 
 
 # Or with beautifulsoup
 df.loc[:, 'Body'] = df['Body'].apply(lambda x: BeautifulSoup(x, 'lxml').get_text())
 
 
-# In[9]:
+# In[ ]:
 
 
 df
 
 
-# In[10]:
+# In[ ]:
 
 
 print(df['Body'].loc[0])
 
 
-# In[11]:
+# In[ ]:
 
 
 print(df['Body'].loc[10000])
 
 
-# In[12]:
+# In[ ]:
 
 
 print(df['Body'].loc[100000])
@@ -303,7 +303,7 @@ print('Number of tokens : ' + str(counts_body['words']))
 print('Number of distinct tokens (vocabulary): ' + str(len(tokens_body)))
 
 
-# In[20]:
+# In[21]:
 
 
 counts_tags  = nltk.FreqDist()
@@ -319,7 +319,7 @@ print('Number of tokens : ' + str(counts_tags['words']))
 print('Number of distinct tokens (vocabulary): ' + str(len(tokens_tags)))
 
 
-# In[36]:
+# In[22]:
 
 
 #for token in tokens_tags:
@@ -328,7 +328,7 @@ print('Number of distinct tokens (vocabulary): ' + str(len(tokens_tags)))
 
 # ## Most represented tags
 
-# In[21]:
+# In[23]:
 
 
 {k: v for k, v in sorted(tokens_tags.items(), key=lambda item: item[1], reverse=True)}
@@ -336,19 +336,19 @@ print('Number of distinct tokens (vocabulary): ' + str(len(tokens_tags)))
 
 # # Cumulated number of posts against tags
 
-# In[22]:
+# In[24]:
 
 
 tags_represented_posts_cumulated = np.cumsum([v for k, v in sorted(tokens_tags.items(), key=lambda item: item[1], reverse=True)])
 
 
-# In[23]:
+# In[25]:
 
 
 tags_represented_posts_cumulated.max()
 
 
-# In[24]:
+# In[26]:
 
 
 plt.title('Cumulated number of posts against tags')
@@ -359,7 +359,7 @@ plt.legend()
 plt.plot(range(len(tags_represented_posts_cumulated)), tags_represented_posts_cumulated)
 
 
-# In[25]:
+# In[27]:
 
 
 tags_represented_posts_cumulated[1500]
@@ -367,30 +367,12 @@ tags_represented_posts_cumulated[1500]
 
 # # Frequency visualisation of tokens
 
-# In[26]:
-
-
-#vectorizer = CountVectorizer(token_pattern = r"(?u)\b\w+\b") # this token pattern overrides default of min 2 letters for a word
-#vectorizer = CountVectorizer(token_pattern=r"(?u)\b\w\w+\b|!|\?|\"|\'") # Allows 1 word tokens like !, ?, ", '
-vectorizer = CountVectorizer()
-docs = vectorizer.fit_transform(df['Body'])
-
-
-# In[27]:
-
-
-features = vectorizer.get_feature_names()
-visualizer = FreqDistVisualizer(features=features)
-visualizer.fit(docs)
-visualizer.poof()
-
-
 # In[28]:
 
 
 #vectorizer = CountVectorizer(token_pattern = r"(?u)\b\w+\b") # this token pattern overrides default of min 2 letters for a word
 #vectorizer = CountVectorizer(token_pattern=r"(?u)\b\w\w+\b|!|\?|\"|\'") # Allows 1 word tokens like !, ?, ", '
-vectorizer = CountVectorizer(stop_words='english')
+vectorizer = CountVectorizer()
 docs = vectorizer.fit_transform(df['Body'])
 
 
@@ -403,13 +385,31 @@ visualizer.fit(docs)
 visualizer.poof()
 
 
-# In[35]:
+# In[30]:
+
+
+#vectorizer = CountVectorizer(token_pattern = r"(?u)\b\w+\b") # this token pattern overrides default of min 2 letters for a word
+#vectorizer = CountVectorizer(token_pattern=r"(?u)\b\w\w+\b|!|\?|\"|\'") # Allows 1 word tokens like !, ?, ", '
+vectorizer = CountVectorizer(stop_words='english')
+docs = vectorizer.fit_transform(df['Body'])
+
+
+# In[31]:
+
+
+features = vectorizer.get_feature_names()
+visualizer = FreqDistVisualizer(features=features)
+visualizer.fit(docs)
+visualizer.poof()
+
+
+# In[32]:
 
 
 docs
 
 
-# In[81]:
+# In[33]:
 
 
 np.min([len(f) for f in features])
@@ -417,7 +417,7 @@ np.min([len(f) for f in features])
 
 # ## Most represented tokens
 
-# In[83]:
+# In[34]:
 
 
 {k: v for k, v in sorted(tokens_body.items(), key=lambda item: item[1], reverse=True)}
