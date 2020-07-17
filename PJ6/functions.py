@@ -1092,12 +1092,6 @@ In and out data : pandas DataFrame
 '''
 class Doc2Vec_Vectorizer(BaseEstimator, TransformerMixin):
     def __init__(self, model_path=None, model_save_path=None, feature_totransform=None, n_dim=200, window=5, min_count=5, remove_stopwords=True):
-        # Passing labels_featurename here for NCA is a mistake :(  it should be passed as a label to fit function, for
-        # gridsearch to correctly split labels associated with folds.
-        # So, I kept labels_featurenamesfor backwards compatibility with the rest of the notebook.
-        # But with GridSearchCV, labels_featurename won't be used :  labels passed to fit will be used instead
-
-        # labels_featurename can be a feature name and also a list of discrete labels
         self.fitted = False
         self.feature_totransform = 'all_text'
         self.n_dim = n_dim

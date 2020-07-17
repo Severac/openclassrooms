@@ -98,7 +98,6 @@ ALL_FEATURES = []
 
 MODEL_CLIENT_FEATURES = ['TotalPricePerMonth', 'DescriptionNormalized', 'HasEverCancelled', 'BoughtTopValueProduct' ]
 
-
 plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
 
 import seaborn as sns
@@ -165,8 +164,11 @@ API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 LEARNING_CURVE_STEP_SIZE = 100
 
 # Doc2Vec settings :
-DOC2VEC_TRAINING_SAVE_FILE = 'doc2vec_model'
-#doc2vec_fname = get_tmpfile(DOC2VEC_TRAINING_SAVE_FILE)
+
+# If True : retrain and save doc2vec model.  If false: only load doc2vec model
+DOC2VEC_RETRAIN_AND_SAVE = True
+DOC2VEC_TRAINING_SAVE_FILE = 'docvec_model_prerequisite'
+
 
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
 from gensim.parsing.preprocessing import remove_stopwords
@@ -253,4 +255,18 @@ df_train = dataprep.fit_transform(df_train)
 
 df_test = dataprep.transform(df_test)
 
+# INSERT doc2vec training here (and save / load model file)
+# Doc2vec training (launch only first time)
 
+if (DOC2VEC_RETRAIN_AND_SAVE == True):
+    model_doc2vec = Doc2Vec_Vectorizer(model_save_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')
+
+else :
+    model_doc2vec = Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')
+   
+model_doc2vec.fit(df_train)    
+df_train_embedded = model_doc2vec.model.docvecs.vectors_docs
+
+# Launching a clustering to generate labels that will be used for stratified sampling
+model_kmeans = KMeans(n_clusters=10, random_state=42).fit(df_train_embedded)
+cluster_labels_train = model_kmeans.labels_
