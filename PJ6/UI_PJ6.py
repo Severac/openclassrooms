@@ -116,7 +116,7 @@ st.image(image,
 
 
 ######################" Left Panel : options ##############################################"
-st.sidebar.title('Display debug information')
+st.sidebar.title('Model analysis')
 
 
 ######################" Main Panel : prédictions ###############################"
@@ -130,8 +130,6 @@ post_body = str(st.text_area('Post body:'))
 df_input = pd.DataFrame([[post_object, post_body]],\
                         columns=['Title', 'Body'],)
 
-st.dataframe(df_input)
-st.write(str(df_input['Body'].loc[0]))
 
 
 ######################" Left Panel : model analysis ##############################################"
@@ -142,15 +140,11 @@ if (debug_mode == True):
     st.header('Step 0 : Input data')
     st.table(df_input)
     
-    st.header('Step 1 : Data agregated at client level (Unscaled feature)')
-    #df_clients_agg = model_agregate.transform(df_input)
-    #st.table(df_clients_agg.reset_index())
+    st.header('Step 1 : Data transformed')
+    df_input_transformed = PrepareTextData().fit_transform(df_input)
+    st.table(df_input_transformed)
     
-    st.header('Step 2 : Data before clustering, at client level (scaled features)')
-    #df_clients = model_before_clustering.transform(df_input)
-    #st.table(df_clients.reset_index())
-
-
+    
 del model
 # Manual memory cleaning at the of the program is necessary to avoid memory leak 
 # (due to streamlit bug ?)

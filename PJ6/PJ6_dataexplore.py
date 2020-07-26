@@ -3,7 +3,7 @@
 
 # # Global settings
 
-# In[ ]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -144,7 +144,7 @@ SAVE_API_MODEL = True # If True : API model ill be saved
 API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 
 
-# In[ ]:
+# In[2]:
 
 
 ALL_FILES_LIST
@@ -152,7 +152,7 @@ ALL_FILES_LIST
 
 # # Load data
 
-# In[ ]:
+# In[3]:
 
 
 import pandas as pd
@@ -173,14 +173,14 @@ def load_data(data_path=DATA_PATH):
     return pd.concat(df_list)
 
 
-# In[ ]:
+# In[4]:
 
 
 df = load_data()
 df.reset_index(inplace=True)
 
 
-# In[ ]:
+# In[5]:
 
 
 df
@@ -188,45 +188,45 @@ df
 
 # ## Drop NA on body and remove html tags
 
-# In[ ]:
+# In[6]:
 
 
 df.dropna(subset=['Body'], axis=0, inplace=True)
 
 
-# In[ ]:
+# In[7]:
 
 
 # Manually with a regexp
 #df.loc[:, 'Body'] = df['Body'].str.replace('<[^<]+?>', '') 
 
 
-# In[ ]:
+# In[8]:
 
 
 # Or with beautifulsoup
 df.loc[:, 'Body'] = df['Body'].apply(lambda x: BeautifulSoup(x, 'lxml').get_text())
 
 
-# In[ ]:
+# In[9]:
 
 
 df
 
 
-# In[ ]:
+# In[10]:
 
 
 print(df['Body'].loc[0])
 
 
-# In[ ]:
+# In[11]:
 
 
 print(df['Body'].loc[10000])
 
 
-# In[ ]:
+# In[12]:
 
 
 print(df['Body'].loc[100000])
@@ -273,13 +273,13 @@ df
 
 # # Global counts
 
-# In[18]:
+# In[ ]:
 
 
 df
 
 
-# In[19]:
+# In[ ]:
 
 
 #pandas_profiling.ProfileReport(df)
@@ -287,7 +287,7 @@ df
 
 # ## Tokens and vocabulary count
 
-# In[20]:
+# In[ ]:
 
 
 counts_body  = nltk.FreqDist()
@@ -303,7 +303,7 @@ print('Number of tokens : ' + str(counts_body['words']))
 print('Number of distinct tokens (vocabulary): ' + str(len(tokens_body)))
 
 
-# In[21]:
+# In[ ]:
 
 
 counts_tags  = nltk.FreqDist()
@@ -319,7 +319,7 @@ print('Number of tokens : ' + str(counts_tags['words']))
 print('Number of distinct tokens (vocabulary): ' + str(len(tokens_tags)))
 
 
-# In[22]:
+# In[ ]:
 
 
 #for token in tokens_tags:
@@ -367,7 +367,7 @@ tags_represented_posts_cumulated[1500]
 
 # # Frequency visualisation of tokens
 
-# In[28]:
+# In[37]:
 
 
 #vectorizer = CountVectorizer(token_pattern = r"(?u)\b\w+\b") # this token pattern overrides default of min 2 letters for a word
@@ -376,16 +376,22 @@ vectorizer = CountVectorizer()
 docs = vectorizer.fit_transform(df['Body'])
 
 
-# In[29]:
+# In[38]:
+
+
+plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
+
+
+# In[39]:
 
 
 features = vectorizer.get_feature_names()
-visualizer = FreqDistVisualizer(features=features)
+visualizer = FreqDistVisualizer(features=features, n=20)
 visualizer.fit(docs)
 visualizer.poof()
 
 
-# In[30]:
+# In[40]:
 
 
 #vectorizer = CountVectorizer(token_pattern = r"(?u)\b\w+\b") # this token pattern overrides default of min 2 letters for a word
@@ -394,22 +400,22 @@ vectorizer = CountVectorizer(stop_words='english')
 docs = vectorizer.fit_transform(df['Body'])
 
 
-# In[31]:
+# In[41]:
 
 
 features = vectorizer.get_feature_names()
-visualizer = FreqDistVisualizer(features=features)
+visualizer = FreqDistVisualizer(features=features, n=20)
 visualizer.fit(docs)
 visualizer.poof()
 
 
-# In[32]:
+# In[22]:
 
 
 docs
 
 
-# In[33]:
+# In[23]:
 
 
 np.min([len(f) for f in features])

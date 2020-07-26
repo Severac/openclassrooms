@@ -137,6 +137,11 @@ LOAD_KNN_MODEL = True
 
 KNN_FILE_MODEL_PREFIX = 'knn_model'
 
+
+SAVE_BESTGRIDSEARCH_MODEL = True
+LOAD_BESTGRIDSEARCH_MODEL = False
+BESTGRIDSEARCH_FILE_MODEL_PREFIX = 'bestgridsearch_model_'
+
 EXECUTE_INTERMEDIATE_MODELS = True # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
 
 
@@ -2924,6 +2929,67 @@ roc_auc_score(df_test_labels, df_predictions_test)
 
 
 predictions_test.shape
+
+
+# # GridSearch with cross validation
+
+# A GridSearch using pipeline is implemented separately, in .py files  
+# To run the gridsearch, open a python3 console and :  
+# 
+# 1/ Launch a python3 console  
+# 2/ Run PJ6_GridSearch_prerequisites.py : exec(open('PJ6_GridSearch_prerequisites.py').read())  
+# 3/ Run PJ6_GridSearch1.py : exec(open('PJ6_GridSearch1.py').read())  
+
+# # Load GridSearch results and analyze them
+
+# In[89]:
+
+
+from functions import *
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[90]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
+
+
+# In[91]:
+
+
+grid_search = None
+
+grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'gridsearch_PJ6')
+
+
+# In[98]:
+
+
+grid_search.best_estimator_
+
+
+# In[100]:
+
+
+get_ipython().run_cell_magic('time', '', "if (SAVE_BESTGRIDSEARCH_MODEL == True):\n    predictions_train = grid_search.best_estimator_.predict(df_train)\n    df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)\n\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_train' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_train, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_train' + '.pickle', 'rb') as f:\n        df_predictions_train = pickle.load(f)")
+
+
+# In[101]:
+
+
+get_ipython().run_cell_magic('time', '', "if (SAVE_BESTGRIDSEARCH_MODEL == True):\n    predictions_test = grid_search.best_estimator_.predict(df_test)\n    df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)\n\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_test' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_test, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_test' + '.pickle', 'rb') as f:\n        df_predictions_test = pickle.load(f)")
+
+
+# In[105]:
+
+
+df_predictions_train.shape
 
 
 # # Annex (old code)

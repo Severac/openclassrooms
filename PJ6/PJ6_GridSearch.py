@@ -14,6 +14,11 @@ Usage :
     Run PJ6_GridSearch_prerequisites.py : exec(open('PJ6_GridSearch_prerequisites.py').read())
     Run this script (uncomment the validation run you want to pass)
         > exec(open('PJ6_GridSearch.py').read())
+        
+        
+First run of GridSearch was done with :
+    - 4 models  (KNN 5 or 10,  and doc2vec 10 or 200)
+    - GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
 
 """
 

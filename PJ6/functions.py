@@ -53,14 +53,17 @@ import pickle
 from bs4 import BeautifulSoup
 
 
-RECOMPUTE_GRIDSEARCH = True  # CAUTION : computation is several hours long
-SAVE_GRID_RESULTS = True # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
-LOAD_GRID_RESULTS = False # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
+ # Removed from functions.py (needs to be set in the notebook or in .py gridsearch prerequisite file)
+'''
+RECOMPUTE_GRIDSEARCH = False  # CAUTION : computation is several hours long
+SAVE_GRID_RESULTS = False # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
+LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
 
 
 #GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
-
-GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
+'''
+ # Removed from functions.py (needs to be set in the notebook or in .py gridsearch prerequisite file)
+GRIDSEARCH_FILE_PREFIX = 'grid_search_results_' 
 
 ### Doc2vec settings
 
@@ -1030,10 +1033,19 @@ class Clusterer(BaseEstimator, TransformerMixin):
             return(silhouette_score(X, predicted_labels))
         
 '''
+This function is originally used in PJ6_GridSearch.py
+But it also needs to be here in order to be able to load pickle file saved in GridSearch
+'''
+
+def precision_score_micro(y_true, y_pred):
+    return(precision_score(y_true, y_pred, average='micro'))
+
+'''
 This function is abled to either save a grid search result, or load it 
 (depending on SAVE_GRID_RESULTS)
 '''
 def save_or_load_search_params(grid_search, save_file_suffix):
+    print(f'prefix: {GRIDSEARCH_FILE_PREFIX}')
     if (SAVE_GRID_RESULTS == True):
         #df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["Accuracy"])],axis=1)
         #df_grid_search_results.to_csv(GRIDSEARCH_CSV_FILE)
@@ -1055,7 +1067,9 @@ def save_or_load_search_params(grid_search, save_file_suffix):
 
         else:
             with open(GRIDSEARCH_FILE_PREFIX + save_file_suffix + '.pickle', 'rb') as f:
+                print('pickle load start')
                 grid_search = pickle.load(f)
+                print('pickle load end')
 
             df_grid_search_results = pd.concat([pd.DataFrame(grid_search.cv_results_["params"]),pd.DataFrame(grid_search.cv_results_["mean_test_score"], columns=["mean_test_score"])],axis=1)
             df_grid_search_results = pd.concat([df_grid_search_results,pd.DataFrame(grid_search.cv_results_["std_test_score"], columns=["std_test_score"])],axis=1)
@@ -1098,6 +1112,7 @@ class Doc2Vec_Vectorizer(BaseEstimator, TransformerMixin):
         self.window = window
         self.min_count = min_count
         self.model_path = model_path
+        self.model_save_path = model_save_path
         self.model = None
 
     def fit(self, df,
@@ -1167,7 +1182,7 @@ class Doc2Vec_Vectorizer(BaseEstimator, TransformerMixin):
                 #return([self.model.infer_vector(gensim.utils.simple_preprocess(text)) for text in df[self.feature_totransform]])
                 df_out = pd.DataFrame()
                 cnt = 0
-                progbar = tqdm(range(df.shape[0]))
+                #progbar = tqdm(range(df.shape[0]))
                 
                 for text in df[self.feature_totransform]:
                     #df_out.loc[cnt] = self.model.infer_vector(gensim.utils.simple_preprocess(text))
@@ -1176,7 +1191,7 @@ class Doc2Vec_Vectorizer(BaseEstimator, TransformerMixin):
                     
                     df_out = df_out.append(pd.Series(self.model.infer_vector(gensim.utils.simple_preprocess(text))), ignore_index=True)
                     
-                    progbar.update(1)
+                    #progbar.update(1)
                     cnt += 1
                 
                 return(df_out)

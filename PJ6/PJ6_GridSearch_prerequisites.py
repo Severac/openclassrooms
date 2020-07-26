@@ -124,7 +124,8 @@ LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pic
 
 #GRIDSEARCH_CSV_FILE = 'grid_search_results.csv'
 
-GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
+#GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'  # At first run, this value was used
+GRIDSEARCH_FILE_PREFIX = 'grid_search_results_stratified_split_'
 
 # Set this to load (or train again / save) KNN model to disk  (in "Implementation of a KNN classification algorithm on 90000 instances" part)
 SAVE_KNN_MODEL = False
@@ -255,14 +256,14 @@ df_train = dataprep.fit_transform(df_train)
 
 df_test = dataprep.transform(df_test)
 
-# INSERT doc2vec training here (and save / load model file)
-# Doc2vec training (launch only first time)
-
+# Labelling of instances with a clustering... (to use as input of stratified split)
+'''
+print('Labelling of instances with a clustering... (to use as input of stratified split)')
 if (DOC2VEC_RETRAIN_AND_SAVE == True):
-    model_doc2vec = Doc2Vec_Vectorizer(model_save_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')
+    model_doc2vec = Doc2Vec_Vectorizer(model_save_path=DOC2VEC_TRAINING_SAVE_FILE, n_dim=10, feature_totransform='all_text')
 
 else :
-    model_doc2vec = Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text')
+    model_doc2vec = Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, n_dim=10, feature_totransform='all_text')
    
 model_doc2vec.fit(df_train)    
 df_train_embedded = model_doc2vec.model.docvecs.vectors_docs
@@ -270,3 +271,4 @@ df_train_embedded = model_doc2vec.model.docvecs.vectors_docs
 # Launching a clustering to generate labels that will be used for stratified sampling
 model_kmeans = KMeans(n_clusters=10, random_state=42).fit(df_train_embedded)
 cluster_labels_train = model_kmeans.labels_
+'''
