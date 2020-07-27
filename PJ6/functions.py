@@ -52,6 +52,20 @@ import pickle
 
 from bs4 import BeautifulSoup
 
+RECOMPUTE_GRIDSEARCH = False  # CAUTION : computation is several hours long
+SAVE_GRID_RESULTS = False # If True : grid results object will be saved to pickle files that have GRIDSEARCH_FILE_PREFIX
+LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pickle files that have GRIDSEARCH_FILE_PREFIX
+
+SAVE_KNN_MODEL = False
+LOAD_KNN_MODEL = True
+
+KNN_FILE_MODEL_PREFIX = 'knn_model'
+
+SAVE_BESTGRIDSEARCH_MODEL = False
+LOAD_BESTGRIDSEARCH_MODEL = True
+BESTGRIDSEARCH_FILE_MODEL_PREFIX = 'bestgridsearch_model_'
+
+
 
  # Removed from functions.py (needs to be set in the notebook or in .py gridsearch prerequisite file)
 '''

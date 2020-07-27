@@ -5,7 +5,7 @@
 
 # # Global settings
 
-# In[1]:
+# In[46]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -138,8 +138,8 @@ LOAD_KNN_MODEL = True
 KNN_FILE_MODEL_PREFIX = 'knn_model'
 
 
-SAVE_BESTGRIDSEARCH_MODEL = True
-LOAD_BESTGRIDSEARCH_MODEL = False
+SAVE_BESTGRIDSEARCH_MODEL = False
+LOAD_BESTGRIDSEARCH_MODEL = True
 BESTGRIDSEARCH_FILE_MODEL_PREFIX = 'bestgridsearch_model_'
 
 EXECUTE_INTERMEDIATE_MODELS = True # If True: every intermediate model (which results are manually analyzed in the notebook) will be executed
@@ -520,7 +520,7 @@ for document in df_train['all_text']:
 InputDocs
 
 
-# In[69]:
+# In[ ]:
 
 
 start = time.time()
@@ -530,7 +530,7 @@ end = time.time()
 print('Durée doc2vec training: ' + str(end - start) + ' secondes')    
 
 
-# In[70]:
+# In[ ]:
 
 
 #model_doc2vec.save(doc2vec_fname)
@@ -2942,7 +2942,7 @@ predictions_test.shape
 
 # # Load GridSearch results and analyze them
 
-# In[89]:
+# In[47]:
 
 
 from functions import *
@@ -2950,7 +2950,7 @@ importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[90]:
+# In[48]:
 
 
 df_train = df_train_ori
@@ -2960,7 +2960,7 @@ df_train_labels = df_train_labels_ori
 df_test_labels = df_test_labels_ori
 
 
-# In[91]:
+# In[49]:
 
 
 grid_search = None
@@ -2968,29 +2968,127 @@ grid_search = None
 grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'gridsearch_PJ6')
 
 
-# In[98]:
+# In[50]:
 
 
 grid_search.best_estimator_
 
 
-# In[100]:
+# In[51]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_BESTGRIDSEARCH_MODEL == True):\n    predictions_train = grid_search.best_estimator_.predict(df_train)\n    df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)\n\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_train' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_train, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_train' + '.pickle', 'rb') as f:\n        df_predictions_train = pickle.load(f)")
 
 
-# In[101]:
+# In[52]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_BESTGRIDSEARCH_MODEL == True):\n    predictions_test = grid_search.best_estimator_.predict(df_test)\n    df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)\n\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_test' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_test, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_test' + '.pickle', 'rb') as f:\n        df_predictions_test = pickle.load(f)")
 
 
-# In[105]:
+# In[53]:
 
 
 df_predictions_train.shape
 
+
+# ## Performance measures
+
+# In[56]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[57]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[58]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_train_labels, df_predictions_train)
+
+
+# In[59]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[60]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[58]:
+
+
+roc_auc_score(df_train_labels, df_predictions_train)
+
+
+# In[61]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[62]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[63]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_test_labels, df_predictions_test)
+
+
+# In[64]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[65]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[64]:
+
+
+roc_auc_score(df_test_labels, df_predictions_test)
+
+
+# ## Check how many instances have at least 1 tag predicted
+
+# In[68]:
+
+
+df_test_labels_sum = df_test_labels.sum(axis=1)
+
+
+# In[69]:
+
+
+df_test_labels_sum.shape
+
+
+# In[70]:
+
+
+df_test_labels_sum[df_test_labels_sum > 0]
+
+
+# => 91% of instances have at least 1 predicted class to true (61% precision on them)
 
 # # Annex (old code)
 
