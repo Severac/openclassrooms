@@ -273,13 +273,13 @@ df
 
 # # Global counts
 
-# In[ ]:
+# In[18]:
 
 
 df
 
 
-# In[ ]:
+# In[19]:
 
 
 #pandas_profiling.ProfileReport(df)
@@ -366,6 +366,20 @@ tags_represented_posts_cumulated[1500]
 
 
 # # Frequency visualisation of tokens
+
+# In[35]:
+
+
+import matplotlib.pylab as pylab
+
+params = {'legend.fontsize': 'x-large',
+          'figure.figsize': (16, 9),
+         'axes.labelsize': 'x-large',
+         'axes.titlesize':'x-large',
+         'xtick.labelsize':'x-large',
+         'ytick.labelsize':'x-large'}
+pylab.rcParams.update(params)
+
 
 # In[37]:
 

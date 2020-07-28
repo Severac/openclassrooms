@@ -5,7 +5,7 @@
 
 # # Global settings
 
-# In[46]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -452,46 +452,58 @@ df_train_labels.shape
 df_test_labels.shape
 
 
+# In[43]:
+
+
+print(df_test_labels.columns.tolist())
+
+
+# In[42]:
+
+
+pd.Index(['a', 'b'])
+
+
 # # Prepare text data (remove html in Body, and regroup Body + title)
 
-# In[39]:
+# In[41]:
 
 
 df_train = df_train_ori
 df_test = df_test_ori
 
 
-# In[40]:
+# In[42]:
 
 
 dataprep = PrepareTextData()
 
 
-# In[41]:
+# In[ ]:
 
 
 df_train = dataprep.fit_transform(df_train)
 
 
-# In[42]:
+# In[ ]:
 
 
 df_test = dataprep.transform(df_test)
 
 
-# In[43]:
+# In[ ]:
 
 
 df_train
 
 
-# In[44]:
+# In[ ]:
 
 
 df_test
 
 
-# In[45]:
+# In[ ]:
 
 
 df_train_tags
@@ -3088,7 +3100,7 @@ df_test_labels_sum.shape
 df_test_labels_sum[df_test_labels_sum > 0]
 
 
-# => 91% of instances have at least 1 predicted class to true (61% precision on them)
+# => 91% of instances have at least 1 predicted class to true (77% precision on them)
 
 # # Annex (old code)
 
