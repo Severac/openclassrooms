@@ -2803,25 +2803,25 @@ get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2 == True):\n    pre
 get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2 == True):\n    predictions_train = prediction_pipeline.predict(df_train)\n    df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_train' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_train, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_train' + '.pickle', 'rb') as f:\n        df_predictions_train = pickle.load(f)")
 
 
-# In[ ]:
+# In[70]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2 == True):\n    predictions_test = prediction_pipeline.predict(df_test)\n    df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_test' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_test, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_test' + '.pickle', 'rb') as f:\n        df_predictions_test = pickle.load(f)")
 
 
-# In[ ]:
+# In[71]:
 
 
 df_predictions_train
 
 
-# In[ ]:
+# In[72]:
 
 
 df_predictions_test
 
 
-# In[ ]:
+# In[73]:
 
 
 df_train
@@ -2829,32 +2829,32 @@ df_train
 
 # ## Performance measures
 
-# In[ ]:
+# In[74]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[ ]:
+# In[75]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[ ]:
+# In[76]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_train_labels, df_predictions_train)
 
 
-# In[ ]:
+# In[77]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[ ]:
+# In[78]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='macro')
@@ -2866,32 +2866,32 @@ recall_score(df_train_labels, df_predictions_train, average='macro')
 roc_auc_score(df_train_labels, df_predictions_train)
 
 
-# In[ ]:
+# In[79]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[ ]:
+# In[80]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[ ]:
+# In[81]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_test_labels, df_predictions_test)
 
 
-# In[ ]:
+# In[82]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[ ]:
+# In[83]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='macro')
@@ -2903,7 +2903,7 @@ recall_score(df_test_labels, df_predictions_test, average='macro')
 roc_auc_score(df_test_labels, df_predictions_test)
 
 
-# In[ ]:
+# In[84]:
 
 
 predictions_test.shape
@@ -2917,25 +2917,39 @@ predictions_test.shape
 
 # ## Check how many instances have at least 1 tag predicted
 
-# In[ ]:
+# In[85]:
 
 
 df_predictions_test_sum = df_predictions_test.sum(axis=1)
 
 
-# In[ ]:
+# In[86]:
 
 
 df_predictions_test_sum.shape
 
 
-# In[ ]:
+# In[87]:
 
 
 df_predictions_test_sum[df_predictions_test_sum > 0]
 
 
-# => X% of instances have at least 1 predicted class to true.... Better than 13% let's hope
+# => 13.6% of instances have at least 1 predicted class to true.... :(
+
+# Even though :
+
+# In[89]:
+
+
+df_train_labels_sum = df_train_labels.sum(axis=1)
+
+
+# In[91]:
+
+
+print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label on training set')
+
 
 # # Implementation of a Perceptron Classifier with MultiOutputClassifier and partial fit
 
