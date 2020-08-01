@@ -138,6 +138,12 @@ LOAD_KNN_MODEL = True
 KNN_FILE_MODEL_PREFIX = 'knn_model'
 
 
+# Set this to load (or train again / save) second KNN model to disk  (in "Implementation of KNN classification algorithm on 9000 instances all of which have at least 1 label" part)
+SAVE_KNN_MODEL2 = True
+LOAD_KNN_MODEL2 = False
+
+KNN_FILE_MODEL_PREFIX2 = 'knn_model2'
+
 SAVE_BESTGRIDSEARCH_MODEL = False
 LOAD_BESTGRIDSEARCH_MODEL = True
 BESTGRIDSEARCH_FILE_MODEL_PREFIX = 'bestgridsearch_model_'
@@ -452,13 +458,13 @@ df_train_labels.shape
 df_test_labels.shape
 
 
-# In[43]:
+# In[39]:
 
 
 print(df_test_labels.columns.tolist())
 
 
-# In[42]:
+# In[40]:
 
 
 pd.Index(['a', 'b'])
@@ -479,31 +485,31 @@ df_test = df_test_ori
 dataprep = PrepareTextData()
 
 
-# In[ ]:
+# In[43]:
 
 
 df_train = dataprep.fit_transform(df_train)
 
 
-# In[ ]:
+# In[44]:
 
 
 df_test = dataprep.transform(df_test)
 
 
-# In[ ]:
+# In[45]:
 
 
 df_train
 
 
-# In[ ]:
+# In[46]:
 
 
 df_test
 
 
-# In[ ]:
+# In[47]:
 
 
 df_train_tags
@@ -1557,7 +1563,7 @@ df_test_labels_sum.shape
 df_test_labels_sum[df_test_labels_sum > 0]
 
 
-# => 90% of instances have at least 1 predicted class to true (61% precision on them)
+# => 90% of instances have at least 1 predicted label to true
 
 # ## Check tags that have never been predicted
 
@@ -2632,6 +2638,305 @@ roc_auc_score(df_test_labels, df_predictions_test)
 predictions_test.shape
 
 
+# # Clean training instances that have no predicted labels, then implementation of a KNN classification algorithm on 90000 instances and check predictions
+
+# ## Check how many instances have at least 1 label
+
+# In[48]:
+
+
+df_train_labels_sum = df_train_labels.sum(axis=1)
+
+
+# In[49]:
+
+
+df_train_labels_sum.shape
+
+
+# In[50]:
+
+
+df_train_labels_sum[df_train_labels_sum > 0]
+
+
+# In[51]:
+
+
+df_train_labels.shape
+
+
+# => 90% of instances have at least 1 predicted label to true
+
+# In[52]:
+
+
+print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label')
+
+
+# ## Drop training instances without labels
+
+# In[53]:
+
+
+df_train.drop(index=df_train_labels_sum[df_train_labels_sum == 0].index, inplace=True)
+
+
+# In[54]:
+
+
+df_train_labels.drop(index=df_train_labels_sum[df_train_labels_sum == 0].index, inplace=True)
+
+
+# In[55]:
+
+
+df_train_labels.shape
+
+
+# In[56]:
+
+
+df_train.shape
+
+
+# In[57]:
+
+
+df_train_labels.reset_index(drop=True, inplace=True)
+
+
+# In[58]:
+
+
+df_train.reset_index(drop=True, inplace=True)
+
+
+# In[59]:
+
+
+df_train.loc[2000]
+
+
+# In[60]:
+
+
+df_train_labels.loc[2000][df_train_labels.loc[2000] == 1]
+
+
+# In[61]:
+
+
+df_train_ori = df_train.copy(deep=True)
+df_test_ori = df_test.copy(deep=True)
+
+df_train_labels_ori = df_train_labels.copy(deep=True)
+df_test_labels_ori = df_test_labels.copy(deep=True)
+
+
+# ## Implementation of KNN classification algorithm on 9000 instances all of which have at least 1 label
+
+# In[62]:
+
+
+from functions import *
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[63]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
+
+
+# In[64]:
+
+
+DATASET_SIZE = 90000
+DATASET_TEST_SIZE = 10000
+
+df_train = df_train.loc[0:DATASET_SIZE-1, :]
+df_train_labels = df_train_labels.loc[0:DATASET_SIZE-1, :]
+
+df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
+df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
+
+
+# In[65]:
+
+
+df_train_tags = df_train_tags.loc[0:DATASET_SIZE-1, :]
+df_test_tags = df_test_tags.loc[0:DATASET_SIZE-1, :]
+
+
+# In[66]:
+
+
+df_train
+
+
+# In[67]:
+
+
+prediction_pipeline = Pipeline([
+    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text', n_dim=200)),
+    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier(n_neighbors=10),)
+    ])
+
+
+# In[68]:
+
+
+get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2 == True):\n    prediction_pipeline.fit(df_train, df_train_labels)\n    \n    with open(KNN_FILE_MODEL_PREFIX2 + 'prediction_pipeline' + '.pickle', 'wb') as f:\n        pickle.dump(prediction_pipeline, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'prediction_pipeline' + '.pickle', 'rb') as f:\n        prediction_pipeline = pickle.load(f)")
+
+
+# In[69]:
+
+
+get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2 == True):\n    predictions_train = prediction_pipeline.predict(df_train)\n    df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_train' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_train, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_train' + '.pickle', 'rb') as f:\n        df_predictions_train = pickle.load(f)")
+
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2 == True):\n    predictions_test = prediction_pipeline.predict(df_test)\n    df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_test' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_test, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_test' + '.pickle', 'rb') as f:\n        df_predictions_test = pickle.load(f)")
+
+
+# In[ ]:
+
+
+df_predictions_train
+
+
+# In[ ]:
+
+
+df_predictions_test
+
+
+# In[ ]:
+
+
+df_train
+
+
+# ## Performance measures
+
+# In[ ]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[ ]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[ ]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_train_labels, df_predictions_train)
+
+
+# In[ ]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[ ]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[58]:
+
+
+roc_auc_score(df_train_labels, df_predictions_train)
+
+
+# In[ ]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[ ]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[ ]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_test_labels, df_predictions_test)
+
+
+# In[ ]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[ ]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[64]:
+
+
+roc_auc_score(df_test_labels, df_predictions_test)
+
+
+# In[ ]:
+
+
+predictions_test.shape
+
+
+# In[ ]:
+
+
+
+
+
+# ## Check how many instances have at least 1 tag predicted
+
+# In[ ]:
+
+
+df_predictions_test_sum = df_predictions_test.sum(axis=1)
+
+
+# In[ ]:
+
+
+df_predictions_test_sum.shape
+
+
+# In[ ]:
+
+
+df_predictions_test_sum[df_predictions_test_sum > 0]
+
+
+# => X% of instances have at least 1 predicted class to true.... Better than 13% let's hope
+
 # # Implementation of a Perceptron Classifier with MultiOutputClassifier and partial fit
 
 # In[152]:
@@ -2954,7 +3259,7 @@ predictions_test.shape
 
 # # Load GridSearch results and analyze them
 
-# In[47]:
+# In[44]:
 
 
 from functions import *
@@ -2962,7 +3267,7 @@ importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[48]:
+# In[45]:
 
 
 df_train = df_train_ori
@@ -2972,12 +3277,18 @@ df_train_labels = df_train_labels_ori
 df_test_labels = df_test_labels_ori
 
 
-# In[49]:
+# In[46]:
 
 
 grid_search = None
 
 grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'gridsearch_PJ6')
+
+
+# In[56]:
+
+
+grid_search.predict(PrepareTextData().fit_transform(df_train.loc[[4]]))
 
 
 # In[50]:
@@ -2986,13 +3297,13 @@ grid_search, df_grid_search_results = save_or_load_search_params(grid_search, 'g
 grid_search.best_estimator_
 
 
-# In[51]:
+# In[57]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_BESTGRIDSEARCH_MODEL == True):\n    predictions_train = grid_search.best_estimator_.predict(df_train)\n    df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)\n\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_train' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_train, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_train' + '.pickle', 'rb') as f:\n        df_predictions_train = pickle.load(f)")
 
 
-# In[52]:
+# In[58]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_BESTGRIDSEARCH_MODEL == True):\n    predictions_test = grid_search.best_estimator_.predict(df_test)\n    df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)\n\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_test' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_test, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(BESTGRIDSEARCH_FILE_MODEL_PREFIX + 'predictions_test' + '.pickle', 'rb') as f:\n        df_predictions_test = pickle.load(f)")
@@ -3002,6 +3313,18 @@ get_ipython().run_cell_magic('time', '', "if (SAVE_BESTGRIDSEARCH_MODEL == True)
 
 
 df_predictions_train.shape
+
+
+# In[68]:
+
+
+df_predictions_test.sum(axis=1)[df_predictions_test.sum(axis=1) > 0]
+
+
+# In[69]:
+
+
+df_predictions_test.shape
 
 
 # ## Performance measures
@@ -3082,25 +3405,45 @@ roc_auc_score(df_test_labels, df_predictions_test)
 
 # ## Check how many instances have at least 1 tag predicted
 
-# In[68]:
+# In[70]:
 
 
 df_test_labels_sum = df_test_labels.sum(axis=1)
 
 
-# In[69]:
+# In[71]:
 
 
 df_test_labels_sum.shape
 
 
-# In[70]:
+# In[72]:
 
 
 df_test_labels_sum[df_test_labels_sum > 0]
 
 
 # => 91% of instances have at least 1 predicted class to true (77% precision on them)
+
+# In[73]:
+
+
+df_predictions_test_sum = df_predictions_test.sum(axis=1)
+
+
+# In[74]:
+
+
+df_predictions_test_sum.shape
+
+
+# In[75]:
+
+
+df_predictions_test_sum[df_predictions_test_sum > 0]
+
+
+# => 13% of instances have at least 1 predicted class to true :(
 
 # # Annex (old code)
 
