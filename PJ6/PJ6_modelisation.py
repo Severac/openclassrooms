@@ -138,9 +138,16 @@ LOAD_KNN_MODEL = True
 KNN_FILE_MODEL_PREFIX = 'knn_model'
 
 
-# Set this to load (or train again / save) second KNN model to disk  (in "Implementation of KNN classification algorithm on 9000 instances all of which have at least 1 label" part)
-SAVE_KNN_MODEL2 = True
-LOAD_KNN_MODEL2 = False
+# Set this to load (or train again / save) second KNN model to disk  
+#  (in "Implementation of KNN classification algorithm on 9000 instances all of which have at least 1 label" part)
+#  (and also in "Same as 1/ but with predict proba instead of predict" part)
+SAVE_KNN_MODEL2 = False
+LOAD_KNN_MODEL2 = True
+
+# Set this to load (or predict again / save) probabilites prediction on model 2 to disk  (in "Same as 1/ but with predict proba instead of predict" part)
+SAVE_KNN_MODEL2_PROBA = False
+LOAD_KNN_MODEL2_PROBA = True
+
 
 KNN_FILE_MODEL_PREFIX2 = 'knn_model2'
 
@@ -2638,7 +2645,7 @@ roc_auc_score(df_test_labels, df_predictions_test)
 predictions_test.shape
 
 
-# # Clean training instances that have no predicted labels, then implementation of a KNN classification algorithm on 90000 instances and check predictions
+# # 1/ Clean training instances that have no predicted labels, then implementation of a KNN classification algorithm on 90000 instances and check predictions
 
 # ## Check how many instances have at least 1 label
 
@@ -2949,6 +2956,417 @@ df_train_labels_sum = df_train_labels.sum(axis=1)
 
 
 print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label on training set')
+
+
+# # 2/ Same as 1/ but with predict proba instead of predict
+
+# ## Check how many instances have at least 1 label
+
+# In[48]:
+
+
+df_train_labels_sum = df_train_labels.sum(axis=1)
+
+
+# In[49]:
+
+
+df_train_labels_sum.shape
+
+
+# In[50]:
+
+
+df_train_labels_sum[df_train_labels_sum > 0]
+
+
+# In[51]:
+
+
+df_train_labels.shape
+
+
+# => 90% of instances have at least 1 predicted label to true
+
+# In[52]:
+
+
+print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label')
+
+
+# ## Drop training instances without labels
+
+# In[53]:
+
+
+df_train.drop(index=df_train_labels_sum[df_train_labels_sum == 0].index, inplace=True)
+
+
+# In[54]:
+
+
+df_train_labels.drop(index=df_train_labels_sum[df_train_labels_sum == 0].index, inplace=True)
+
+
+# In[55]:
+
+
+df_train_labels.shape
+
+
+# In[56]:
+
+
+df_train.shape
+
+
+# In[57]:
+
+
+df_train_labels.reset_index(drop=True, inplace=True)
+
+
+# In[58]:
+
+
+df_train.reset_index(drop=True, inplace=True)
+
+
+# In[59]:
+
+
+df_train.loc[2000]
+
+
+# In[60]:
+
+
+df_train_labels.loc[2000][df_train_labels.loc[2000] == 1]
+
+
+# In[61]:
+
+
+df_train_ori = df_train.copy(deep=True)
+df_test_ori = df_test.copy(deep=True)
+
+df_train_labels_ori = df_train_labels.copy(deep=True)
+df_test_labels_ori = df_test_labels.copy(deep=True)
+
+
+# ## Implementation of KNN classification algorithm on 9000 instances all of which have at least 1 label
+
+# In[62]:
+
+
+from functions import *
+importlib.reload(sys.modules['functions'])
+from functions import *
+
+
+# In[63]:
+
+
+df_train = df_train_ori
+df_test = df_test_ori
+
+df_train_labels = df_train_labels_ori
+df_test_labels = df_test_labels_ori
+
+
+# In[64]:
+
+
+DATASET_SIZE = 90000
+DATASET_TEST_SIZE = 10000
+
+df_train = df_train.loc[0:DATASET_SIZE-1, :]
+df_train_labels = df_train_labels.loc[0:DATASET_SIZE-1, :]
+
+df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
+df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
+
+
+# In[65]:
+
+
+df_train_tags = df_train_tags.loc[0:DATASET_SIZE-1, :]
+df_test_tags = df_test_tags.loc[0:DATASET_SIZE-1, :]
+
+
+# In[66]:
+
+
+df_train
+
+
+# In[67]:
+
+
+prediction_pipeline = Pipeline([
+    ('doc2vec', Doc2Vec_Vectorizer(model_path=DOC2VEC_TRAINING_SAVE_FILE, feature_totransform='all_text', n_dim=200)),
+    #('features_selector', FeaturesSelector(features_toselect=['Tags'])),
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier(n_neighbors=10),)
+    ])
+
+
+# In[68]:
+
+
+get_ipython().run_cell_magic('time', '', '# Normally, SAVE_KNN_MODEL2 == False  here.  Set to true if you want to retrain model that have been already saved in part "1/ (Clean training instances that have no predicted labels)"\nif (SAVE_KNN_MODEL2 == True):\n    prediction_pipeline.fit(df_train, df_train_labels)\n    \n    with open(KNN_FILE_MODEL_PREFIX2 + \'prediction_pipeline\' + \'.pickle\', \'wb\') as f:\n        pickle.dump(prediction_pipeline, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + \'prediction_pipeline\' + \'.pickle\', \'rb\') as f:\n        prediction_pipeline = pickle.load(f)')
+
+
+# In[69]:
+
+
+get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2_PROBA == True):\n    predictions_train_proba = prediction_pipeline.predict_proba(df_train)\n    #df_predictions_train_proba = pd.DataFrame(predictions_train_proba, columns=df_train_labels.columns)\n    \n    # Weird that we need to transpose instances and labels in probabilities we get :\n    df_predictions_train_proba = pd.DataFrame(np.array(predictions_train_proba)[:, :, 1].T, columns=df_train_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_train_proba' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_train_proba, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_train_proba' + '.pickle', 'rb') as f:\n        df_predictions_train_proba = pickle.load(f)")
+
+
+# In[71]:
+
+
+get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2_PROBA == True):\n    predictions_test_proba = prediction_pipeline.predict_proba(df_test)\n    #df_predictions_test_proba = pd.DataFrame(predictions_test_proba, columns=df_test_labels.columns)\n    df_predictions_test_proba = pd.DataFrame(np.array(predictions_test_proba)[:, :, 1].T, columns=df_test_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_test_proba' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_test_proba, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_test_proba' + '.pickle', 'rb') as f:\n        df_predictions_test_proba = pickle.load(f)")
+
+
+# In[72]:
+
+
+df_predictions_train_proba
+
+
+# In[73]:
+
+
+df_predictions_test_proba
+
+
+# ## Computed predictions based on custom trigger
+
+# In[147]:
+
+
+PREDICTIONS_TRIGGER = 0.2
+
+
+# In[148]:
+
+
+df_predictions_train = pd.DataFrame(np.where(df_predictions_train_proba >= PREDICTIONS_TRIGGER, 1, 0), columns=df_train_labels.columns)
+df_predictions_test = pd.DataFrame(np.where(df_predictions_test_proba >= PREDICTIONS_TRIGGER, 1, 0), columns=df_test_labels.columns)
+
+
+# ## Check how many instances have at least 1 tag predicted
+
+# In[149]:
+
+
+(df_predictions_train > 0).any(1)[(df_predictions_train > 0).any(1)]
+
+
+# In[150]:
+
+
+(df_predictions_test > 0).any(1)[(df_predictions_test > 0).any(1)]
+
+
+# In[151]:
+
+
+df_predictions_test.shape
+
+
+# In[152]:
+
+
+df_predictions_train.loc[1, df_predictions_train.gt(0).any() ]
+
+
+# In[153]:
+
+
+df_predictions_train.columns
+
+
+# In[154]:
+
+
+df_predictions_train_subset = df_predictions_train.loc[0:5, :]
+
+
+# In[155]:
+
+
+((df_predictions_train_subset > 0).any(1))
+
+
+# In[156]:
+
+
+df_predictions_train_subset > 0
+
+
+# In[157]:
+
+
+df_predictions_train_subset.loc[:, df_predictions_train_subset.gt(0).any() ]
+
+
+# In[158]:
+
+
+# https://stackoverflow.com/questions/41090333/return-first-matching-value-column-name-in-new-dataframe
+df_predictions_train_subset.apply(lambda x : x[x > 0].index, axis=1)
+
+
+# ## Performance measures (copy/pasted from 1 :  to be completed with predict proba results)
+
+# In[74]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[75]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[76]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_train_labels, df_predictions_train)
+
+
+# In[77]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[78]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[58]:
+
+
+roc_auc_score(df_train_labels, df_predictions_train)
+
+
+# In[79]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[80]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[81]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_test_labels, df_predictions_test)
+
+
+# In[82]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[83]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[64]:
+
+
+roc_auc_score(df_test_labels, df_predictions_test)
+
+
+# In[84]:
+
+
+predictions_test.shape
+
+
+# In[ ]:
+
+
+
+
+
+# ## Check how many instances have at least 1 tag predicted
+
+# In[85]:
+
+
+df_predictions_test_sum = df_predictions_test.sum(axis=1)
+
+
+# In[86]:
+
+
+df_predictions_test_sum.shape
+
+
+# In[87]:
+
+
+df_predictions_test_sum[df_predictions_test_sum > 0]
+
+
+# => 13.6% of instances have at least 1 predicted class to true.... :(
+
+# Even though :
+
+# In[89]:
+
+
+df_train_labels_sum = df_train_labels.sum(axis=1)
+
+
+# In[91]:
+
+
+print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label on training set')
+
+
+# # Same as 2/ but with stratified split based on clustering, and 90000 instances sampling based on clustering
+
+# ## Determining clusters
+
+# In[ ]:
+
+
+kmeans_model = KMeans(n_clusters=5, random_state=42).fit(df)
+df_clusters = kmeans_model.labels_
+
+
+# ## Stratified split train / test
+
+# In[ ]:
+
+
+from sklearn.model_selection import train_test_split
+df_train, df_test, df_train_labels, df_test_labels = train_test_split(df, df_labels, test_size=0.1, random_state=42, shuffle = True, stratify = df_clusters)
+
+
+# In[ ]:
+
+
+
 
 
 # # Implementation of a Perceptron Classifier with MultiOutputClassifier and partial fit
