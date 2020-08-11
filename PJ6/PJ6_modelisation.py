@@ -5,7 +5,7 @@
 
 # # Global settings
 
-# In[80]:
+# In[125]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -72,6 +72,8 @@ from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
+
+from sklearn.metrics import classification_report
 
 from yellowbrick.classifier import ROCAUC
 from sklearn.metrics import roc_auc_score
@@ -3144,54 +3146,93 @@ df_predictions_test_proba
 
 # ## Visualize precision / recall with different triggers of probabilities
 
-# In[81]:
+# In[119]:
 
 
 PREDICTIONS_TRIGGERS = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
 
-precision_scores = []
-recall_scores = []
-f1_scores = []
+precision_scores_train = []
+precision_scores_test = []
+
+recall_scores_train = []
+recall_scores_test = []
+
+f1_scores_train = []
+f1_scores_test = []
 
 for trigger in PREDICTIONS_TRIGGERS:
     df_predictions_train = pd.DataFrame(np.where(df_predictions_train_proba >= trigger, 1, 0), columns=df_train_labels.columns)
     df_predictions_test = pd.DataFrame(np.where(df_predictions_test_proba >= trigger, 1, 0), columns=df_test_labels.columns)
     
+    precision_scores_train.append(precision_score(df_train_labels, df_predictions_train, average='micro'))
+    precision_scores_test.append(precision_score(df_test_labels, df_predictions_test, average='micro'))
+    
+    recall_scores_train.append(recall_score(df_train_labels, df_predictions_train, average='micro'))
+    recall_scores_test.append(recall_score(df_test_labels, df_predictions_test, average='micro'))
+    
+    f1_scores_train.append(f1_score(df_train_labels, df_predictions_train, average='micro'))
+    f1_scores_test.append(f1_score(df_test_labels, df_predictions_test, average='micro'))
 
-    precision_scores.append(precision_score(df_train_labels, df_predictions_train, average='micro'))
-    recall_scores.append(recall_score(df_train_labels, df_predictions_train, average='micro'))
-    f1_scores.append(f1_score(df_train_labels, df_predictions_train, average='micro'))
 
-
-# In[85]:
+# In[120]:
 
 
 plt.xlabel("recall")
 plt.ylabel("precision")
 
-plt.title("precision micro vs. recall micro curve")
+plt.title("precision micro vs. recall micro curve, training set")
 
-plt.plot(recall_scores, precision_scores, '-o')
+plt.plot(recall_scores_train, precision_scores_train, '-o')
 
 
-# In[84]:
+# => For a trigger of 0.3  we have Precision of 0.6 and recall of ~0.35  
+# => We choose this trigger of 0.3 in order to prioritize precision over recall
+
+# In[121]:
 
 
 plt.xlabel('Prediction trigger')
 plt.ylabel('F1 score')
-plt.title("F1 score micro vs. trigger")
-plt.plot(PREDICTIONS_TRIGGERS, f1_scores, '-o')
+plt.title("F1 score micro vs. trigger, training set")
+plt.plot(PREDICTIONS_TRIGGERS, f1_scores_train, '-o')
 
+
+# => Trigger of 0.3 has relatively high F1 score
+
+# In[122]:
+
+
+plt.xlabel("recall")
+plt.ylabel("precision")
+
+plt.title("precision micro vs. recall micro curve, test set")
+
+plt.plot(recall_scores_test, precision_scores_test, '-o')
+
+
+# => For a trigger of 0.3  we have Precision of ~0.4 and recall of ~0.2  
+# => We choose this trigger of 0.3 in order to prioritize precision over recall
+
+# In[123]:
+
+
+plt.xlabel('Prediction trigger')
+plt.ylabel('F1 score')
+plt.title("F1 score micro vs. trigger, test set")
+plt.plot(PREDICTIONS_TRIGGERS, f1_scores_test, '-o')
+
+
+# => Trigger of 0.3 has relatively high F1 score
 
 # ## Computed predictions based on custom trigger
 
-# In[86]:
+# In[144]:
 
 
 PREDICTIONS_TRIGGER = 0.3
 
 
-# In[87]:
+# In[145]:
 
 
 df_predictions_train = pd.DataFrame(np.where(df_predictions_train_proba >= PREDICTIONS_TRIGGER, 1, 0), columns=df_train_labels.columns)
@@ -3200,61 +3241,61 @@ df_predictions_test = pd.DataFrame(np.where(df_predictions_test_proba >= PREDICT
 
 # ## Check how many instances have at least 1 tag predicted
 
-# In[88]:
+# In[146]:
 
 
 (df_predictions_train > 0).any(1)[(df_predictions_train > 0).any(1)]
 
 
-# In[89]:
+# In[147]:
 
 
 (df_predictions_test > 0).any(1)[(df_predictions_test > 0).any(1)]
 
 
-# In[90]:
+# In[148]:
 
 
 df_predictions_test.shape
 
 
-# In[91]:
+# In[149]:
 
 
 df_predictions_train.loc[1, df_predictions_train.gt(0).any() ]
 
 
-# In[92]:
+# In[150]:
 
 
 df_predictions_train.columns
 
 
-# In[93]:
+# In[151]:
 
 
 df_predictions_train_subset = df_predictions_train.loc[0:5, :]
 
 
-# In[94]:
+# In[152]:
 
 
 ((df_predictions_train_subset > 0).any(1))
 
 
-# In[95]:
+# In[153]:
 
 
 df_predictions_train_subset > 0
 
 
-# In[96]:
+# In[154]:
 
 
 df_predictions_train_subset.loc[:, df_predictions_train_subset.gt(0).any() ]
 
 
-# In[97]:
+# In[155]:
 
 
 # https://stackoverflow.com/questions/41090333/return-first-matching-value-column-name-in-new-dataframe
@@ -3264,75 +3305,75 @@ df_predictions_train_subset.apply(lambda x : x[x > 0].index, axis=1)
 
 # ## Performance measures (copy/pasted from 1 :  to be completed with predict proba results)
 
-# In[98]:
+# In[156]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[99]:
+# In[157]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[100]:
+# In[158]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_train_labels, df_predictions_train)
 
 
-# In[101]:
+# In[159]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[102]:
+# In[160]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[103]:
+# In[161]:
 
 
 roc_auc_score(df_train_labels, df_predictions_train)
 
 
-# In[104]:
+# In[162]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[105]:
+# In[163]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[106]:
+# In[164]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_test_labels, df_predictions_test)
 
 
-# In[107]:
+# In[165]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[108]:
+# In[166]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[109]:
+# In[167]:
 
 
 roc_auc_score(df_test_labels, df_predictions_test)
@@ -3346,19 +3387,19 @@ roc_auc_score(df_test_labels, df_predictions_test)
 
 # ## Check how many instances have at least 1 tag predicted
 
-# In[110]:
+# In[168]:
 
 
 df_predictions_test_sum = df_predictions_test.sum(axis=1)
 
 
-# In[111]:
+# In[169]:
 
 
 df_predictions_test_sum.shape
 
 
-# In[112]:
+# In[170]:
 
 
 df_predictions_test_sum[df_predictions_test_sum > 0]
@@ -3368,16 +3409,194 @@ df_predictions_test_sum[df_predictions_test_sum > 0]
 
 # Even though :
 
-# In[113]:
+# In[171]:
 
 
 df_train_labels_sum = df_train_labels.sum(axis=1)
 
 
-# In[114]:
+# In[172]:
 
 
 print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label on training set')
+
+
+# ## Compare model precision score with instance representations
+
+# In[173]:
+
+
+df_test_classif_dict = classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist(), output_dict=True)
+
+
+# In[174]:
+
+
+df_train_classif_dict = classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)
+
+
+# In[175]:
+
+
+#print(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist()))
+
+
+# In[176]:
+
+
+del df_test_classif_dict['micro avg']
+del df_test_classif_dict['macro avg']
+del df_test_classif_dict['weighted avg']
+del df_test_classif_dict['samples avg']
+
+
+# In[177]:
+
+
+del df_train_classif_dict['micro avg']
+del df_train_classif_dict['macro avg']
+del df_train_classif_dict['weighted avg']
+del df_train_classif_dict['samples avg']
+
+
+# In[178]:
+
+
+len(df_test_classif_dict)
+
+
+# In[179]:
+
+
+df_classif_test_report = pd.DataFrame(df_test_classif_dict).transpose()    .sort_values(by='precision', ascending=False)
+
+
+# In[180]:
+
+
+df_classif_test_report['precision'][df_classif_test_report['precision'] == 0]
+
+
+# In[134]:
+
+
+df_test_classif_dict
+
+
+# In[135]:
+
+
+df_test_classif_dict['Tags_.htaccess']['precision']
+
+
+# In[181]:
+
+
+df_train_labels_count_dict = df_train_labels.sum().to_dict()
+
+
+# In[137]:
+
+
+df_train_labels_count_dict
+
+
+# In[182]:
+
+
+count_values = [df_train_labels_count_dict[key] for key in df_train_labels_count_dict]
+
+
+# In[183]:
+
+
+precision_values = [df_test_classif_dict[key]['precision'] for key in df_train_labels_count_dict]
+
+
+# In[184]:
+
+
+precision_values_train = [df_train_classif_dict[key]['precision'] for key in df_train_labels_count_dict]
+
+
+# In[185]:
+
+
+precision_values
+
+
+# In[186]:
+
+
+#plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
+#sns.set(rc={'figure.figsize':(50,9)})
+import seaborn as sns
+
+#fig = plt.figure()
+
+fig = plt.gcf()
+#fig.set_size_inches(16, 10) # Does not work. Onlyly heiht  
+
+#plt.scatter(count_values, precision_values_train)
+g = sns.jointplot(count_values, precision_values, color='blue', height=13)
+g.set_axis_labels("Number of tag occurence on training set", "Precision on test set")
+plt.subplots_adjust(top=0.9)
+plt.suptitle('Precision (test) against instance representation (train)')
+
+
+# In[187]:
+
+
+#plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
+#sns.set(rc={'figure.figsize':(50,9)})
+import seaborn as sns
+
+fig = plt.figure()
+
+#plt.scatter(count_values, precision_values_train)
+g = sns.jointplot(count_values, precision_values_train, color='blue', height=10)
+g.set_axis_labels("Number of tag occurence on training set", "Precision on training set")
+plt.subplots_adjust(top=0.9)
+plt.suptitle('Precision (train) against instance representation (train)')
+
+
+# In[191]:
+
+
+realdf_train_classif_dict = pd.DataFrame(df_train_classif_dict)
+
+
+# In[211]:
+
+
+tags_precision1 = realdf_train_classif_dict.loc['precision', :][realdf_train_classif_dict.loc['precision', :] == 1]
+
+
+# In[219]:
+
+
+tags_precision1.index.values
+
+
+# In[200]:
+
+
+realdf_train_classif_dict.loc['precision', :][realdf_train_classif_dict.loc['precision', :] == 0]
+
+
+# In[199]:
+
+
+realdf_train_classif_dict
+
+
+# In[227]:
+
+
+for key in df_train_labels_count_dict:
+    if key in (tags_precision1.index.values):
+        nb_values = df_train_labels_count_dict[key]
+        print(f'{key} : values of {nb_values}')
 
 
 # # Same as 2/ but with stratified split based on clustering, and 90000 instances sampling based on clustering
