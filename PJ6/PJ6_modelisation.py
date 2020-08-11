@@ -5,7 +5,7 @@
 
 # # Global settings
 
-# In[1]:
+# In[80]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -71,6 +71,7 @@ from sklearn import tree
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
 
 from yellowbrick.classifier import ROCAUC
 from sklearn.metrics import roc_auc_score
@@ -3123,33 +3124,74 @@ get_ipython().run_cell_magic('time', '', '# Normally, SAVE_KNN_MODEL2 == False  
 get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2_PROBA == True):\n    predictions_train_proba = prediction_pipeline.predict_proba(df_train)\n    #df_predictions_train_proba = pd.DataFrame(predictions_train_proba, columns=df_train_labels.columns)\n    \n    # Weird that we need to transpose instances and labels in probabilities we get :\n    df_predictions_train_proba = pd.DataFrame(np.array(predictions_train_proba)[:, :, 1].T, columns=df_train_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_train_proba' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_train_proba, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_train_proba' + '.pickle', 'rb') as f:\n        df_predictions_train_proba = pickle.load(f)")
 
 
-# In[71]:
+# In[70]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2_PROBA == True):\n    predictions_test_proba = prediction_pipeline.predict_proba(df_test)\n    #df_predictions_test_proba = pd.DataFrame(predictions_test_proba, columns=df_test_labels.columns)\n    df_predictions_test_proba = pd.DataFrame(np.array(predictions_test_proba)[:, :, 1].T, columns=df_test_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_test_proba' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_test_proba, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_test_proba' + '.pickle', 'rb') as f:\n        df_predictions_test_proba = pickle.load(f)")
 
 
-# In[72]:
+# In[71]:
 
 
 df_predictions_train_proba
 
 
-# In[73]:
+# In[72]:
 
 
 df_predictions_test_proba
 
 
+# ## Visualize precision / recall with different triggers of probabilities
+
+# In[81]:
+
+
+PREDICTIONS_TRIGGERS = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
+
+precision_scores = []
+recall_scores = []
+f1_scores = []
+
+for trigger in PREDICTIONS_TRIGGERS:
+    df_predictions_train = pd.DataFrame(np.where(df_predictions_train_proba >= trigger, 1, 0), columns=df_train_labels.columns)
+    df_predictions_test = pd.DataFrame(np.where(df_predictions_test_proba >= trigger, 1, 0), columns=df_test_labels.columns)
+    
+
+    precision_scores.append(precision_score(df_train_labels, df_predictions_train, average='micro'))
+    recall_scores.append(recall_score(df_train_labels, df_predictions_train, average='micro'))
+    f1_scores.append(f1_score(df_train_labels, df_predictions_train, average='micro'))
+
+
+# In[85]:
+
+
+plt.xlabel("recall")
+plt.ylabel("precision")
+
+plt.title("precision micro vs. recall micro curve")
+
+plt.plot(recall_scores, precision_scores, '-o')
+
+
+# In[84]:
+
+
+plt.xlabel('Prediction trigger')
+plt.ylabel('F1 score')
+plt.title("F1 score micro vs. trigger")
+plt.plot(PREDICTIONS_TRIGGERS, f1_scores, '-o')
+
+
 # ## Computed predictions based on custom trigger
 
-# In[147]:
+# In[86]:
 
 
-PREDICTIONS_TRIGGER = 0.2
+PREDICTIONS_TRIGGER = 0.3
 
 
-# In[148]:
+# In[87]:
 
 
 df_predictions_train = pd.DataFrame(np.where(df_predictions_train_proba >= PREDICTIONS_TRIGGER, 1, 0), columns=df_train_labels.columns)
@@ -3158,147 +3200,142 @@ df_predictions_test = pd.DataFrame(np.where(df_predictions_test_proba >= PREDICT
 
 # ## Check how many instances have at least 1 tag predicted
 
-# In[149]:
+# In[88]:
 
 
 (df_predictions_train > 0).any(1)[(df_predictions_train > 0).any(1)]
 
 
-# In[150]:
+# In[89]:
 
 
 (df_predictions_test > 0).any(1)[(df_predictions_test > 0).any(1)]
 
 
-# In[151]:
+# In[90]:
 
 
 df_predictions_test.shape
 
 
-# In[152]:
+# In[91]:
 
 
 df_predictions_train.loc[1, df_predictions_train.gt(0).any() ]
 
 
-# In[153]:
+# In[92]:
 
 
 df_predictions_train.columns
 
 
-# In[154]:
+# In[93]:
 
 
 df_predictions_train_subset = df_predictions_train.loc[0:5, :]
 
 
-# In[155]:
+# In[94]:
 
 
 ((df_predictions_train_subset > 0).any(1))
 
 
-# In[156]:
+# In[95]:
 
 
 df_predictions_train_subset > 0
 
 
-# In[157]:
+# In[96]:
 
 
 df_predictions_train_subset.loc[:, df_predictions_train_subset.gt(0).any() ]
 
 
-# In[158]:
+# In[97]:
 
 
 # https://stackoverflow.com/questions/41090333/return-first-matching-value-column-name-in-new-dataframe
+pd.set_option('display.max_columns', None)
 df_predictions_train_subset.apply(lambda x : x[x > 0].index, axis=1)
 
 
 # ## Performance measures (copy/pasted from 1 :  to be completed with predict proba results)
 
-# In[74]:
+# In[98]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[75]:
+# In[99]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[76]:
+# In[100]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_train_labels, df_predictions_train)
 
 
-# In[77]:
+# In[101]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[78]:
+# In[102]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[58]:
+# In[103]:
 
 
 roc_auc_score(df_train_labels, df_predictions_train)
 
 
-# In[79]:
+# In[104]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[80]:
+# In[105]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[81]:
+# In[106]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_test_labels, df_predictions_test)
 
 
-# In[82]:
+# In[107]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[83]:
+# In[108]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[64]:
+# In[109]:
 
 
 roc_auc_score(df_test_labels, df_predictions_test)
-
-
-# In[84]:
-
-
-predictions_test.shape
 
 
 # In[ ]:
@@ -3309,35 +3346,35 @@ predictions_test.shape
 
 # ## Check how many instances have at least 1 tag predicted
 
-# In[85]:
+# In[110]:
 
 
 df_predictions_test_sum = df_predictions_test.sum(axis=1)
 
 
-# In[86]:
+# In[111]:
 
 
 df_predictions_test_sum.shape
 
 
-# In[87]:
+# In[112]:
 
 
 df_predictions_test_sum[df_predictions_test_sum > 0]
 
 
-# => 13.6% of instances have at least 1 predicted class to true.... :(
+# => 64% of instances have at least 1 predicted class to true....
 
 # Even though :
 
-# In[89]:
+# In[113]:
 
 
 df_train_labels_sum = df_train_labels.sum(axis=1)
 
 
-# In[91]:
+# In[114]:
 
 
 print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label on training set')

@@ -33,6 +33,7 @@ import matplotlib.pyplot as plt
 
 #API_MODEL_PICKLE_FILE = 'API_model_PJ6.pickle'
 API_MODEL_PICKLE_FILE = 'grid_search_results_gridsearch_PJ6.pickle'
+PREDICTIONS_TRIGGER = 0.3
 
 LOGO_IMAGE_FILE = 'so-logo.png'
 
@@ -136,27 +137,38 @@ df_input = pd.DataFrame([[post_object, post_body]],\
 
 df_input_transformed = PrepareTextData().fit_transform(df_input)
 
-df_predictions = pd.DataFrame(model.predict(df_input_transformed), columns=TAG_VALUES)
+#df_predictions = pd.DataFrame(model.predict(df_input_transformed), columns=TAG_VALUES)
+predictions_proba = model.predict_proba(df_input_transformed)
+df_predictions_proba = pd.DataFrame(np.array(predictions_proba)[:, :, 1].T, columns=TAG_VALUES)
+df_predictions = pd.DataFrame(np.where(df_predictions_proba >= PREDICTIONS_TRIGGER, 1, 0), columns=TAG_VALUES)
 
 df_predictions_todisplay = df_predictions.loc[:, df_predictions.gt(0).any() ]
+df_predictions_proba_todisplay = df_predictions_proba.loc[:, df_predictions_proba.gt(0).any() ]
 
 st.header('Model predictions :')
-st.table(df_predictions.sum(axis=1))
-
-st.write(df_predictions_todisplay)
-
-######################" Left Panel : model analysis ##############################################"
 
 debug_mode = st.sidebar.checkbox('Display debug data', value=False)
 
-if (debug_mode == True):
-    st.header('Step 0 : Input data')
-    st.table(df_input)
+if ((post_object != '') and (post_body != '')):
+    #st.table(df_predictions.sum(axis=1))
     
-    st.header('Step 1 : Data transformed')
-    st.table(df_input_transformed)
+    st.write(df_predictions_todisplay)
+
+    st.header('Tag probabilities')
+    st.table(df_predictions_proba_todisplay)
     
+    ######################" Left Panel : model analysis ##############################################"
     
+    if (debug_mode == True):
+        st.header('Step 0 : Input data')
+        st.table(df_input)
+        
+        st.header('Step 1 : Data transformed')
+        st.table(df_input_transformed)
+        
+else:
+    st.write('Please enter text above to get tag predictions')
+        
 del model
 # Manual memory cleaning at the of the program is necessary to avoid memory leak 
 # (due to streamlit bug ?)
