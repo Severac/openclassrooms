@@ -2426,88 +2426,6 @@ df_train_ori
 df_train_labels
 
 
-# ## Performance measures
-
-# In[ ]:
-
-
-precision_score(df_train_labels, df_predictions_train, average='micro')
-
-
-# In[ ]:
-
-
-precision_score(df_train_labels, df_predictions_train, average='macro')
-
-
-# In[ ]:
-
-
-# Shows exact matchs of all tags
-accuracy_score(df_train_labels, df_predictions_train)
-
-
-# In[ ]:
-
-
-recall_score(df_train_labels, df_predictions_train, average='micro')
-
-
-# In[ ]:
-
-
-recall_score(df_train_labels, df_predictions_train, average='macro')
-
-
-# In[ ]:
-
-
-roc_auc_score(df_train_labels, df_predictions_train)
-
-
-# In[ ]:
-
-
-precision_score(df_test_labels, df_predictions_test, average='micro')
-
-
-# In[ ]:
-
-
-precision_score(df_test_labels, df_predictions_test, average='macro')
-
-
-# In[ ]:
-
-
-# Shows exact matchs of all tags
-accuracy_score(df_test_labels, df_predictions_test)
-
-
-# In[ ]:
-
-
-recall_score(df_test_labels, df_predictions_test, average='micro')
-
-
-# In[ ]:
-
-
-recall_score(df_test_labels, df_predictions_test, average='macro')
-
-
-# In[ ]:
-
-
-roc_auc_score(df_test_labels, df_predictions_test)
-
-
-# In[ ]:
-
-
-predictions_test.shape
-
-
 # # 1/ Clean training instances that have no predicted labels, then implementation of a KNN classification algorithm on 90000 instances and check predictions
 
 # ## Check how many instances have at least 1 label
@@ -2771,54 +2689,6 @@ recall_score(df_test_labels, df_predictions_test, average='macro')
 
 
 roc_auc_score(df_test_labels, df_predictions_test)
-
-
-# In[505]:
-
-
-predictions_test.shape
-
-
-# In[ ]:
-
-
-
-
-
-# ## Check how many instances have at least 1 tag predicted
-
-# In[ ]:
-
-
-df_predictions_test_sum = df_predictions_test.sum(axis=1)
-
-
-# In[ ]:
-
-
-df_predictions_test_sum.shape
-
-
-# In[ ]:
-
-
-df_predictions_test_sum[df_predictions_test_sum > 0]
-
-
-# => 13.6% of instances have at least 1 predicted class to true.... :(
-
-# Even though :
-
-# In[ ]:
-
-
-df_train_labels_sum = df_train_labels.sum(axis=1)
-
-
-# In[ ]:
-
-
-print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label on training set')
 
 
 # # 2/ Same as 1/ but with predict proba instead of predict
@@ -3163,7 +3033,7 @@ pd.set_option('display.max_columns', None)
 df_predictions_train_subset.apply(lambda x : x[x > 0].index, axis=1)
 
 
-# ## Performance measures (copy/pasted from 1 :  to be completed with predict proba results)
+# ## Performance measures
 
 # In[90]:
 
@@ -3588,7 +3458,7 @@ df_train, df_test, df_train_labels, df_test_labels = train_test_split(df, df_lab
 
 
 
-# # Implementation of a Perceptron Classifier with MultiOutputClassifier and partial fit
+# # Implementation of a Perceptron Classifier with MultiOutputClassifier
 
 # In[152]:
 
@@ -3736,167 +3606,6 @@ predictions_train.sum(axis=1)[predictions_train.sum(axis=1) > 0]
 
 
 precision_score(df_train_labels, predictions_train, average='micro')
-
-
-# In[76]:
-
-
-minibatch_indexes = minibatch_generate_indexes(df_train, STEP_SIZE)
-
-
-# In[77]:
-
-
-get_ipython().run_cell_magic('time', '', 'nb_iter = int(DATASET_SIZE / STEP_SIZE)\nprogbar = tqdm(range(nb_iter))\n\ntrain_errors, val_errors = [], []\n\nfor (left_index, right_index) in minibatch_indexes:\n    print(\'Partial fit\')\n    # right_index+1 because df_train is in numpy format, right bound is not included (but in pandas, right bound is included)\n    \n    # Below does not work : 3rd parameters (classes) can\'t be strings :(\n    #prediction_model.partial_fit(df_train[left_index:right_index+1], df_train_labels.loc[left_index:right_index], df_train_labels.columns.tolist())\n    \n    prediction_model.partial_fit(df_train[left_index:right_index+1],\\\n                                 df_train_labels.loc[left_index:right_index],\\\n                                 [df_train_labels[c].unique() for c in df_train_labels])\n    \n    print(\'Intermediate prediction\')\n    #print(\'1\\n\')\n    predictions_train = prediction_model.predict(df_train[left_index:right_index+1])\n    #print(\'2\\n\')\n    predictions_test = prediction_model.predict(df_test)\n    #print(\'3\\n\')\n    \n    train_errors.append(precision_score(df_train_labels.loc[left_index:right_index], predictions_train, average=\'micro\'))\n    #val_errors.append(precision_score(df_test_labels.loc[left_index:right_index], predictions_test, average=\'micro\'))   \n    val_errors.append(precision_score(df_test_labels, predictions_test, average=\'micro\'))   \n    \n    print(\'Train errors : \' + str(train_errors))\n    print(\'Test errors : \' + str(val_errors))\n    \n    progbar.update(1)\n    \nplt.plot(train_errors, "r-+", linewidth=2, label="train")\nplt.plot(val_errors, "b-", linewidth=3, label="test")\nplt.legend(loc="upper right", fontsize=14)   # not shown in the book\nplt.xlabel("Training set iterations", fontsize=14) # not shown\n\nplt.ylabel("precision_micro", fontsize=14)      ')
-
-
-# In[48]:
-
-
-df_train_labels.sum(axis=1)[df_train_labels.sum(axis=1) > 0]
-
-
-# In[49]:
-
-
-predictions_train.shape
-
-
-# In[50]:
-
-
-predictions_test.shape
-
-
-# In[53]:
-
-
-predictions_test_df=pd.DataFrame(predictions_test)
-
-
-# In[55]:
-
-
-predictions_test_df.sum(axis=1)[predictions_test_df.sum(axis=1) > 0]
-
-
-# In[108]:
-
-
-df_tmp = pd.DataFrame(predictions_test).prod(axis=1)
-
-
-# In[109]:
-
-
-df_tmp[df_tmp > 0]
-
-
-# In[96]:
-
-
-np.unique(df_train_labels.loc[0:5])
-
-
-# In[98]:
-
-
-from sklearn.preprocessing import MultiLabelBinarizer
-mlb = MultiLabelBinarizer(classes=df_train_labels.columns.tolist())
-
-
-# In[102]:
-
-
-df_train_ori
-
-
-# In[100]:
-
-
-df_train_labels
-
-
-# ## Performance measures
-
-# In[131]:
-
-
-precision_score(df_train_labels, df_predictions_train, average='micro')
-
-
-# In[ ]:
-
-
-precision_score(df_train_labels, df_predictions_train, average='macro')
-
-
-# In[130]:
-
-
-# Shows exact matchs of all tags
-accuracy_score(df_train_labels, df_predictions_train)
-
-
-# In[ ]:
-
-
-recall_score(df_train_labels, df_predictions_train, average='micro')
-
-
-# In[ ]:
-
-
-recall_score(df_train_labels, df_predictions_train, average='macro')
-
-
-# In[ ]:
-
-
-roc_auc_score(df_train_labels, df_predictions_train)
-
-
-# In[ ]:
-
-
-precision_score(df_test_labels, df_predictions_test, average='micro')
-
-
-# In[ ]:
-
-
-precision_score(df_test_labels, df_predictions_test, average='macro')
-
-
-# In[ ]:
-
-
-# Shows exact matchs of all tags
-accuracy_score(df_test_labels, df_predictions_test)
-
-
-# In[ ]:
-
-
-recall_score(df_test_labels, df_predictions_test, average='micro')
-
-
-# In[ ]:
-
-
-recall_score(df_test_labels, df_predictions_test, average='macro')
-
-
-# In[ ]:
-
-
-roc_auc_score(df_test_labels, df_predictions_test)
-
-
-# In[ ]:
-
-
-predictions_test.shape
 
 
 # # GridSearch with cross validation
@@ -4189,156 +3898,6 @@ df_test.reset_index(drop=True, inplace=True)
 
 # df['all_text']
 
-# ## Number of correct labels predicted per sample
-
-# In[ ]:
-
-
-df_train_nb_correct_labels_predicted = (df_train_labels * df_predictions_train).sum(axis=1)
-
-
-# In[ ]:
-
-
-df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted > 0]
-
-
-# In[ ]:
-
-
-df_test_nb_correct_labels_predicted = (df_test_labels * df_predictions_test).sum(axis=1)
-
-
-# In[ ]:
-
-
-df_test_nb_correct_labels_predicted[df_test_nb_correct_labels_predicted > 0]
-
-
-# In[ ]:
-
-
-df_test_nb_correct_labels_predicted
-
-
-# In[ ]:
-
-
-df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0]
-
-
-# In[ ]:
-
-
-index_train_noclue = df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0].index
-
-
-# In[ ]:
-
-
-index_train_noclue
-
-
-# For instance 0, model is not totally out of the truth :  tag pycharm predicted :
-
-# In[ ]:
-
-
-df_train_labels.loc[0, :]['Tags_python']
-
-
-# In[ ]:
-
-
-df_predictions_train.loc[0,:][df_predictions_train.loc[0,:] > 0]
-
-
-# In[ ]:
-
-
-df_train.loc[index_train_noclue, :]
-
-
-# In[ ]:
-
-
-doc_index = 0
-col_names_tags_value_1 = [col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()]
-
-
-# In[ ]:
-
-
-df_train_labels[df_train_labels == 1]
-
-
-# In[ ]:
-
-
-(df_train_labels == 1)
-
-
-# In[ ]:
-
-
-df_train_labels
-
-
-# In[ ]:
-
-
-df_train_labels.loc[1]['Tags_java']
-
-
-# In[ ]:
-
-
-# Labels that model had no clue to predict (all labels that were missed, plus the model missed all of the other labels for the instance) => too slow
-col_names_tags_value_1_labels = [[col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                        if (df_train_labels[df_train_labels.index.isin([doc_index])][col] == 1).any()]  for doc_index in index_train_noclue]
-
-
-# In[ ]:
-
-
-col_names_tags_value_1_labels
-
-
-# In[ ]:
-
-
-with open(KNN_FILE_MODEL_PREFIX + 'col_names_tags_value_1_labels' + '.pickle', 'wb') as f:
-    pickle.dump(col_names_tags_value_1_labels, f, pickle.HIGHEST_PROTOCOL)
-
-
-# In[143]:
-
-
-'''
-#Too slow
-col_names_tags_value_1_allsamples = [[col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]\
-                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()] for doc_index in index_train_noclue]
-
-'''
-
-
-# In[142]:
-
-
-col_names_tags_value_1
-
-
-# In[ ]:
-
-
-df_predictions_test
-
-
-# In[116]:
-
-
-df_predictions_train['Tags_electron'].sum()
-
-
 # In[104]:
 
 
@@ -4349,4 +3908,167 @@ print(classification_report(df_train_labels, df_predictions_train, target_names=
 
 
 df_predictions_train
+
+
+# ## Partial fit of Perceptron 
+
+# In[76]:
+
+
+minibatch_indexes = minibatch_generate_indexes(df_train, STEP_SIZE)
+
+
+# In[77]:
+
+
+get_ipython().run_cell_magic('time', '', 'nb_iter = int(DATASET_SIZE / STEP_SIZE)\nprogbar = tqdm(range(nb_iter))\n\ntrain_errors, val_errors = [], []\n\nfor (left_index, right_index) in minibatch_indexes:\n    print(\'Partial fit\')\n    # right_index+1 because df_train is in numpy format, right bound is not included (but in pandas, right bound is included)\n    \n    # Below does not work : 3rd parameters (classes) can\'t be strings :(\n    #prediction_model.partial_fit(df_train[left_index:right_index+1], df_train_labels.loc[left_index:right_index], df_train_labels.columns.tolist())\n    \n    prediction_model.partial_fit(df_train[left_index:right_index+1],\\\n                                 df_train_labels.loc[left_index:right_index],\\\n                                 [df_train_labels[c].unique() for c in df_train_labels])\n    \n    print(\'Intermediate prediction\')\n    #print(\'1\\n\')\n    predictions_train = prediction_model.predict(df_train[left_index:right_index+1])\n    #print(\'2\\n\')\n    predictions_test = prediction_model.predict(df_test)\n    #print(\'3\\n\')\n    \n    train_errors.append(precision_score(df_train_labels.loc[left_index:right_index], predictions_train, average=\'micro\'))\n    #val_errors.append(precision_score(df_test_labels.loc[left_index:right_index], predictions_test, average=\'micro\'))   \n    val_errors.append(precision_score(df_test_labels, predictions_test, average=\'micro\'))   \n    \n    print(\'Train errors : \' + str(train_errors))\n    print(\'Test errors : \' + str(val_errors))\n    \n    progbar.update(1)\n    \nplt.plot(train_errors, "r-+", linewidth=2, label="train")\nplt.plot(val_errors, "b-", linewidth=3, label="test")\nplt.legend(loc="upper right", fontsize=14)   # not shown in the book\nplt.xlabel("Training set iterations", fontsize=14) # not shown\n\nplt.ylabel("precision_micro", fontsize=14)      ')
+
+
+# In[48]:
+
+
+df_train_labels.sum(axis=1)[df_train_labels.sum(axis=1) > 0]
+
+
+# In[49]:
+
+
+predictions_train.shape
+
+
+# In[50]:
+
+
+predictions_test.shape
+
+
+# In[53]:
+
+
+predictions_test_df=pd.DataFrame(predictions_test)
+
+
+# In[55]:
+
+
+predictions_test_df.sum(axis=1)[predictions_test_df.sum(axis=1) > 0]
+
+
+# In[108]:
+
+
+df_tmp = pd.DataFrame(predictions_test).prod(axis=1)
+
+
+# In[109]:
+
+
+df_tmp[df_tmp > 0]
+
+
+# In[96]:
+
+
+np.unique(df_train_labels.loc[0:5])
+
+
+# In[98]:
+
+
+from sklearn.preprocessing import MultiLabelBinarizer
+mlb = MultiLabelBinarizer(classes=df_train_labels.columns.tolist())
+
+
+# In[102]:
+
+
+df_train_ori
+
+
+# In[100]:
+
+
+df_train_labels
+
+
+# ## Performance measures
+
+# In[131]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[ ]:
+
+
+precision_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[130]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_train_labels, df_predictions_train)
+
+
+# In[ ]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='micro')
+
+
+# In[ ]:
+
+
+recall_score(df_train_labels, df_predictions_train, average='macro')
+
+
+# In[ ]:
+
+
+roc_auc_score(df_train_labels, df_predictions_train)
+
+
+# In[ ]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[ ]:
+
+
+precision_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[ ]:
+
+
+# Shows exact matchs of all tags
+accuracy_score(df_test_labels, df_predictions_test)
+
+
+# In[ ]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='micro')
+
+
+# In[ ]:
+
+
+recall_score(df_test_labels, df_predictions_test, average='macro')
+
+
+# In[ ]:
+
+
+roc_auc_score(df_test_labels, df_predictions_test)
+
+
+# In[ ]:
+
+
+predictions_test.shape
 
