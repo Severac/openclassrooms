@@ -1595,78 +1595,6 @@ df_test_labels_sum[df_test_labels_sum > 0]
 
 # ## Check tags that have never been predicted
 
-# In[75]:
-
-
-df_first = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6], 'c': [7,8,9]})
-
-
-# In[76]:
-
-
-df_toy = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
-
-
-# In[77]:
-
-
-df_toy
-
-
-# In[78]:
-
-
-df_toy > 2
-
-
-# In[79]:
-
-
-(df_toy > 4).any()
-
-
-# In[80]:
-
-
-df_toy.loc[:, (df_toy > 4).any(axis=0)]
-
-
-# In[81]:
-
-
-df_toy.loc[:, (df_toy > 4).any(axis=0)].shape
-
-
-# In[82]:
-
-
-df_first[df_toy.columns].loc[:, (df_toy > 5).any(axis=0)]
-
-
-# In[83]:
-
-
-df_first[df_toy.columns].loc[:, (df_toy > 5).any(axis=0)] > 5
-
-
-# In[84]:
-
-
-(df_first[df_toy.columns].loc[:, (df_toy > 5).any(axis=0)] > 5).any(axis=1)
-
-
-# In[85]:
-
-
-df_first
-
-
-# In[86]:
-
-
-df_first[df_toy.columns].loc[(df_toy > 5).any(axis=1), :]
-
-
 # In[87]:
 
 
@@ -1906,168 +1834,6 @@ len(df_classif_train_report['precision'][df_classif_train_report['precision'] ==
 df_classif_test_report['precision'].hist()
 
 
-# ## Number of correct labels predicted per sample
-
-# In[ ]:
-
-
-df_train_nb_correct_labels_predicted = (df_train_labels * df_predictions_train).sum(axis=1)
-
-
-# In[ ]:
-
-
-df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted > 0]
-
-
-# In[ ]:
-
-
-df_test_nb_correct_labels_predicted = (df_test_labels * df_predictions_test).sum(axis=1)
-
-
-# In[ ]:
-
-
-df_test_nb_correct_labels_predicted[df_test_nb_correct_labels_predicted > 0]
-
-
-# In[ ]:
-
-
-df_test_nb_correct_labels_predicted
-
-
-# In[ ]:
-
-
-df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0]
-
-
-# In[ ]:
-
-
-index_train_noclue = df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0].index
-
-
-# In[ ]:
-
-
-index_train_noclue
-
-
-# For instance 0, model is not totally out of the truth :  tag pycharm predicted :
-
-# In[ ]:
-
-
-df_train_labels.loc[0, :]['Tags_python']
-
-
-# In[ ]:
-
-
-df_predictions_train.loc[0,:][df_predictions_train.loc[0,:] > 0]
-
-
-# In[ ]:
-
-
-df_train.loc[index_train_noclue, :]
-
-
-# In[ ]:
-
-
-doc_index = 0
-col_names_tags_value_1 = [col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()]
-
-
-# In[ ]:
-
-
-df_train_labels[df_train_labels == 1]
-
-
-# In[ ]:
-
-
-(df_train_labels == 1)
-
-
-# In[ ]:
-
-
-df_train_labels
-
-
-# In[ ]:
-
-
-df_train_labels.loc[1]['Tags_java']
-
-
-# In[ ]:
-
-
-# Labels that model had no clue to predict (all labels that were missed, plus the model missed all of the other labels for the instance) => too slow
-col_names_tags_value_1_labels = [[col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                        if (df_train_labels[df_train_labels.index.isin([doc_index])][col] == 1).any()]  for doc_index in index_train_noclue]
-
-
-# In[ ]:
-
-
-col_names_tags_value_1_labels
-
-
-# In[ ]:
-
-
-with open(KNN_FILE_MODEL_PREFIX + 'col_names_tags_value_1_labels' + '.pickle', 'wb') as f:
-    pickle.dump(col_names_tags_value_1_labels, f, pickle.HIGHEST_PROTOCOL)
-
-
-# In[143]:
-
-
-'''
-#Too slow
-col_names_tags_value_1_allsamples = [[col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]\
-                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()] for doc_index in index_train_noclue]
-
-'''
-
-
-# In[142]:
-
-
-col_names_tags_value_1
-
-
-# In[ ]:
-
-
-df_predictions_test
-
-
-# In[116]:
-
-
-df_predictions_train['Tags_electron'].sum()
-
-
-# In[104]:
-
-
-print(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist()))
-
-
-# In[101]:
-
-
-df_predictions_train
-
-
 # ## Compare model precision score with instance representations
 
 # In[123]:
@@ -2268,15 +2034,6 @@ len(realdf_test_classif_dict.loc['precision', :][realdf_test_classif_dict.loc['p
 
 
 realdf_test_classif_dict.loc['precision', :][realdf_test_classif_dict.loc['precision', :] == 0]
-
-
-# In[151]:
-
-
-for key in df_test_labels_count_dict:
-    if key in (tags_precision0_test.index.values):
-        nb_values = df_test_labels_count_dict[key]
-        print(f'{key} : values of {nb_values}')
 
 
 # In[154]:
@@ -4431,3 +4188,165 @@ df_test.reset_index(drop=True, inplace=True)
 
 
 # df['all_text']
+
+# ## Number of correct labels predicted per sample
+
+# In[ ]:
+
+
+df_train_nb_correct_labels_predicted = (df_train_labels * df_predictions_train).sum(axis=1)
+
+
+# In[ ]:
+
+
+df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted > 0]
+
+
+# In[ ]:
+
+
+df_test_nb_correct_labels_predicted = (df_test_labels * df_predictions_test).sum(axis=1)
+
+
+# In[ ]:
+
+
+df_test_nb_correct_labels_predicted[df_test_nb_correct_labels_predicted > 0]
+
+
+# In[ ]:
+
+
+df_test_nb_correct_labels_predicted
+
+
+# In[ ]:
+
+
+df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0]
+
+
+# In[ ]:
+
+
+index_train_noclue = df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0].index
+
+
+# In[ ]:
+
+
+index_train_noclue
+
+
+# For instance 0, model is not totally out of the truth :  tag pycharm predicted :
+
+# In[ ]:
+
+
+df_train_labels.loc[0, :]['Tags_python']
+
+
+# In[ ]:
+
+
+df_predictions_train.loc[0,:][df_predictions_train.loc[0,:] > 0]
+
+
+# In[ ]:
+
+
+df_train.loc[index_train_noclue, :]
+
+
+# In[ ]:
+
+
+doc_index = 0
+col_names_tags_value_1 = [col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()]
+
+
+# In[ ]:
+
+
+df_train_labels[df_train_labels == 1]
+
+
+# In[ ]:
+
+
+(df_train_labels == 1)
+
+
+# In[ ]:
+
+
+df_train_labels
+
+
+# In[ ]:
+
+
+df_train_labels.loc[1]['Tags_java']
+
+
+# In[ ]:
+
+
+# Labels that model had no clue to predict (all labels that were missed, plus the model missed all of the other labels for the instance) => too slow
+col_names_tags_value_1_labels = [[col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                        if (df_train_labels[df_train_labels.index.isin([doc_index])][col] == 1).any()]  for doc_index in index_train_noclue]
+
+
+# In[ ]:
+
+
+col_names_tags_value_1_labels
+
+
+# In[ ]:
+
+
+with open(KNN_FILE_MODEL_PREFIX + 'col_names_tags_value_1_labels' + '.pickle', 'wb') as f:
+    pickle.dump(col_names_tags_value_1_labels, f, pickle.HIGHEST_PROTOCOL)
+
+
+# In[143]:
+
+
+'''
+#Too slow
+col_names_tags_value_1_allsamples = [[col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]\
+                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()] for doc_index in index_train_noclue]
+
+'''
+
+
+# In[142]:
+
+
+col_names_tags_value_1
+
+
+# In[ ]:
+
+
+df_predictions_test
+
+
+# In[116]:
+
+
+df_predictions_train['Tags_electron'].sum()
+
+
+# In[104]:
+
+
+print(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist()))
+
+
+# In[101]:
+
+
+df_predictions_train
+
