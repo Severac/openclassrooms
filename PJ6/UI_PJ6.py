@@ -12,7 +12,7 @@ It takes object and body of a post as input,  and outputs predicted tags for tha
 Interface will be hosted here :  https://pj6.analysons.com/
 
 See "README API.txt" for installation instructions :
-    < Insert GitHub link>
+    https://github.com/Severac/openclassrooms/blob/master/PJ6/README%20API.txt
 
 """
 

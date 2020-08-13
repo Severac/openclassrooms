@@ -1,17 +1,15 @@
 URL of user interface (hosted on AWS) : 
 https://pj6.analysons.com/
 
-TO DO : update for PJ6
-
 To install the UI :
 
 Run an AWS EC2 instance (Ubuntu) and configure it  
-(add streamlit listen port 8504 on IP filtering.  Configure fixed IP for the instance.  Generate key .PEM file to be able to connect via SSH)
+(add streamlit listen port 8505 on IP filtering.  Configure fixed IP for the instance.  Generate key .PEM file to be able to connect via SSH)
 
 Create a directory streamlit_OC_PJ5 and upload following files on it :
 - UI_PJ6.py
 - functions.py
-- API_model_PJ6.pickle
+- grid_search_results_gridsearch_PJ6.pickle
 - so-logo.png
 
 Connected as ssh and run commands :
@@ -28,12 +26,17 @@ pip install plotly_express
 sudo apt-get install tmux
 tmux new -s StreamSession_PJ6
 cd streamlit_OC_PJ6
-streamlit run UI_PJ6.py --server.port=8504 --browser.serverPort='8504' --browser.serverAddress='pj6.analysons.com'
+streamlit run UI_PJ6.py --server.port=8505 --browser.serverPort='8505' --browser.serverAddress='pj6.analysons.com'
 
 Exit TMUX session with : Ctrl + B  then D (streamlit will continue to run in the background after your disconnect)
 
 To reattach to the session, in order to stop or relaunch streamlit :
 tmux attach -t StreamSession_PJ6
+
+Create a shell script to directly launch streamlit session in background (equivalent of above commands tmux new -s then streamlit reun) :
+RUN_CMD.sh:
+#!/bin/bash
+tmux new-session -d -s StreamSession_PJ6 "streamlit run UI_PJ6.py --server.port=8505 --browser.serverPort='8505' --browser.serverAddress='pj6.analysons.com'"
 
 Web server configuration for redirection :
 
@@ -50,7 +53,7 @@ sudo service apache2 restart
 
 Pour logger l'url:  ajout de %V dans le LogFormat du /etc/apache2/apache2.conf
 
-/etc/apache2/sites-available/000-default.conf :
+/etc/apache2/sites-available/000-default.conf (edit as root) :
 
 <VirtualHost *:80>
     ServerName pj6.analysons.com
@@ -67,10 +70,10 @@ sudo certbot certonly --apache
 
    RewriteEngine On
    RewriteCond %{HTTP:Upgrade} =websocket
-   RewriteRule /(.*) ws://localhost:8504/$1 [P]
+   RewriteRule /(.*) ws://localhost:8505/$1 [P]
    RewriteCond %{HTTP:Upgrade} !=websocket
-   RewriteRule /(.*) http://localhost:8504/$1 [P]
-   ProxyPassReverse / http://localhost:8504
+   RewriteRule /(.*) http://localhost:8505/$1 [P]
+   ProxyPassReverse / http://localhost:8505
 
    SSLEngine On
    SSLCertificateFile /etc/letsencrypt/live/pj6.analysons.com/fullchain.pem
@@ -80,4 +83,7 @@ sudo certbot certonly --apache
    CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 
+sudo service apache2 restart
+
+Add pj6.analysons.com on DNS (service route53 on AWS) as alias of analysons.com
 

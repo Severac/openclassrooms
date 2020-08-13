@@ -5,7 +5,7 @@
 
 # # Global settings
 
-# In[125]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -565,25 +565,25 @@ print('Durée doc2vec training: ' + str(end - start) + ' secondes')
 model_doc2vec.save(DOC2VEC_TRAINING_SAVE_FILE)
 
 
-# In[71]:
+# In[ ]:
 
 
 TaggedDocument(gensim.utils.simple_preprocess(df_train.iloc[0]['all_text']), [0])
 
 
-# In[72]:
+# In[ ]:
 
 
 gensim.utils.simple_preprocess("Hello this is a new text")
 
 
-# In[73]:
+# In[ ]:
 
 
 [model_doc2vec.infer_vector(gensim.utils.simple_preprocess(text)) for text in ['hello this is', 'second text']]
 
 
-# In[49]:
+# In[ ]:
 
 
 #a = [document for document in df_train.loc[:,'all_text'] ] 
@@ -1252,14 +1252,14 @@ plot_learning_curves(prediction_pipeline, df_train, df_test, df_train_labels, df
 
 # # Implementation of unsupervised LDA on 90000 instances
 
-# In[163]:
+# In[81]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[164]:
+# In[82]:
 
 
 df_train = df_train_ori
@@ -1269,7 +1269,7 @@ df_train_labels = df_train_labels_ori
 df_test_labels = df_test_labels_ori
 
 
-# In[165]:
+# In[83]:
 
 
 DATASET_SIZE = 90000
@@ -1282,20 +1282,20 @@ df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
 df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
 
 
-# In[166]:
+# In[84]:
 
 
 df_train_tags = df_train_tags.loc[0:DATASET_SIZE-1, :]
 df_test_tags = df_test_tags.loc[0:DATASET_SIZE-1, :]
 
 
-# In[167]:
+# In[85]:
 
 
 df_train
 
 
-# In[168]:
+# In[86]:
 
 
 '''
@@ -1304,61 +1304,85 @@ bow_encoder.fit(df_train, categorical_features_totransform=['all_text'])
 '''
 
 
-# In[169]:
+# In[87]:
 
 
 bow_encoder = CountVectorizer(tokenizer=(lambda x : x.split(' ')),                                 max_features=200, stop_words='english')
 
 
-# In[170]:
+# In[88]:
 
 
 df_train['all_text']
 
 
-# In[171]:
+# In[89]:
 
 
-bow_encoder.fit(df_train['all_text'])
+#bow_encoder.fit(df_train['all_text'].apply(remove_stopwords))
 
 
-# In[172]:
+# In[90]:
 
 
-df_train = bow_encoder.transform(df_train['all_text'])
+#df_train = bow_encoder.transform(df_train['all_text'].apply(remove_stopwords))
 
 
-# In[173]:
+# In[91]:
+
+
+bow_encoder = CountVectorizer(stop_words='english', max_features=200)
+
+
+# In[92]:
+
+
+df_train = bow_encoder.fit_transform(df_train['all_text'])
+
+
+# In[93]:
 
 
 df_train
 
 
-# In[174]:
+# In[94]:
+
+
+bow_encoder.get_feature_names()
+
+
+# In[95]:
 
 
 len(bow_encoder.vocabulary_)
 
 
-# In[175]:
+# In[96]:
 
 
 lda = LatentDirichletAllocation(n_components=50)
 
 
-# In[178]:
+# In[97]:
 
 
 res_lda = lda.fit_transform(df_train)
 
 
-# In[179]:
+# In[98]:
 
 
 res_lda
 
 
-# In[180]:
+# In[99]:
+
+
+res_lda.shape
+
+
+# In[100]:
 
 
 def print_top_words(model, feature_names, n_top_words):
@@ -1370,7 +1394,7 @@ def print_top_words(model, feature_names, n_top_words):
     print()
 
 
-# In[181]:
+# In[102]:
 
 
 tf_feature_names = bow_encoder.get_feature_names()
@@ -1381,14 +1405,14 @@ print_top_words(lda, tf_feature_names, 5)
 
 # # Implementation of a KNN classification algorithm on 90000 instances and check predictions
 
-# In[46]:
+# In[48]:
 
 
 importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[47]:
+# In[49]:
 
 
 df_train = df_train_ori
@@ -1398,7 +1422,7 @@ df_train_labels = df_train_labels_ori
 df_test_labels = df_test_labels_ori
 
 
-# In[48]:
+# In[50]:
 
 
 DATASET_SIZE = 90000
@@ -1411,20 +1435,20 @@ df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
 df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
 
 
-# In[49]:
+# In[51]:
 
 
 df_train_tags = df_train_tags.loc[0:DATASET_SIZE-1, :]
 df_test_tags = df_test_tags.loc[0:DATASET_SIZE-1, :]
 
 
-# In[50]:
+# In[52]:
 
 
 df_train
 
 
-# In[51]:
+# In[53]:
 
 
 prediction_pipeline = Pipeline([
@@ -1435,37 +1459,37 @@ prediction_pipeline = Pipeline([
     ])
 
 
-# In[52]:
+# In[54]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL == True):\n    prediction_pipeline.fit(df_train, df_train_labels)\n    \n    with open(KNN_FILE_MODEL_PREFIX + 'prediction_pipeline' + '.pickle', 'wb') as f:\n        pickle.dump(prediction_pipeline, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX + 'prediction_pipeline' + '.pickle', 'rb') as f:\n        prediction_pipeline = pickle.load(f)")
 
 
-# In[53]:
+# In[55]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL == True):\n    predictions_train = prediction_pipeline.predict(df_train)\n    df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX + 'predictions_train' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_train, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX + 'predictions_train' + '.pickle', 'rb') as f:\n        df_predictions_train = pickle.load(f)")
 
 
-# In[54]:
+# In[56]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL == True):\n    predictions_test = prediction_pipeline.predict(df_test)\n    df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX + 'predictions_test' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_test, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX + 'predictions_test' + '.pickle', 'rb') as f:\n        df_predictions_test = pickle.load(f)")
 
 
-# In[55]:
+# In[57]:
 
 
 df_predictions_train
 
 
-# In[56]:
+# In[58]:
 
 
 df_predictions_test
 
 
-# In[57]:
+# In[59]:
 
 
 df_train
@@ -1473,101 +1497,95 @@ df_train
 
 # ## Performance measures
 
-# In[53]:
+# In[60]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[54]:
+# In[61]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[55]:
+# In[62]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_train_labels, df_predictions_train)
 
 
-# In[56]:
+# In[63]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[57]:
+# In[64]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[58]:
+# In[65]:
 
 
 roc_auc_score(df_train_labels, df_predictions_train)
 
 
-# In[107]:
+# In[66]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[60]:
+# In[67]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[61]:
+# In[68]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_test_labels, df_predictions_test)
 
 
-# In[62]:
+# In[69]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[63]:
+# In[70]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[64]:
+# In[71]:
 
 
 roc_auc_score(df_test_labels, df_predictions_test)
 
 
-# In[65]:
-
-
-predictions_test.shape
-
-
 # ## Check how many instances have at least 1 tag predicted
 
-# In[66]:
+# In[72]:
 
 
 df_test_labels_sum = df_test_labels.sum(axis=1)
 
 
-# In[67]:
+# In[73]:
 
 
 df_test_labels_sum.shape
 
 
-# In[68]:
+# In[74]:
 
 
 df_test_labels_sum[df_test_labels_sum > 0]
@@ -1577,189 +1595,189 @@ df_test_labels_sum[df_test_labels_sum > 0]
 
 # ## Check tags that have never been predicted
 
-# In[69]:
+# In[75]:
 
 
 df_first = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6], 'c': [7,8,9]})
 
 
-# In[70]:
+# In[76]:
 
 
 df_toy = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
 
 
-# In[71]:
+# In[77]:
 
 
 df_toy
 
 
-# In[72]:
+# In[78]:
 
 
 df_toy > 2
 
 
-# In[73]:
+# In[79]:
 
 
 (df_toy > 4).any()
 
 
-# In[74]:
+# In[80]:
 
 
 df_toy.loc[:, (df_toy > 4).any(axis=0)]
 
 
-# In[75]:
+# In[81]:
 
 
 df_toy.loc[:, (df_toy > 4).any(axis=0)].shape
 
 
-# In[76]:
+# In[82]:
 
 
 df_first[df_toy.columns].loc[:, (df_toy > 5).any(axis=0)]
 
 
-# In[77]:
+# In[83]:
 
 
 df_first[df_toy.columns].loc[:, (df_toy > 5).any(axis=0)] > 5
 
 
-# In[78]:
+# In[84]:
 
 
 (df_first[df_toy.columns].loc[:, (df_toy > 5).any(axis=0)] > 5).any(axis=1)
 
 
-# In[79]:
+# In[85]:
 
 
 df_first
 
 
-# In[80]:
+# In[86]:
 
 
 df_first[df_toy.columns].loc[(df_toy > 5).any(axis=1), :]
 
 
-# In[81]:
+# In[87]:
 
 
 df_train_labels_sum = df_train_labels.sum(axis=0)
 
 
-# In[82]:
+# In[88]:
 
 
 df_train_labels_sum.shape
 
 
-# In[83]:
+# In[89]:
 
 
 df_predictions_train_sum = df_predictions_train.sum(axis=0)
 
 
-# In[84]:
+# In[90]:
 
 
 df_predictions_train_sum[df_predictions_train_sum == 0]
 
 
-# In[85]:
+# In[91]:
 
 
 (df_train_labels.loc[:, df_predictions_train_sum[df_predictions_train_sum == 0].index] > 0).any()
 
 
-# In[86]:
+# In[92]:
 
 
 df_train_labels[df_predictions_train_sum[df_predictions_train_sum == 0].index]
 
 
-# In[87]:
+# In[93]:
 
 
 # all indexes in df_train_labels that have at least 1 column with no predicted labels  (such as df_predictions_train_sum == 0)
 df_train_labels[df_predictions_train_sum[df_predictions_train_sum == 0].index].loc[(df_train_labels.loc[:, df_predictions_train_sum[df_predictions_train_sum == 0].index] > 0).any(axis=1), :]
 
 
-# In[88]:
+# In[94]:
 
 
 indexes_train_containing_non_predicted_labels = df_train_labels[df_predictions_train_sum[df_predictions_train_sum == 0].index].loc[(df_train_labels.loc[:, df_predictions_train_sum[df_predictions_train_sum == 0].index] > 0).any(axis=1), :].index
 
 
-# In[93]:
+# In[95]:
 
 
 df_train_tags.shape
 
 
-# In[111]:
+# In[96]:
 
 
 df_train_tags
 
 
-# In[114]:
+# In[97]:
 
 
 df_train_tags_containing_keyword = df_train_tags.loc[indexes_train_containing_non_predicted_labels, :]['Tags'].str.contains('unix')
 
 
-# In[117]:
+# In[98]:
 
 
 df_train_tags_containing_keyword[df_train_tags_containing_keyword].index
 
 
-# In[129]:
+# In[99]:
 
 
 df_train_labels.loc[df_train_tags_containing_keyword[df_train_tags_containing_keyword].index, :][['Tags_unix', 'Tags_linux']]
 
 
-# In[89]:
+# In[100]:
 
 
 df_train_labels.loc[indexes_train_containing_non_predicted_labels, :]
 
 
-# In[1]:
+# In[101]:
 
 
 # To continue :  add something like [''.join(str(l)) for l in y]  to join tag columns and see clearly 1 values
 
 
-# In[150]:
+# In[102]:
 
 
 df_predictions_train['Tags_memory'].sum()
 
 
-# In[138]:
+# In[103]:
 
 
 df_train_labels_sum.sort_values(ascending=True)
 
 
-# In[139]:
+# In[104]:
 
 
 df_test_labels_sum = df_test_labels.sum(axis=0)
 df_test_labels_sum.shape
 
 
-# In[140]:
+# In[105]:
 
 
 df_test_labels_sum.sort_values(ascending=True)
@@ -1767,21 +1785,21 @@ df_test_labels_sum.sort_values(ascending=True)
 
 # ## Number of instances per class
 
-# In[69]:
+# In[106]:
 
 
 pd.set_option('display.max_rows', 400)
 df_train_labels.sum().sort_values(ascending=False)
 
 
-# In[70]:
+# In[107]:
 
 
 pd.set_option('display.max_rows', 400)
 df_train_labels.sum().sort_values(ascending=False)
 
 
-# In[71]:
+# In[108]:
 
 
 df_test_labels.sum().sort_values(ascending=False)
@@ -1789,7 +1807,7 @@ df_test_labels.sum().sort_values(ascending=False)
 
 # ## Score per class
 
-# In[58]:
+# In[109]:
 
 
 from sklearn.metrics import classification_report
@@ -1797,13 +1815,13 @@ from sklearn.metrics import classification_report
 print(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist()))
 
 
-# In[59]:
+# In[110]:
 
 
 pd.DataFrame(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False).shape
 
 
-# In[60]:
+# In[111]:
 
 
 df_train_labels['Tags_plot'].sum()
@@ -1815,7 +1833,7 @@ df_train_labels['Tags_plot'].sum()
 
 
 
-# In[99]:
+# In[112]:
 
 
 df_classif_train_report = pd.DataFrame(classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False)
@@ -1823,25 +1841,25 @@ df_classif_train_report = pd.DataFrame(classification_report(df_train_labels, df
 
 # => La majorité des classes sont au dessus de 70% de précision
 
-# In[103]:
+# In[113]:
 
 
 df_classif_train_report[df_classif_train_report['precision'] == 0].shape
 
 
-# In[101]:
+# In[114]:
 
 
 df_classif_train_report.shape
 
 
-# In[100]:
+# In[115]:
 
 
 df_classif_train_report['precision'].hist()
 
 
-# In[104]:
+# In[116]:
 
 
 df_classif_test_report = pd.DataFrame(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist(), output_dict=True)).transpose()    .sort_values(by='precision', ascending=False)
@@ -1850,21 +1868,39 @@ df_classif_test_report = pd.DataFrame(classification_report(df_test_labels, df_p
 # => Overfit :  
 # Tags_python 	0.535714 	0.300000 	0.384615 	1200.0
 
-# In[113]:
+# In[117]:
 
 
 df_classif_test_report['precision'][df_classif_test_report['precision'] == 0]
 
 
-# In[112]:
+# In[118]:
 
 
 df_classif_test_report['precision'][df_classif_test_report['precision'] > 0]
 
 
+# In[119]:
+
+
+len(df_classif_test_report['precision'][df_classif_test_report['precision'] == 0])
+
+
 # => 213 tags with 0 precision on test set !
 
-# In[108]:
+# In[120]:
+
+
+df_classif_train_report['precision'][df_classif_train_report['precision'] == 0]
+
+
+# In[121]:
+
+
+len(df_classif_train_report['precision'][df_classif_train_report['precision'] == 0])
+
+
+# In[122]:
 
 
 df_classif_test_report['precision'].hist()
@@ -1872,49 +1908,49 @@ df_classif_test_report['precision'].hist()
 
 # ## Number of correct labels predicted per sample
 
-# In[76]:
+# In[ ]:
 
 
 df_train_nb_correct_labels_predicted = (df_train_labels * df_predictions_train).sum(axis=1)
 
 
-# In[77]:
+# In[ ]:
 
 
 df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted > 0]
 
 
-# In[78]:
+# In[ ]:
 
 
 df_test_nb_correct_labels_predicted = (df_test_labels * df_predictions_test).sum(axis=1)
 
 
-# In[79]:
+# In[ ]:
 
 
 df_test_nb_correct_labels_predicted[df_test_nb_correct_labels_predicted > 0]
 
 
-# In[80]:
+# In[ ]:
 
 
 df_test_nb_correct_labels_predicted
 
 
-# In[81]:
+# In[ ]:
 
 
 df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0]
 
 
-# In[82]:
+# In[ ]:
 
 
 index_train_noclue = df_train_nb_correct_labels_predicted[df_train_nb_correct_labels_predicted == 0].index
 
 
-# In[83]:
+# In[ ]:
 
 
 index_train_noclue
@@ -1922,69 +1958,69 @@ index_train_noclue
 
 # For instance 0, model is not totally out of the truth :  tag pycharm predicted :
 
-# In[84]:
+# In[ ]:
 
 
 df_train_labels.loc[0, :]['Tags_python']
 
 
-# In[85]:
+# In[ ]:
 
 
 df_predictions_train.loc[0,:][df_predictions_train.loc[0,:] > 0]
 
 
-# In[86]:
+# In[ ]:
 
 
 df_train.loc[index_train_noclue, :]
 
 
-# In[87]:
+# In[ ]:
 
 
 doc_index = 0
 col_names_tags_value_1 = [col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                          if (df_predictions_train[df_train_labels.index.isin([doc_index])][col] == 1).any()]
 
 
-# In[88]:
+# In[ ]:
 
 
 df_train_labels[df_train_labels == 1]
 
 
-# In[89]:
+# In[ ]:
 
 
 (df_train_labels == 1)
 
 
-# In[90]:
+# In[ ]:
 
 
 df_train_labels
 
 
-# In[99]:
+# In[ ]:
 
 
 df_train_labels.loc[1]['Tags_java']
 
 
-# In[91]:
+# In[ ]:
 
 
 # Labels that model had no clue to predict (all labels that were missed, plus the model missed all of the other labels for the instance) => too slow
 col_names_tags_value_1_labels = [[col for col in df_train_labels[df_predictions_train.index.isin([doc_index])]                        if (df_train_labels[df_train_labels.index.isin([doc_index])][col] == 1).any()]  for doc_index in index_train_noclue]
 
 
-# In[92]:
+# In[ ]:
 
 
 col_names_tags_value_1_labels
 
 
-# In[93]:
+# In[ ]:
 
 
 with open(KNN_FILE_MODEL_PREFIX + 'col_names_tags_value_1_labels' + '.pickle', 'wb') as f:
@@ -2034,25 +2070,25 @@ df_predictions_train
 
 # ## Compare model precision score with instance representations
 
-# In[74]:
+# In[123]:
 
 
 df_test_classif_dict = classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist(), output_dict=True)
 
 
-# In[75]:
+# In[124]:
 
 
 df_train_classif_dict = classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)
 
 
-# In[76]:
+# In[125]:
 
 
 #print(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist()))
 
 
-# In[77]:
+# In[126]:
 
 
 del df_test_classif_dict['micro avg']
@@ -2061,7 +2097,7 @@ del df_test_classif_dict['weighted avg']
 del df_test_classif_dict['samples avg']
 
 
-# In[78]:
+# In[127]:
 
 
 del df_train_classif_dict['micro avg']
@@ -2070,73 +2106,73 @@ del df_train_classif_dict['weighted avg']
 del df_train_classif_dict['samples avg']
 
 
-# In[79]:
+# In[128]:
 
 
 len(df_test_classif_dict)
 
 
-# In[95]:
+# In[129]:
 
 
 df_classif_test_report = pd.DataFrame(df_test_classif_dict).transpose()    .sort_values(by='precision', ascending=False)
 
 
-# In[98]:
+# In[130]:
 
 
-df_classif_test_report['precision'][df_classif_test_report['precision'] == 0]
+#df_classif_test_report['precision'][df_classif_test_report['precision'] == 0]
 
 
-# In[80]:
+# In[131]:
 
 
-df_test_classif_dict
+#df_test_classif_dict
 
 
-# In[81]:
+# In[132]:
 
 
 df_test_classif_dict['Tags_.htaccess']['precision']
 
 
-# In[85]:
+# In[133]:
 
 
 df_train_labels_count_dict = df_train_labels.sum().to_dict()
 
 
-# In[86]:
+# In[134]:
 
 
-df_train_labels_count_dict
+#df_train_labels_count_dict
 
 
-# In[87]:
+# In[135]:
 
 
 count_values = [df_train_labels_count_dict[key] for key in df_train_labels_count_dict]
 
 
-# In[88]:
+# In[136]:
 
 
 precision_values = [df_test_classif_dict[key]['precision'] for key in df_train_labels_count_dict]
 
 
-# In[89]:
+# In[137]:
 
 
 precision_values_train = [df_train_classif_dict[key]['precision'] for key in df_train_labels_count_dict]
 
 
-# In[90]:
+# In[138]:
 
 
-precision_values
+#precision_values
 
 
-# In[91]:
+# In[139]:
 
 
 #plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
@@ -2155,7 +2191,7 @@ plt.subplots_adjust(top=0.9)
 plt.suptitle('Precision (test) against instance representation (train)')
 
 
-# In[92]:
+# In[140]:
 
 
 #plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
@@ -2171,15 +2207,82 @@ plt.subplots_adjust(top=0.9)
 plt.suptitle('Precision (train) against instance representation (train)')
 
 
-# ## Precision / Recall curve
-
-# In[ ]:
+# In[141]:
 
 
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import plot_precision_recall_curve
+realdf_train_classif_dict = pd.DataFrame(df_train_classif_dict)
 
-disp = plot_precision_recall_curve(prediction_pipeline, df_test, df_test_labels)
+
+# In[142]:
+
+
+tags_precision1 = realdf_train_classif_dict.loc['precision', :][realdf_train_classif_dict.loc['precision', :] == 1]
+
+
+# In[143]:
+
+
+tags_precision1.index.values
+
+
+# In[144]:
+
+
+len(realdf_train_classif_dict.loc['precision', :][realdf_train_classif_dict.loc['precision', :] == 0])
+
+
+# In[145]:
+
+
+realdf_train_classif_dict
+
+
+# In[146]:
+
+
+for key in df_train_labels_count_dict:
+    if key in (tags_precision1.index.values):
+        nb_values = df_train_labels_count_dict[key]
+        print(f'{key} : values of {nb_values}')
+
+
+# In[147]:
+
+
+realdf_test_classif_dict = pd.DataFrame(df_test_classif_dict)
+
+
+# In[148]:
+
+
+tags_precision0_test = realdf_test_classif_dict.loc['precision', :][realdf_test_classif_dict.loc['precision', :] == 0]
+
+
+# In[149]:
+
+
+len(realdf_test_classif_dict.loc['precision', :][realdf_test_classif_dict.loc['precision', :] == 0])
+
+
+# In[150]:
+
+
+realdf_test_classif_dict.loc['precision', :][realdf_test_classif_dict.loc['precision', :] == 0]
+
+
+# In[151]:
+
+
+for key in df_test_labels_count_dict:
+    if key in (tags_precision0_test.index.values):
+        nb_values = df_test_labels_count_dict[key]
+        print(f'{key} : values of {nb_values}')
+
+
+# In[154]:
+
+
+len(realdf_train_classif_dict.loc['precision', :][realdf_train_classif_dict.loc['precision', :] == 0])
 
 
 # # Implementation of a Decision Tree classification algorithm
@@ -2652,25 +2755,25 @@ predictions_test.shape
 
 # ## Check how many instances have at least 1 label
 
-# In[48]:
+# In[467]:
 
 
 df_train_labels_sum = df_train_labels.sum(axis=1)
 
 
-# In[49]:
+# In[468]:
 
 
 df_train_labels_sum.shape
 
 
-# In[50]:
+# In[469]:
 
 
 df_train_labels_sum[df_train_labels_sum > 0]
 
 
-# In[51]:
+# In[470]:
 
 
 df_train_labels.shape
@@ -2678,7 +2781,7 @@ df_train_labels.shape
 
 # => 90% of instances have at least 1 predicted label to true
 
-# In[52]:
+# In[471]:
 
 
 print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label')
@@ -2686,55 +2789,55 @@ print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.sh
 
 # ## Drop training instances without labels
 
-# In[53]:
+# In[472]:
 
 
 df_train.drop(index=df_train_labels_sum[df_train_labels_sum == 0].index, inplace=True)
 
 
-# In[54]:
+# In[473]:
 
 
 df_train_labels.drop(index=df_train_labels_sum[df_train_labels_sum == 0].index, inplace=True)
 
 
-# In[55]:
+# In[474]:
 
 
 df_train_labels.shape
 
 
-# In[56]:
+# In[475]:
 
 
 df_train.shape
 
 
-# In[57]:
+# In[476]:
 
 
 df_train_labels.reset_index(drop=True, inplace=True)
 
 
-# In[58]:
+# In[477]:
 
 
 df_train.reset_index(drop=True, inplace=True)
 
 
-# In[59]:
+# In[478]:
 
 
 df_train.loc[2000]
 
 
-# In[60]:
+# In[479]:
 
 
 df_train_labels.loc[2000][df_train_labels.loc[2000] == 1]
 
 
-# In[61]:
+# In[480]:
 
 
 df_train_ori = df_train.copy(deep=True)
@@ -2746,7 +2849,7 @@ df_test_labels_ori = df_test_labels.copy(deep=True)
 
 # ## Implementation of KNN classification algorithm on 9000 instances all of which have at least 1 label
 
-# In[62]:
+# In[481]:
 
 
 from functions import *
@@ -2754,7 +2857,7 @@ importlib.reload(sys.modules['functions'])
 from functions import *
 
 
-# In[63]:
+# In[482]:
 
 
 df_train = df_train_ori
@@ -2764,7 +2867,7 @@ df_train_labels = df_train_labels_ori
 df_test_labels = df_test_labels_ori
 
 
-# In[64]:
+# In[483]:
 
 
 DATASET_SIZE = 90000
@@ -2777,20 +2880,20 @@ df_test = df_test.loc[0:DATASET_TEST_SIZE-1, :]
 df_test_labels = df_test_labels.loc[0:DATASET_TEST_SIZE-1, :]
 
 
-# In[65]:
+# In[484]:
 
 
 df_train_tags = df_train_tags.loc[0:DATASET_SIZE-1, :]
 df_test_tags = df_test_tags.loc[0:DATASET_SIZE-1, :]
 
 
-# In[66]:
+# In[485]:
 
 
 df_train
 
 
-# In[67]:
+# In[486]:
 
 
 prediction_pipeline = Pipeline([
@@ -2801,37 +2904,37 @@ prediction_pipeline = Pipeline([
     ])
 
 
-# In[68]:
+# In[487]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2 == True):\n    prediction_pipeline.fit(df_train, df_train_labels)\n    \n    with open(KNN_FILE_MODEL_PREFIX2 + 'prediction_pipeline' + '.pickle', 'wb') as f:\n        pickle.dump(prediction_pipeline, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'prediction_pipeline' + '.pickle', 'rb') as f:\n        prediction_pipeline = pickle.load(f)")
 
 
-# In[69]:
+# In[488]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2 == True):\n    predictions_train = prediction_pipeline.predict(df_train)\n    df_predictions_train = pd.DataFrame(predictions_train, columns=df_train_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_train' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_train, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_train' + '.pickle', 'rb') as f:\n        df_predictions_train = pickle.load(f)")
 
 
-# In[70]:
+# In[489]:
 
 
 get_ipython().run_cell_magic('time', '', "if (SAVE_KNN_MODEL2 == True):\n    predictions_test = prediction_pipeline.predict(df_test)\n    df_predictions_test = pd.DataFrame(predictions_test, columns=df_test_labels.columns)\n\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_test' + '.pickle', 'wb') as f:\n        pickle.dump(df_predictions_test, f, pickle.HIGHEST_PROTOCOL)\n        \nelse:\n    with open(KNN_FILE_MODEL_PREFIX2 + 'predictions_test' + '.pickle', 'rb') as f:\n        df_predictions_test = pickle.load(f)")
 
 
-# In[71]:
+# In[490]:
 
 
 df_predictions_train
 
 
-# In[72]:
+# In[491]:
 
 
 df_predictions_test
 
 
-# In[73]:
+# In[492]:
 
 
 df_train
@@ -2839,81 +2942,81 @@ df_train
 
 # ## Performance measures
 
-# In[74]:
+# In[493]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[75]:
+# In[494]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[76]:
+# In[495]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_train_labels, df_predictions_train)
 
 
-# In[77]:
+# In[496]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[78]:
+# In[497]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[58]:
+# In[498]:
 
 
 roc_auc_score(df_train_labels, df_predictions_train)
 
 
-# In[79]:
+# In[499]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[80]:
+# In[500]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[81]:
+# In[501]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_test_labels, df_predictions_test)
 
 
-# In[82]:
+# In[502]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[83]:
+# In[503]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[64]:
+# In[504]:
 
 
 roc_auc_score(df_test_labels, df_predictions_test)
 
 
-# In[84]:
+# In[505]:
 
 
 predictions_test.shape
@@ -2927,19 +3030,19 @@ predictions_test.shape
 
 # ## Check how many instances have at least 1 tag predicted
 
-# In[85]:
+# In[ ]:
 
 
 df_predictions_test_sum = df_predictions_test.sum(axis=1)
 
 
-# In[86]:
+# In[ ]:
 
 
 df_predictions_test_sum.shape
 
 
-# In[87]:
+# In[ ]:
 
 
 df_predictions_test_sum[df_predictions_test_sum > 0]
@@ -2949,13 +3052,13 @@ df_predictions_test_sum[df_predictions_test_sum > 0]
 
 # Even though :
 
-# In[89]:
+# In[ ]:
 
 
 df_train_labels_sum = df_train_labels.sum(axis=1)
 
 
-# In[91]:
+# In[ ]:
 
 
 print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label on training set')
@@ -3146,7 +3249,7 @@ df_predictions_test_proba
 
 # ## Visualize precision / recall with different triggers of probabilities
 
-# In[119]:
+# In[73]:
 
 
 PREDICTIONS_TRIGGERS = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
@@ -3174,7 +3277,7 @@ for trigger in PREDICTIONS_TRIGGERS:
     f1_scores_test.append(f1_score(df_test_labels, df_predictions_test, average='micro'))
 
 
-# In[120]:
+# In[74]:
 
 
 plt.xlabel("recall")
@@ -3188,7 +3291,7 @@ plt.plot(recall_scores_train, precision_scores_train, '-o')
 # => For a trigger of 0.3  we have Precision of 0.6 and recall of ~0.35  
 # => We choose this trigger of 0.3 in order to prioritize precision over recall
 
-# In[121]:
+# In[75]:
 
 
 plt.xlabel('Prediction trigger')
@@ -3199,7 +3302,7 @@ plt.plot(PREDICTIONS_TRIGGERS, f1_scores_train, '-o')
 
 # => Trigger of 0.3 has relatively high F1 score
 
-# In[122]:
+# In[76]:
 
 
 plt.xlabel("recall")
@@ -3213,7 +3316,7 @@ plt.plot(recall_scores_test, precision_scores_test, '-o')
 # => For a trigger of 0.3  we have Precision of ~0.4 and recall of ~0.2  
 # => We choose this trigger of 0.3 in order to prioritize precision over recall
 
-# In[123]:
+# In[77]:
 
 
 plt.xlabel('Prediction trigger')
@@ -3226,13 +3329,13 @@ plt.plot(PREDICTIONS_TRIGGERS, f1_scores_test, '-o')
 
 # ## Computed predictions based on custom trigger
 
-# In[144]:
+# In[78]:
 
 
 PREDICTIONS_TRIGGER = 0.3
 
 
-# In[145]:
+# In[79]:
 
 
 df_predictions_train = pd.DataFrame(np.where(df_predictions_train_proba >= PREDICTIONS_TRIGGER, 1, 0), columns=df_train_labels.columns)
@@ -3241,61 +3344,61 @@ df_predictions_test = pd.DataFrame(np.where(df_predictions_test_proba >= PREDICT
 
 # ## Check how many instances have at least 1 tag predicted
 
-# In[146]:
+# In[80]:
 
 
 (df_predictions_train > 0).any(1)[(df_predictions_train > 0).any(1)]
 
 
-# In[147]:
+# In[81]:
 
 
 (df_predictions_test > 0).any(1)[(df_predictions_test > 0).any(1)]
 
 
-# In[148]:
+# In[82]:
 
 
 df_predictions_test.shape
 
 
-# In[149]:
+# In[83]:
 
 
 df_predictions_train.loc[1, df_predictions_train.gt(0).any() ]
 
 
-# In[150]:
+# In[84]:
 
 
 df_predictions_train.columns
 
 
-# In[151]:
+# In[85]:
 
 
 df_predictions_train_subset = df_predictions_train.loc[0:5, :]
 
 
-# In[152]:
+# In[86]:
 
 
 ((df_predictions_train_subset > 0).any(1))
 
 
-# In[153]:
+# In[87]:
 
 
 df_predictions_train_subset > 0
 
 
-# In[154]:
+# In[88]:
 
 
 df_predictions_train_subset.loc[:, df_predictions_train_subset.gt(0).any() ]
 
 
-# In[155]:
+# In[89]:
 
 
 # https://stackoverflow.com/questions/41090333/return-first-matching-value-column-name-in-new-dataframe
@@ -3305,75 +3408,75 @@ df_predictions_train_subset.apply(lambda x : x[x > 0].index, axis=1)
 
 # ## Performance measures (copy/pasted from 1 :  to be completed with predict proba results)
 
-# In[156]:
+# In[90]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[157]:
+# In[91]:
 
 
 precision_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[158]:
+# In[92]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_train_labels, df_predictions_train)
 
 
-# In[159]:
+# In[93]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='micro')
 
 
-# In[160]:
+# In[94]:
 
 
 recall_score(df_train_labels, df_predictions_train, average='macro')
 
 
-# In[161]:
+# In[95]:
 
 
 roc_auc_score(df_train_labels, df_predictions_train)
 
 
-# In[162]:
+# In[96]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[163]:
+# In[97]:
 
 
 precision_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[164]:
+# In[98]:
 
 
 # Shows exact matchs of all tags
 accuracy_score(df_test_labels, df_predictions_test)
 
 
-# In[165]:
+# In[99]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='micro')
 
 
-# In[166]:
+# In[100]:
 
 
 recall_score(df_test_labels, df_predictions_test, average='macro')
 
 
-# In[167]:
+# In[101]:
 
 
 roc_auc_score(df_test_labels, df_predictions_test)
@@ -3387,19 +3490,19 @@ roc_auc_score(df_test_labels, df_predictions_test)
 
 # ## Check how many instances have at least 1 tag predicted
 
-# In[168]:
+# In[102]:
 
 
 df_predictions_test_sum = df_predictions_test.sum(axis=1)
 
 
-# In[169]:
+# In[103]:
 
 
 df_predictions_test_sum.shape
 
 
-# In[170]:
+# In[104]:
 
 
 df_predictions_test_sum[df_predictions_test_sum > 0]
@@ -3409,39 +3512,54 @@ df_predictions_test_sum[df_predictions_test_sum > 0]
 
 # Even though :
 
-# In[171]:
+# In[105]:
 
 
 df_train_labels_sum = df_train_labels.sum(axis=1)
 
 
-# In[172]:
+# In[106]:
 
 
 print(str(len(df_train_labels_sum[df_train_labels_sum > 0]) / df_train_labels.shape[0]*100) + '% labels have at least 1 label on training set')
 
 
+# In[138]:
+
+
+df_predictions_train_sum = df_predictions_train.sum(axis=1)
+df_predictions_train_sum[df_predictions_train_sum > 0]
+
+
+# In[139]:
+
+
+df_predictions_train.shape
+
+
+# => 69% of instances have at least 1 predicted class to true on training set
+
 # ## Compare model precision score with instance representations
 
-# In[173]:
+# In[107]:
 
 
 df_test_classif_dict = classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist(), output_dict=True)
 
 
-# In[174]:
+# In[108]:
 
 
 df_train_classif_dict = classification_report(df_train_labels, df_predictions_train, target_names=df_train_labels.columns.tolist(), output_dict=True)
 
 
-# In[175]:
+# In[109]:
 
 
 #print(classification_report(df_test_labels, df_predictions_test, target_names=df_test_labels.columns.tolist()))
 
 
-# In[176]:
+# In[110]:
 
 
 del df_test_classif_dict['micro avg']
@@ -3450,7 +3568,7 @@ del df_test_classif_dict['weighted avg']
 del df_test_classif_dict['samples avg']
 
 
-# In[177]:
+# In[111]:
 
 
 del df_train_classif_dict['micro avg']
@@ -3459,73 +3577,79 @@ del df_train_classif_dict['weighted avg']
 del df_train_classif_dict['samples avg']
 
 
-# In[178]:
+# In[112]:
 
 
 len(df_test_classif_dict)
 
 
-# In[179]:
+# In[113]:
 
 
 df_classif_test_report = pd.DataFrame(df_test_classif_dict).transpose()    .sort_values(by='precision', ascending=False)
 
 
-# In[180]:
+# In[114]:
 
 
-df_classif_test_report['precision'][df_classif_test_report['precision'] == 0]
+len(df_classif_test_report['precision'][df_classif_test_report['precision'] == 0])
 
 
-# In[134]:
+# In[115]:
 
 
-df_test_classif_dict
+#df_test_classif_dict
 
 
-# In[135]:
+# In[116]:
 
 
 df_test_classif_dict['Tags_.htaccess']['precision']
 
 
-# In[181]:
+# In[117]:
 
 
 df_train_labels_count_dict = df_train_labels.sum().to_dict()
 
 
-# In[137]:
+# In[118]:
 
 
-df_train_labels_count_dict
+df_test_labels_count_dict = df_test_labels.sum().to_dict()
 
 
-# In[182]:
+# In[119]:
+
+
+#df_train_labels_count_dict
+
+
+# In[120]:
 
 
 count_values = [df_train_labels_count_dict[key] for key in df_train_labels_count_dict]
 
 
-# In[183]:
+# In[121]:
 
 
 precision_values = [df_test_classif_dict[key]['precision'] for key in df_train_labels_count_dict]
 
 
-# In[184]:
+# In[122]:
 
 
 precision_values_train = [df_train_classif_dict[key]['precision'] for key in df_train_labels_count_dict]
 
 
-# In[185]:
+# In[123]:
 
 
-precision_values
+#precision_values
 
 
-# In[186]:
+# In[124]:
 
 
 #plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
@@ -3544,7 +3668,7 @@ plt.subplots_adjust(top=0.9)
 plt.suptitle('Precision (test) against instance representation (train)')
 
 
-# In[187]:
+# In[125]:
 
 
 #plt.rcParams["figure.figsize"] = [16,9] # Taille par défaut des figures de matplotlib
@@ -3560,43 +3684,125 @@ plt.subplots_adjust(top=0.9)
 plt.suptitle('Precision (train) against instance representation (train)')
 
 
-# In[191]:
+# In[126]:
 
 
 realdf_train_classif_dict = pd.DataFrame(df_train_classif_dict)
 
 
-# In[211]:
+# In[127]:
 
 
 tags_precision1 = realdf_train_classif_dict.loc['precision', :][realdf_train_classif_dict.loc['precision', :] == 1]
 
 
-# In[219]:
+# In[128]:
 
 
 tags_precision1.index.values
 
 
-# In[200]:
+# In[129]:
 
 
 realdf_train_classif_dict.loc['precision', :][realdf_train_classif_dict.loc['precision', :] == 0]
 
 
-# In[199]:
+# In[130]:
 
 
 realdf_train_classif_dict
 
 
-# In[227]:
+# In[131]:
 
 
 for key in df_train_labels_count_dict:
     if key in (tags_precision1.index.values):
         nb_values = df_train_labels_count_dict[key]
         print(f'{key} : values of {nb_values}')
+
+
+# In[132]:
+
+
+realdf_test_classif_dict = pd.DataFrame(df_test_classif_dict)
+
+
+# In[133]:
+
+
+tags_precision0_test = realdf_test_classif_dict.loc['precision', :][realdf_test_classif_dict.loc['precision', :] == 0]
+
+
+# In[134]:
+
+
+len(realdf_test_classif_dict.loc['precision', :][realdf_test_classif_dict.loc['precision', :] == 0])
+
+
+# In[135]:
+
+
+len(realdf_train_classif_dict.loc['precision', :][realdf_train_classif_dict.loc['precision', :] == 0])
+
+
+# In[136]:
+
+
+for key in df_test_labels_count_dict:
+    if key in (tags_precision0_test.index.values):
+        nb_values = df_test_labels_count_dict[key]
+        print(f'{key} : values of {nb_values}')
+
+
+# In[137]:
+
+
+for key in df_test_labels_count_dict:
+    if key in (tags_precision0_test.index.values):
+        nb_values = df_train_labels_count_dict[key]
+        print(f'{key} : values of {nb_values}')
+
+
+# In[143]:
+
+
+(df_predictions_train.loc[:, tags_precision0_test.index] > 0).any(axis=0)
+
+
+# In[148]:
+
+
+(df_predictions_test.loc[:, tags_precision0_test.index] > 0).any(axis=0)
+
+
+# => For above tags that have 0 precision on test set : some have been predicted True at least once, some others not (precision is still 0 in that case)
+
+# In[155]:
+
+
+# Check number of predictions in training set for tags that have 0 precision on test set : nearly all of them are under 50 predictions
+df_predictions_train.sum(axis=0)[tags_precision0_test.index]
+
+
+# In[147]:
+
+
+# Check number of occurences in training set labels for tags that have 0 precision on test set : all of them have decent number of occurences (> 90)
+(df_train_labels.sum(axis=0))[tags_precision0_test.index]
+
+
+# In[156]:
+
+
+df_train_labels.shape[1]
+
+
+# In[158]:
+
+
+plt.bar(range(df_train_labels.shape[1]), df_train_labels.sum(axis=0).sort_values(ascending=False))
 
 
 # # Same as 2/ but with stratified split based on clustering, and 90000 instances sampling based on clustering
