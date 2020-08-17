@@ -1,0 +1,13 @@
+conda update conda 
+ou conda update --force conda
+
+Pour SIFT :
+pip install opencv-contrib-python  <= ne fonctionne pas
+
+conda install -c menpo opencv <= ne fonctionne pas
+
+
+Fonctionne :
+~/anaconda3/bin/pip install opencv-python==3.4.2.17
+~/anaconda3/bin/pip install opencv-contrib-python==3.4.2.17
+
