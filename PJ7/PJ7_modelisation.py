@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ7 : implement automatic image indexing
 
-# In[1]:
+# In[2]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -73,7 +73,7 @@ from sklearn.metrics import f1_score
 
 from sklearn.metrics import classification_report
 
-from yellowbrick.classifier import ROCAUC
+#from yellowbrick.classifier import ROCAUC
 from sklearn.metrics import roc_auc_score
 
 import nltk
@@ -86,7 +86,7 @@ from sklearn.decomposition import LatentDirichletAllocation
 
 from nltk import pos_tag, sent_tokenize, wordpunct_tokenize
 
-import pandas_profiling
+#import pandas_profiling
 
 from bs4 import BeautifulSoup
 
@@ -187,34 +187,37 @@ LEARNING_CURVE_STEP_SIZE = 100
 
 # # Image settings
 
-# In[2]:
+# In[3]:
 
 
 from PIL import Image
 from io import BytesIO
 
 
-# In[3]:
+# In[4]:
 
 
 import cv2
 
+sift = cv2.xfeatures2d.SIFT_create()
+surf = cv2.xfeatures2d.SURF_create()
+
 
 # # Exploration of 1 image from OC course
 
-# In[4]:
+# In[5]:
 
 
 img = Image.open("simba.png") 
 
 
-# In[5]:
+# In[6]:
 
 
 np_img = np.array(img)
 
 
-# In[6]:
+# In[7]:
 
 
 # Pour le normaliser : argument density=True dans plt.hist
@@ -224,7 +227,7 @@ n, bins, patches = plt.hist(np_img.flatten(), bins=range(256))
 plt.show()
 
 
-# In[7]:
+# In[8]:
 
 
 # Pour le normaliser : argument density=True dans plt.hist
@@ -234,7 +237,7 @@ n, bins, patches = plt.hist(np_img.flatten(), bins=range(256), edgecolor='blue')
 plt.show()
 
 
-# In[8]:
+# In[9]:
 
 
 # Pour le normaliser : argument density=True dans plt.hist
@@ -246,74 +249,74 @@ plt.show()
 
 # # Exploration of 1 image
 
-# In[9]:
+# In[10]:
 
 
 PATH_TESTIMAGE = DATA_PATH + "/n02111889-Samoyed/" + "n02111889_1363.jpg"
 img = Image.open(PATH_TESTIMAGE) 
 
 
-# In[10]:
+# In[11]:
 
 
 'n02108422-bull_mastiff'.split('-')[1]
 
 
-# In[11]:
+# In[12]:
 
 
 display(img)
 
 
-# In[12]:
+# In[13]:
 
 
 img.size
 
 
-# In[13]:
+# In[14]:
 
 
 img.mode
 
 
-# In[14]:
+# In[15]:
 
 
 img.getpixel((20, 100))
 
 
-# In[15]:
+# In[16]:
 
 
 np_image = np.array(img)
 
 
-# In[16]:
+# In[17]:
 
 
 np_image.shape
 
 
-# In[17]:
+# In[18]:
 
 
 np.array([1,2,3])
 
 
-# In[18]:
+# In[19]:
 
 
 np_img = np.array(img)
 
 
-# In[19]:
+# In[20]:
 
 
 np_img[:, :, 0]
 
 
-# In[20]:
+# In[21]:
 
 
 # Pour le normaliser : argument density=True dans plt.hist
@@ -323,7 +326,7 @@ n, bins, patches = plt.hist(np_img.flatten(), bins=range(256))
 plt.show()
 
 
-# In[21]:
+# In[22]:
 
 
 # Pour le normaliser : argument density=True dans plt.hist
@@ -333,7 +336,7 @@ n, bins, patches = plt.hist(np_img[:, :, 0].flatten(), bins=range(256))
 plt.show()
 
 
-# In[22]:
+# In[23]:
 
 
 # Pour le normaliser : argument density=True dans plt.hist
@@ -343,7 +346,7 @@ n, bins, patches = plt.hist(np_img[:, :, 1].flatten(), bins=range(256))
 plt.show()
 
 
-# In[23]:
+# In[24]:
 
 
 # Pour le normaliser : argument density=True dans plt.hist
@@ -355,44 +358,31 @@ plt.show()
 
 # # Image preprocessing tests
 
-# In[24]:
+# In[25]:
 
 
 imgcv = cv2.imread(PATH_TESTIMAGE)
 
 
-# In[25]:
-
-
-imgcv_gray = cv2.cvtColor(imgcv,cv2.COLOR_BGR2GRAY)
-
-
 # In[26]:
 
 
-imgcv_gray.shape
+imgcv_gray = cv2.cvtColor(imgcv,cv2.COLOR_BGR2GRAY) # Gray scaling
 
 
 # In[27]:
 
 
-Image.fromarray(imgcv_gray)
+imgcv_gray.shape
 
 
 # In[28]:
 
 
-sift = cv2.xfeatures2d.SIFT_create()
-surf = cv2.xfeatures2d.SURF_create()
+Image.fromarray(imgcv_gray)
 
 
-# In[30]:
-
-
-sift
-
-
-# In[35]:
+# In[29]:
 
 
 kp = sift.detect(imgcv_gray,None)
@@ -402,31 +392,31 @@ imgcv_keypoints = cv2.drawKeypoints(imgcv_gray, kp, flags=cv2.DRAW_MATCHES_FLAGS
 cv2.imwrite('sift_keypoints.jpg',imgcv_keypoints)
 
 
-# In[48]:
+# In[30]:
 
 
 Image.fromarray(imgcv_keypoints)
 
 
-# In[40]:
+# In[31]:
 
 
 kp, des = sift.detectAndCompute(imgcv_gray,None)
 
 
-# In[39]:
+# In[32]:
 
 
 len(kp)
 
 
-# In[41]:
+# In[33]:
 
 
 des.shape
 
 
-# In[47]:
+# In[34]:
 
 
 flann_params = dict(algorithm = 1, trees = 5)
@@ -435,48 +425,96 @@ bow_extract = cv2.BOWImgDescriptorExtractor( sift , matcher )
 #bow_extract.setVocabulary( vocab ) # the 64x20 dictionary, you made before # <= selon la doc:  Each row of the vocabulary is a visual word (cluster center). 
 
 
-# In[46]:
+# In[35]:
 
 
-bowsig = bow_extract.compute(imgcv_gray, kp)
+#bowsig = bow_extract.compute(imgcv_gray, kp)
 
 
 # # Load images and labels
 
-# In[14]:
+# In[90]:
 
 
 filename_images = []
 np_images = []
 labels = []
 
+deslist = []
+
+NB_DOGS_PER_RACE = 5
 i = 0
 
+np_des = np.empty((0, 1+128), np.uint8)  # We add 1 column to store the image number
 
-# In[15]:
+
+# In[91]:
 
 
-for root, dirs, files in os.walk(DATA_PATH):
-    path = root.split(os.sep)
-    
-    for file in files:
-        # Append filename to global list
-        filename_images.append(os.path.join(root, file))
-        
-        # Append image numpy array to global list
-        im = Image.open(os.path.join(root, file))
-        np_images.append(np.array(im))  # <= Takes too much memory (compared to jpeg disk space usage) : for later, either fix memory problem, or stream files from disk
-        im.close()
-        
-        # Append image label to global list (we use the part of directory name after the '-'character as label)
-        labels.append(os.path.basename(root).split('-')[1])
+np_des
 
-        # Limitation for now, because of memory
-        i += 1
-        
-        if (i > 10):
-            break
-        
+
+# In[92]:
+
+
+np_toy = np.full((5, 10), 1, dtype=np.uint8)
+
+
+# In[93]:
+
+
+np_toy.nbytes
+
+
+# In[94]:
+
+
+get_ipython().run_cell_magic('time', '', '\ncnt_files = sum([len(files) for r, d, files in os.walk(DATA_PATH)])\nprogbar = tqdm(range(cnt_files))\n\npic_number = 0\nfor root, dirs, files in os.walk(DATA_PATH):\n    path = root.split(os.sep)\n    \n    i = 0    \n    for file in files:\n        if (i > NB_DOGS_PER_RACE - 1):\n            break\n        \n        # Append filename to global list\n        filename_images.append(os.path.join(root, file))\n        \n        img = cv2.imread(os.path.join(root, file))\n        \n        kp, des = sift.detectAndCompute(img, None)\n        \n        np_picnum = np.full((des.shape[0], 1), pic_number, dtype=np.uint16) # Add 1 column to store picture number\n        des = np.hstack((np_picnum, des.astype(np.uint8)))\n        \n        #deslist.append(des)\n        #np_des = np.append(np_des, des, axis=0)\n        np_des = np.vstack((np_des, des)) # Equivalent of line above\n        \n        progbar.update(1)\n        \n        i += 1\n        pic_number += 1')
+
+
+# In[113]:
+
+
+np_des.dtype
+
+
+# In[97]:
+
+
+np_des.shape
+
+
+# In[114]:
+
+
+df_des = pd.DataFrame(np_des)
+
+
+# In[86]:
+
+
+df_des.loc[:, 1].max()
+
+
+# In[89]:
+
+
+df_des.max()
+
+
+# In[98]:
+
+
+np_des.nbytes
+
+
+# In[ ]:
+
+
+np_des = deslist[0]
+
+for descriptor in deslist:
+    np_des = np.vstack((np_des, descriptor))  
 
 
 # In[16]:
@@ -521,6 +559,73 @@ len(filename_images)
 labels[50]
 
 
+# ## With Pandas
+
+# In[144]:
+
+
+filename_images = []
+np_images = []
+labels = []
+
+deslist = []
+
+NB_DOGS_PER_RACE = 10
+i = 0
+
+df_des = pd.DataFrame(np.empty((0, 1+128), np.uint8), columns=['picnum'] +  [colname for colname in range(0,128)])  # We add 1 column to store the image number
+
+
+# In[145]:
+
+
+df_des
+
+
+# In[146]:
+
+
+get_ipython().run_cell_magic('time', '', "\ncnt_files = sum([len(files) for r, d, files in os.walk(DATA_PATH)])\nprogbar = tqdm(range(cnt_files))\n\npic_number = 0\nfor root, dirs, files in os.walk(DATA_PATH):\n    path = root.split(os.sep)\n    \n    i = 0    \n    for file in files:\n        if (i > NB_DOGS_PER_RACE - 1):\n            break\n        \n        # Append filename to global list\n        filename_images.append(os.path.join(root, file))\n        \n        img = cv2.imread(os.path.join(root, file))\n        \n        kp, des = sift.detectAndCompute(img, None)\n        \n        df_picnum = pd.DataFrame(np.full((des.shape[0], 1), pic_number, dtype=np.uint16), columns=['picnum']) # Add 1 column to store picture number\n        #print(des.shape)\n        #print(df_picnum.shape)\n        \n        df_des_1pic = pd.concat([df_picnum, pd.DataFrame(des.astype(np.uint8))], axis=1)\n        #print(df_des_1pic.shape)\n        #print(df_des_1pic.columns)\n        \n        #print('df_des.shape avant concat ')\n        #print(df_des.shape)\n        \n        df_des = pd.concat([df_des, df_des_1pic], axis=0)\n\n        #print('df_des.shape apres concat ')\n        #print(df_des.shape)\n        #print('!')\n        \n        progbar.update(1)\n        \n        i += 1\n        pic_number += 1")
+
+
+# In[147]:
+
+
+df_des
+
+
+# In[148]:
+
+
+df_des.memory_usage()
+
+
+# In[149]:
+
+
+df_des.info()
+
+
+# In[154]:
+
+
+clusterer = Clusterer(n_clusters=200)
+
+
+# In[ ]:
+
+
+get_ipython().run_line_magic('time', '')
+
+clusterer.fit(df_des)
+
+
+# In[112]:
+
+
+len(filename_images)
+
+
 # # Annex (old code)
 
 # In[6]:
@@ -545,4 +650,32 @@ for root, dirs, files in os.walk(DATA_PATH):
         print(os.path.join(root, file))
         print(len(path) * '---', file)
         print(len(path) * '---', os.path.basename(root).split('-')[1])
+
+
+# In[ ]:
+
+
+for root, dirs, files in os.walk(DATA_PATH):
+    path = root.split(os.sep)
+    
+    for file in files:
+        # Append filename to global list
+        filename_images.append(os.path.join(root, file))
+        
+        # Append image numpy array to global list
+        im = Image.open(os.path.join(root, file))
+        np_images.append(np.array(im))  # <= Takes too much memory (compared to jpeg disk space usage) : for later, either fix memory problem, or stream files from disk
+        im.close()
+        
+        # Append image label to global list (we use the part of directory name after the '-'character as label)
+        labels.append(os.path.basename(root).split('-')[1])
+
+        # Limitation for now, because of memory
+        '''
+        i += 1
+        
+        if (i > 10):
+            break
+        '''
+        
 

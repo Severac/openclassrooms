@@ -941,7 +941,7 @@ class Clusterer(BaseEstimator, TransformerMixin):
             print('Fit method of Clusterer')
         
         if (self.algorithm_to_use == 'KMEANS'):
-            self.clusterer = KMeans(n_clusters=self.n_clusters, random_state=42)
+            self.clusterer = KMeans(n_clusters=self.n_clusters, n_jobs=2, random_state=42)
         
         elif (self.algorithm_to_use == 'WARD'):
             self.clusterer = AgglomerativeClustering(n_clusters=self.n_clusters, affinity='euclidean', linkage='ward')
