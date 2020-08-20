@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ7 : implement automatic image indexing
 
-# In[49]:
+# In[62]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -130,9 +130,12 @@ LOAD_GRID_RESULTS = True # If True : grid results object will be loaded from pic
 GRIDSEARCH_FILE_PREFIX = 'grid_search_results_'
 
 # Set this to load (or train again / save) Clustering model to disk
-SAVE_CLUSTERING_MODEL = True
-
+SAVE_CLUSTERING_MODEL = False
 CLUSTERING_FILE_MODEL_PREFIX = 'clustering_model'
+
+SAVE_DESCRIPTORS = False
+DESCRIPTORS_FILE_PREFIX = 'descriptors_file'
+
 
 SAVE_BESTGRIDSEARCH_MODEL = False
 LOAD_BESTGRIDSEARCH_MODEL = True
@@ -679,6 +682,22 @@ if (SAVE_CLUSTERING_MODEL == True):
 
 
 clusterer.clusterer
+
+
+# In[63]:
+
+
+if (SAVE_DESCRIPTORS == True):
+    with open(DESCRIPTORS_FILE_PREFIX + 'model1' + '.pickle', 'wb') as f:
+        pickle.dump(df_des, f, pickle.HIGHEST_PROTOCOL)    
+
+
+# In[64]:
+
+
+if (SAVE_CLUSTERING_MODEL == True):
+    with open('filenames' + 'model1' + '.pickle', 'wb') as f:
+        pickle.dump(filename_images, f, pickle.HIGHEST_PROTOCOL)
 
 
 # In[60]:
