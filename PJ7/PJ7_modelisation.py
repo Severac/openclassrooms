@@ -3,7 +3,7 @@
 
 # # Openclassrooms PJ7 : implement automatic image indexing
 
-# In[62]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -431,31 +431,31 @@ Image.fromarray(imgcv_keypoints_best)
 kp_sorted[0:20]
 
 
-# In[114]:
+# In[37]:
 
 
 kp[548]
 
 
-# In[115]:
+# In[38]:
 
 
 kp_sorted_indices = [i[0] for i in sorted(enumerate(kp), key=lambda x:x[1].response, reverse=True)]
 
 
-# In[116]:
+# In[39]:
 
 
 kp_sorted_indices
 
 
-# In[122]:
+# In[40]:
 
 
 des[kp_sorted_indices[0:20], :].shape
 
 
-# In[34]:
+# In[41]:
 
 
 flann_params = dict(algorithm = 1, trees = 5)
@@ -508,7 +508,7 @@ np_toy.nbytes
 # In[94]:
 
 
-get_ipython().run_cell_magic('time', '', '\ncnt_files = sum([len(files) for r, d, files in os.walk(DATA_PATH)])\nprogbar = tqdm(range(cnt_files))\n\npic_number = 0\nfor root, dirs, files in os.walk(DATA_PATH):\n    path = root.split(os.sep)\n    \n    i = 0    \n    for file in files:\n        if (i > NB_DOGS_PER_RACE - 1):\n            break\n        \n        # Append filename to global list\n        filename_images.append(os.path.join(root, file))\n        \n        img = cv2.imread(os.path.join(root, file))\n        \n        kp, des = sift.detectAndCompute(img, None)\n        \n        np_picnum = np.full((des.shape[0], 1), pic_number, dtype=np.uint16) # Add 1 column to store picture number\n        des = np.hstack((np_picnum, des.astype(np.uint8)))\n        \n        #deslist.append(des)\n        #np_des = np.append(np_des, des, axis=0)\n        np_des = np.vstack((np_des, des)) # Equivalent of line above\n        \n        progbar.update(1)\n        \n        i += 1\n        pic_number += 1')
+get_ipython().run_cell_magic('time', '', '\ncnt_files = sum([len(files) for r, d, files in os.walk(DATA_PATH)])\nprogbar = tqdm(range(cnt_files))\n\npic_number = 0\nfor root, dirs, files in os.walk(DATA_PATH):\n    path = root.split(os.sep)\n\n    i = 0    \n    for file in files:\n        if (i > NB_DOGS_PER_RACE - 1):\n            break\n\n        # Append filename to global list\n        filename_images.append(os.path.join(root, file))\n\n        img = cv2.imread(os.path.join(root, file))\n\n        kp, des = sift.detectAndCompute(img, None)\n\n        np_picnum = np.full((des.shape[0], 1), pic_number, dtype=np.uint16) # Add 1 column to store picture number\n        des = np.hstack((np_picnum, des.astype(np.uint8)))\n\n        #deslist.append(des)\n        #np_des = np.append(np_des, des, axis=0)\n        np_des = np.vstack((np_des, des)) # Equivalent of line above\n\n        progbar.update(1)\n\n        i += 1\n        pic_number += 1')
 
 
 # In[114]:
@@ -588,14 +588,14 @@ labels[50]
 
 # ## With Pandas
 
-# In[53]:
+# In[42]:
 
 
 from functions import *
 importlib.reload(sys.modules['functions'])
 
 
-# In[38]:
+# In[43]:
 
 
 filename_images = []
@@ -612,7 +612,7 @@ i = 0
 df_des = pd.DataFrame(np.empty((0, 1+128), np.uint8), columns=['picnum'] +  [colname for colname in range(0,128)])  # We add 1 column to store the image number
 
 
-# In[39]:
+# In[44]:
 
 
 df_des
@@ -621,7 +621,7 @@ df_des
 # In[40]:
 
 
-get_ipython().run_cell_magic('time', '', "\ncnt_files = sum([len(files) for r, d, files in os.walk(DATA_PATH)])\nprogbar = tqdm(range(cnt_files))\n\npic_number = 0\nfor root, dirs, files in os.walk(DATA_PATH):\n    path = root.split(os.sep)\n    \n    i = 0    \n    for file in files:\n        if (i > NB_DOGS_PER_RACE - 1):\n            break\n        \n        # Append filename to global list\n        filename_images.append(os.path.join(root, file))\n        \n        img = cv2.imread(os.path.join(root, file))\n        \n        kp, des = sift.detectAndCompute(img, None)\n        \n        kp_sorted_indices = [i[0] for i in sorted(enumerate(kp), key=lambda x:x[1].response, reverse=True)] # Sort by pixel importance descending\n        des = des[kp_sorted_indices[0:NB_KEYPOINTS_PER_DOG], :]\n        \n        df_picnum = pd.DataFrame(np.full((des.shape[0], 1), pic_number, dtype=np.uint16), columns=['picnum']) # Add 1 column to store picture number\n        #print(des.shape)\n        #print(df_picnum.shape)\n        \n        df_des_1pic = pd.concat([df_picnum, pd.DataFrame(des.astype(np.uint8))], axis=1)\n        #print(df_des_1pic.shape)\n        #print(df_des_1pic.columns)\n        \n        #print('df_des.shape avant concat ')\n        #print(df_des.shape)\n        \n        df_des = pd.concat([df_des, df_des_1pic], axis=0)\n\n        #print('df_des.shape apres concat ')\n        #print(df_des.shape)\n        #print('!')\n        \n        progbar.update(1)\n        \n        i += 1\n        pic_number += 1")
+get_ipython().run_cell_magic('time', '', "\nif (SAVE_CLUSTERING_MODEL == True):  # If False, we'll load data later via pickle\n    cnt_files = sum([len(files) for r, d, files in os.walk(DATA_PATH)])\n    progbar = tqdm(range(cnt_files))\n\n    pic_number = 0\n    for root, dirs, files in os.walk(DATA_PATH):\n        path = root.split(os.sep)\n\n        i = 0    \n        for file in files:\n            if (i > NB_DOGS_PER_RACE - 1):\n                break\n\n            # Append filename to global list\n            filename_images.append(os.path.join(root, file))\n\n            img = cv2.imread(os.path.join(root, file))\n\n            kp, des = sift.detectAndCompute(img, None)\n\n            kp_sorted_indices = [i[0] for i in sorted(enumerate(kp), key=lambda x:x[1].response, reverse=True)] # Sort by pixel importance descending\n            des = des[kp_sorted_indices[0:NB_KEYPOINTS_PER_DOG], :]\n\n            df_picnum = pd.DataFrame(np.full((des.shape[0], 1), pic_number, dtype=np.uint16), columns=['picnum']) # Add 1 column to store picture number\n            #print(des.shape)\n            #print(df_picnum.shape)\n\n            df_des_1pic = pd.concat([df_picnum, pd.DataFrame(des.astype(np.uint8))], axis=1)\n            #print(df_des_1pic.shape)\n            #print(df_des_1pic.columns)\n\n            #print('df_des.shape avant concat ')\n            #print(df_des.shape)\n\n            df_des = pd.concat([df_des, df_des_1pic], axis=0)\n\n            #print('df_des.shape apres concat ')\n            #print(df_des.shape)\n            #print('!')\n\n            progbar.update(1)\n\n            i += 1\n            pic_number += 1")
 
 
 # In[41]:
@@ -670,52 +670,106 @@ import functions
 importlib.reload(sys.modules['functions'])
 
 
-# In[57]:
+# In[46]:
 
 
 if (SAVE_CLUSTERING_MODEL == True):
     with open(CLUSTERING_FILE_MODEL_PREFIX + 'model1' + '.pickle', 'wb') as f:
         pickle.dump(clusterer.clusterer, f, pickle.HIGHEST_PROTOCOL)
+        
+else:
+    with open(CLUSTERING_FILE_MODEL_PREFIX + 'model1' + '.pickle', 'rb') as f:
+        clusterer_clusterer = pickle.load(f)
 
 
-# In[47]:
+# In[48]:
 
 
-clusterer.clusterer
+clusterer_clusterer
 
 
-# In[63]:
+# In[49]:
 
 
 if (SAVE_DESCRIPTORS == True):
     with open(DESCRIPTORS_FILE_PREFIX + 'model1' + '.pickle', 'wb') as f:
         pickle.dump(df_des, f, pickle.HIGHEST_PROTOCOL)    
+        
+else:
+    with open(DESCRIPTORS_FILE_PREFIX + 'model1' + '.pickle', 'rb') as f:
+        df_des = pickle.load(f)
 
 
-# In[64]:
+# In[50]:
 
 
 if (SAVE_CLUSTERING_MODEL == True):
     with open('filenames' + 'model1' + '.pickle', 'wb') as f:
         pickle.dump(filename_images, f, pickle.HIGHEST_PROTOCOL)
+        
+else:
+    with open('filenames' + 'model1' + '.pickle', 'rb') as f:
+        filename_images = pickle.load(f)
 
 
-# In[60]:
+# In[52]:
 
 
-clusterer.predict(df_des.iloc[0:6, 1:])
+clusterer_clusterer.predict(df_des.iloc[0:6, 1:])
 
 
-# In[61]:
+# In[53]:
 
 
 df_des
 
 
-# In[112]:
+# In[54]:
 
 
 len(filename_images)
+
+
+# In[56]:
+
+
+clusterer_clusterer.n_clusters
+
+
+# In[61]:
+
+
+all_cluster_numbers = list(range(NB_CLUSTERS))
+
+
+# In[77]:
+
+
+zero_matrix = np.zeros((len(df_des), NB_CLUSTERS), np.uint8)
+
+
+# In[78]:
+
+
+zero_matrix.nbytes
+
+
+# In[71]:
+
+
+df_des['picnum']
+
+
+# In[79]:
+
+
+dummies = pd.concat([df_des['picnum'], pd.DataFrame(zero_matrix, [colname for colname in range(NB_CLUSTERS)])])
+
+
+# In[76]:
+
+
+dummies
 
 
 # # Annex (old code)
