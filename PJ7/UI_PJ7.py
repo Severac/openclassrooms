@@ -225,7 +225,7 @@ st.image(image,
 
 ######################" Left Panel : options ##############################################"
 st.sidebar.title('Model analysis')
-debug_mode = st.sidebar.checkbox('Display 64x64 feat maps of 1st conv layer', value=False)
+debug_mode = st.sidebar.checkbox('Display 64 feat maps of 1st conv layer', value=False)
 
 ######################" Main Panel : prédictions ###############################"
 st.header('Upload image')    
