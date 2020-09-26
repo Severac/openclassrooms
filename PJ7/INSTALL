@@ -11,3 +11,7 @@ Fonctionne :
 ~/anaconda3/bin/pip install opencv-python==3.4.2.17
 ~/anaconda3/bin/pip install opencv-contrib-python==3.4.2.17
 
+
+Sur le serveur AWS, pour déployer
+
+pip install tensorflow==2.3.0   (il est nécessaire d'utiliser la même version TF que celle utilisée sur kaggle pour sauvegarder le modèle)
