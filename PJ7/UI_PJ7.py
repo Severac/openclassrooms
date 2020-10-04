@@ -225,7 +225,7 @@ st.image(image,
 
 ######################" Left Panel : options ##############################################"
 st.sidebar.title('Model analysis')
-debug_mode = st.sidebar.checkbox('Display 64 feat maps of 1st conv layer', value=False)
+debug_mode = st.sidebar.checkbox('Display feat maps of 1st conv layer', value=False)
 
 ######################" Main Panel : prédictions ###############################"
 st.header('Upload image')    
@@ -253,7 +253,7 @@ if (uploaded_image != None):
 		#fig, ax = plt.subplots()
 		fig = plt.figure()
 		
-		model = Model(inputs=model.inputs, outputs=model.layers[1].output)	
+		model = Model(inputs=model.inputs, outputs=model.layers[4].output)	
 
 		model.summary()
 		# load the image with the required shape
@@ -266,13 +266,14 @@ if (uploaded_image != None):
 		img = preprocess_input(img)
 		# get feature map for first hidden layer
 		feature_maps = model.predict(img)
-		# plot all 64 maps in an 8x8 squares
-		square = 8
+		# plot 32 maps of 1st conv layer
+		display_lines = 4
+		display_cols = 8
 		ix = 1
-		for _ in range(square):
-			for _ in range(square):
+		for _ in range(display_lines):
+			for _ in range(display_cols):
 				# specify subplot and turn of axis
-				ax = plt.subplot(square, square, ix)
+				ax = plt.subplot(display_lines, display_cols, ix)
 				ax.set_xticks([])
 				ax.set_yticks([])
 				# plot filter channel in grayscale
