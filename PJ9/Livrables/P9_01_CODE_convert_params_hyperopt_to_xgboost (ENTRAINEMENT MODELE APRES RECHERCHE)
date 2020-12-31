@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Dec 21 23:15:23 2020
+
+@author: francois
+"""
+
+# Best hyper params with gamma :
+
+hyperopt_params_space = {  
+   'features': [['feature_'+str(i) for i in range(130)]], 
+    'random_state': [42],
+    'max_depth': [8, 9, 10],
+    'n_estimators': [250, 500],
+    'learning_rate': [0.01, 0.02, 0.1],
+    'subsample': [0.5, 0.8],
+    'colsample_bytree': [0.2, 0.3, 0.6, 0.9],
+    'gamma': [0.01, 0.1, 0.5, 1, 10],
+    'tree_method': ['gpu_hist']
+}
+
+iteration_names = ['best_loss', 'best_utility5', 'best_utility4', 'best_utility3', 'best_utility2', 'best_utility1']
+
+
+hyperopt_params_to_convert = [{'colsample_bytree': [1], 'features': [0], 'gamma': [2], 'learning_rate': [1], 'max_depth': [2], 'n_estimators': [0], 'random_state': [0], 'subsample': [1], 'tree_method': [0]},
+  {'colsample_bytree': [3], 'features': [0], 'gamma': [4], 'learning_rate': [1], 'max_depth': [0], 'n_estimators': [0], 'random_state': [0], 'subsample': [1], 'tree_method': [0]},
+  {'colsample_bytree': [3], 'features': [0], 'gamma': [2], 'learning_rate': [1], 'max_depth': [1], 'n_estimators': [1], 'random_state': [0], 'subsample': [0], 'tree_method': [0]},
+  {'colsample_bytree': [0], 'features': [0], 'gamma': [4], 'learning_rate': [2], 'max_depth': [1], 'n_estimators': [0], 'random_state': [0], 'subsample': [1], 'tree_method': [0]},
+  {'colsample_bytree': [1], 'features': [0], 'gamma': [4], 'learning_rate': [1], 'max_depth': [1], 'n_estimators': [0], 'random_state': [0], 'subsample': [0], 'tree_method': [0]},
+  {'colsample_bytree': [0], 'features': [0], 'gamma': [0], 'learning_rate': [1], 'max_depth': [1], 'n_estimators': [0], 'random_state': [0], 'subsample': [1], 'tree_method': [0]},
+  ]
+
+
+xgboost_target_params = []
+
+i=0
+for iteration_name in iteration_names:
+    xgboost_target_params_of_iteration = {}
+    for key in hyperopt_params_to_convert[i]:    
+        xgboost_target_params_of_iteration[key] = hyperopt_params_space[key][hyperopt_params_to_convert[i][key][0]]
+        
+    xgboost_target_params.append(xgboost_target_params_of_iteration)
+
+    i+=1
+
+#for key in hyperopt_params_to_convert:
+#    xgboost_target_params[key] = hyperopt_params_space[key][hyperopt_params_to_convert[key][0]]
+    
+    
+print(xgboost_target_params)
+    
